@@ -1,9 +1,24 @@
 #!/bin/bash
-# Installiert gstack (https://github.com/garrytan/gstack) in Claude Code Cloud-Sessions.
+# Richtet Claude Code Cloud-Sessions ein: Instagram-Datenordner und gstack
+# (https://github.com/garrytan/gstack).
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
+fi
+
+# Die Instagram-Skills (.claude/skills/ig-*) speichern voice.md, plan.md,
+# swipe.md und log.md in ~/.claude/instagram/. Das Home-Verzeichnis geht am
+# Ende jeder Cloud-Session verloren, deshalb zeigt der Ordner auf instagram/
+# im Repo.
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+IG_DATA="$PROJECT_DIR/instagram"
+IG_LINK="$HOME/.claude/instagram"
+mkdir -p "$IG_DATA" "$(dirname "$IG_LINK")"
+if [ -L "$IG_LINK" ] || [ ! -e "$IG_LINK" ]; then
+  ln -sfn "$IG_DATA" "$IG_LINK"
+else
+  echo "$IG_LINK ist ein echter Ordner und wird nicht auf $IG_DATA umgeleitet." >&2
 fi
 
 GSTACK_DIR="$HOME/.claude/skills/gstack"
