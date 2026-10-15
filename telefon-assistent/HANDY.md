@@ -5,7 +5,17 @@ Ein übriges Android-Handy liegt zu Hause am Ladekabel im WLAN und arbeitet als 
 - Es meldet sich als IP-Telefon an deiner FRITZ!Box an und telefoniert über deine Festnetz-Flatrate.
 - Steuern tust du alles per Telegram, zum Beispiel vom iPhone.
 
-**Stimme:** Standardmäßig spricht der Assistent mit einer sehr natürlichen Microsoft-Neural-Stimme
+**Zwei Gesprächs-Varianten:**
+- **Gemini Live (empfohlen, am menschlichsten):** Ein Google-Modell hört, denkt und spricht in einem. Es
+  antwortet fast ohne Pause, betont natürlich und lässt sich unterbrechen wie ein Mensch.
+  Kosten: siehe unten.
+- **Klassisch (kostenlos):** Groq erkennt die Sprache und denkt, die Stimme kommt extra. Zwischen Frage
+  und Antwort liegen ungefähr 1–2 Sekunden.
+
+Ist Gemini einmal nicht erreichbar, etwa weil ein Limit erreicht ist, übernimmt für diesen Anruf
+automatisch die klassische Variante. Du bekommst dann einen Hinweis in Telegram.
+
+**Stimme (klassische Variante):** Standardmäßig spricht der Assistent mit einer sehr natürlichen Microsoft-Neural-Stimme
 („Katja“). Fällt sie aus, übernimmt automatisch die lokale Piper-Stimme. Die klingt künstlicher, läuft
 aber ohne Internet.
 
@@ -26,6 +36,10 @@ aber ohne Internet.
    → **Telefon** → **LAN/WLAN (IP-Telefon)**, Name `KI-Assistent`.
    - Benutzername (z. B. `kiassistent`) und Kennwort festlegen und aufschreiben.
    - Als ausgehende und ankommende Rufnummer deine Festnetznummer wählen.
+
+4. *Für Gemini Live (optional, empfohlen):* **aistudio.google.com** öffnen, mit deinem Google-Konto
+   anmelden → **Get API key** bzw. **API-Schlüssel abrufen** → **Schlüssel erstellen** und aufschreiben.
+   Das Einrichtungsskript fragt danach; lässt du es leer, läuft alles klassisch.
 
 ## Teil B: Apps auf dem Handy installieren
 
@@ -97,7 +111,20 @@ Der Ablauf:
 | `/status` | zeigt, ob die FRITZ!Box-Anmeldung steht |
 | `/abbrechen` | offene Rückfrage verwerfen |
 
-**Andere Stimme:** In `~/Maximilian/telefon-assistent/.env` bei `MICROSOFT_STIMME` z. B.
+**Gemini Live nachträglich ein- oder ausschalten:** In `.env` `GESPRAECH=gemini` bzw.
+`GESPRAECH=klassisch` setzen; für Gemini zusätzlich `GEMINI_API_KEY` eintragen. Danach den Assistenten
+neu starten. Die Gemini-Stimme wechselst du mit `GEMINI_STIMME`, z. B. `Aoede` oder `Puck`. Am besten
+probierst du ein paar aus, indem der Assistent dich selbst anruft.
+
+**Was kostet Gemini Live?**
+- Google rechnet nach Gesprächsdauer ab. Laut Vergleichsseiten kostet es grob 2 Cent pro Minute, bei
+  30 Anrufen à 2 Minuten also etwa 1–2 $ im Monat.
+- Es gibt ein begrenztes Gratis-Kontingent. Ob es in Deutschland für Gemini Live gilt, ist nicht sicher.
+- Kommt beim ersten Anruf die Meldung „Gemini Live ist gerade nicht verfügbar“, musst du in AI Studio
+  unter **Billing** ein Zahlungsmittel hinterlegen. Dort siehst du auch die aktuellen Preise und
+  kannst ein Ausgabenlimit festlegen.
+
+**Andere Stimme (klassisch):** In `~/Maximilian/telefon-assistent/.env` bei `MICROSOFT_STIMME` z. B.
 `de-DE-ConradNeural` (männlich) oder `de-DE-SeraphinaMultilingualNeural` eintragen. Danach den
 Assistenten neu starten.
 
@@ -117,7 +144,8 @@ Assistenten neu starten.
 
 ## Grenzen
 
-- Antworten kommen mit ungefähr 1–2 Sekunden Verzögerung. Manche Gesprächspartner legen bei KI-Anrufen auf.
-- Was dein Gesprächspartner sagt, geht zur Spracherkennung an Groq. Gesprochene Antworten gehen an
-  Microsoft, solange die Microsoft-Stimme aktiv ist.
+- Klassisch kommen Antworten mit ungefähr 1–2 Sekunden Verzögerung, mit Gemini Live deutlich schneller.
+  Manche Gesprächspartner legen bei KI-Anrufen auf.
+- Was dein Gesprächspartner sagt, geht an Google (Gemini Live) bzw. an Groq (klassisch). Bei der
+  klassischen Variante gehen die Antworten zum Vorlesen an Microsoft.
 - Es wird kein Ton gespeichert, nur ein Text-Protokoll. Der Assistent sagt immer, dass er eine KI ist.

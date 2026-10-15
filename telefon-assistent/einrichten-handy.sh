@@ -48,6 +48,8 @@ else
   frage FB_KENNWORT "FRITZ!Box: Kennwort des IP-Telefons (wird nicht angezeigt)" geheim
   frage NAME "Dein Name, wie im Satz 'der digitale Assistent von ...' (z. B. Herrn Mustermann)"
   frage ORT "Dein Wohnort (für die Nummernsuche)"
+  frage GEMINI "Gemini-Schlüssel für Gemini Live (menschlicher, fast ohne Pause) – leer lassen = ohne"
+  if [ -n "$GEMINI" ]; then GESPRAECH=gemini; else GESPRAECH=klassisch; fi
   echo
   echo ">>> Öffne jetzt Telegram, such deinen Bot und schick ihm: /start"
   echo "    Ich warte auf deine Nachricht …"
@@ -80,7 +82,14 @@ INHABER_NAME=$NAME
 WOHNORT=$ORT
 RUECKRUFNUMMER=
 EINGEHENDE_ANRUFE=aus
-# Stimme: microsoft (sehr natürlich, braucht Internet) oder piper (lokal)
+# Gesprächs-KI: gemini (Gemini Live: hört, denkt und spricht in einem, fast ohne Pause)
+#               oder klassisch (Groq + Stimme unten). Bei Problemen mit Gemini springt "klassisch" ein.
+GESPRAECH=$GESPRAECH
+GEMINI_API_KEY=$GEMINI
+GEMINI_MODELL=gemini-3.8-live
+# Gemini-Stimmen z. B.: Kore, Aoede, Leda, Zephyr, Puck, Charon, Fenrir, Orus
+GEMINI_STIMME=Kore
+# Stimme der klassischen Variante: microsoft (sehr natürlich, braucht Internet) oder piper (lokal)
 STIMME=microsoft
 # Andere natürliche Stimmen: de-DE-ConradNeural, de-DE-AmalaNeural, de-DE-SeraphinaMultilingualNeural
 MICROSOFT_STIMME=de-DE-KatjaNeural

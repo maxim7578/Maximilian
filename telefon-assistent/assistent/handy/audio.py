@@ -104,6 +104,11 @@ def als_int16(signal: np.ndarray) -> np.ndarray:
     return np.clip(x, -32768, 32767).astype(np.int16)
 
 
+def runden_int16(signal: np.ndarray) -> np.ndarray:
+    """float-Werte, die schon im int16-Bereich liegen (−32768…32767), runden und begrenzen."""
+    return np.clip(np.rint(signal), -32768, 32767).astype(np.int16)
+
+
 def wav_bytes(pcm: np.ndarray, abtastrate: int = ABTASTRATE) -> bytes:
     puffer = io.BytesIO()
     with wave.open(puffer, "wb") as w:

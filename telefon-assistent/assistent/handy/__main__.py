@@ -13,7 +13,8 @@ from loguru import logger
 from ..einstellungen import Einstellungen, EinstellungsFehler
 from ..ki import KI
 from ..telegram_bot import TelegramBot
-from .anrufe import HandyAnrufverwaltung
+from .anrufe import GeminiEinstellungen, HandyAnrufverwaltung
+from .gemini import GEMINI_URL
 from .sip import Telefon
 from .stimme import stimmen_laden
 
@@ -65,7 +66,19 @@ async def main() -> None:
     telefon = Telefon(adresse, fritzbox[1], fritzbox[2], server_port=int(port or 5060),
                       lokaler_port=int(os.getenv("SIP_PORT", "5062")))
     await telefon.starten()
-    bot.anrufe = HandyAnrufverwaltung(einst, telefon, ki, stimme, bot.melden)
+    gemini = None
+    if os.getenv("GESPRAECH", "klassisch").lower() == "gemini":
+        try:
+            gemini = GeminiEinstellungen(
+                api_key=_pflicht("GEMINI_API_KEY"),
+                modell=os.getenv("GEMINI_MODELL", "gemini-3.8-live"),
+                stimme=os.getenv("GEMINI_STIMME", "Kore"),
+                url=os.getenv("GEMINI_URL", GEMINI_URL),
+            )
+        except EinstellungsFehler as fehler:
+            logger.error(str(fehler))
+            sys.exit(1)
+    bot.anrufe = HandyAnrufverwaltung(einst, telefon, ki, stimme, bot.melden, gemini)
 
     async with bot.app:
         await bot.app.start()

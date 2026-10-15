@@ -202,3 +202,70 @@ async def test_gesamter_ablauf_handy(telefon, tmp_path):
     await asyncio.sleep(1)
     r = subprocess.run(["docker", "exec", NAME, "asterisk", "-rx", "core show channels count"], capture_output=True, text=True)
     assert "0 active channels" in r.stdout
+
+
+async def _anruf_mit_verwaltung(telefon, tmp_path, gemini_url, ablehnen=""):
+    from assistent.auftrag import Anruf
+    from assistent.einstellungen import Einstellungen
+    from assistent.handy.anrufe import GeminiEinstellungen, HandyAnrufverwaltung
+    from assistent.ki import Antwort
+    from tests.handy.schein_gemini import ScheinGemini
+
+    server = ScheinGemini(ablehnen=ablehnen)
+    url = await server.starten()
+
+    class KI:  # nur für die klassische Ausweich-Variante und den Bericht
+        async def transkribieren(self, wav, name):
+            return "Restaurant Da Mario, guten Tag."
+
+        async def gespraech_antwort(self, verlauf, werkzeuge):
+            return Antwort(text="Auf Wiederhören.", werkzeug="gespraech_beenden", werkzeug_id="c1",
+                           argumente={"ergebnis": "klassisch erledigt", "erfolgreich": True},
+                           roh={"role": "assistant", "content": "x"})
+
+        async def bericht_schreiben(self, *args):
+            raise RuntimeError("kein Groq im Test")
+
+    class Stimme:
+        async def sprechen(self, text):
+            return ton(300, 0.5)
+
+    meldungen = []
+
+    async def melden(text):
+        meldungen.append(text)
+
+    einst = Einstellungen(
+        telegram_token="1:a", telegram_chat_id=1, groq_api_key="x", inhaber="Herrn Test", wohnort="",
+        rueckrufnummer="", eingehende_anrufe=False, llm_modell="m", stt_modell="s", piper_stimme="p",
+        max_gespraech_sekunden=60, ari_url="", ari_benutzer="", ari_kennwort="", app_port=0,
+        daten_ordner=str(tmp_path))
+    verwaltung = HandyAnrufverwaltung(einst, telefon, KI(), Stimme(), melden,
+                                      GeminiEinstellungen(api_key="test", url=url))
+    start = time.monotonic()
+    await verwaltung.starten(Anruf(ziel="Da Mario", nummer="500", auftrag="Tisch reservieren", spielraum=""))
+    for _ in range(300):
+        if any("Bericht" in m for m in meldungen):
+            break
+        await asyncio.sleep(0.1)
+    await server.stoppen()
+    return meldungen, server, time.monotonic() - start
+
+
+@pytest.mark.asyncio
+async def test_gesamter_ablauf_mit_gemini(telefon, tmp_path):
+    meldungen, server, dauer = await _anruf_mit_verwaltung(telefon, tmp_path, "")
+    bericht = next(m for m in meldungen if "Bericht" in m)
+    assert "Tisch für 2 um 17 Uhr reserviert" in bericht
+    assert "Gegenüber: Restaurant Da Mario, guten Tag." in bericht
+    assert server.audio_sekunden > 1.0, "Gemini hat den Ton des Anrufs nicht bekommen"
+    assert dauer < 15
+    r = subprocess.run(["docker", "exec", NAME, "asterisk", "-rx", "core show channels count"], capture_output=True, text=True)
+    assert "0 active channels" in r.stdout
+
+
+@pytest.mark.asyncio
+async def test_gemini_lehnt_ab_klassische_variante_springt_ein(telefon, tmp_path):
+    meldungen, _, _ = await _anruf_mit_verwaltung(telefon, tmp_path, "", ablehnen="API key not valid")
+    assert any("Gemini Live ist gerade nicht verfügbar" in m for m in meldungen)
+    assert "klassisch erledigt" in next(m for m in meldungen if "Bericht" in m)
