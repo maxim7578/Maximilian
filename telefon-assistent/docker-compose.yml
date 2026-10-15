@@ -1,0 +1,33 @@
+# Startet alles mit: docker compose up -d --build
+# Läuft auf Linux (network_mode: host wird für Telefonie im Heimnetz gebraucht).
+
+services:
+  # Erzeugt die Asterisk-Konfiguration aus .env und ist danach fertig.
+  konfig:
+    build: .
+    env_file: .env
+    command: ["python", "-m", "assistent.konfig"]
+    volumes:
+      - ./asterisk:/asterisk
+
+  # Telefonanlage: meldet sich als IP-Telefon an der FRITZ!Box an.
+  asterisk:
+    image: andrius/asterisk:23.5.0_debian-trixie
+    network_mode: host
+    volumes:
+      - ./asterisk/etc:/etc/asterisk
+    depends_on:
+      konfig:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Telegram-Bot und Gesprächs-KI.
+  assistent:
+    build: .
+    env_file: .env
+    network_mode: host
+    volumes:
+      - ./daten:/daten
+    depends_on:
+      - asterisk
+    restart: unless-stopped

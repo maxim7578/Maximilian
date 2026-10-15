@@ -1,0 +1,6 @@
+pipecat-ai[groq,silero,piper]==1.12.0
+pipecat-asterisk==0.1.4
+python-telegram-bot==22.8
+groq==1.7.0
+httpx==0.28.1
+uvicorn==0.54.0
