@@ -50,7 +50,27 @@ Telegram (Sprachnachricht) → Laptop: Assistent ─┬─ Groq: Sprache erkenne
 ## Schritt 4: Software auf dem Laptop starten
 
 Die Anleitung gilt für **Linux** (z. B. Ubuntu oder Linux Mint). Der Laptop muss per LAN oder WLAN mit
-der FRITZ!Box verbunden sein.
+der FRITZ!Box verbunden sein; ein LAN-Kabel ist für die Gesprächsqualität besser.
+
+**4.0 Nur wenn auf dem Gerät noch Windows läuft: Linux Mint installieren.** Dabei werden Windows und
+**alle Daten auf dem Gerät gelöscht**. Sichere vorher, was du behalten willst. Du brauchst einen
+USB-Stick mit mindestens 8 GB; auch dessen Inhalt wird gelöscht.
+
+1. Unter Windows **linuxmint.com** öffnen → **Download** → die aktuelle Version **Cinnamon Edition**
+   herunterladen (eine `.iso`-Datei, ca. 3 GB).
+2. **rufus.ie** öffnen, Rufus herunterladen und starten. USB-Stick einstecken, bei **Laufwerk** den Stick
+   wählen, bei **Startart** auf **AUSWAHL** klicken und die `.iso`-Datei wählen → **START**. Rückfragen mit
+   **OK** bestätigen (ISO-Abbild-Modus).
+3. Vom Stick starten: In Windows **Einstellungen → System → Wiederherstellung → Erweiterter Start →
+   Jetzt neu starten**, dann **Ein Gerät verwenden** → den USB-Stick wählen.
+4. Linux Mint startet zum Ausprobieren. Doppelklick auf **Install Linux Mint** auf dem Schreibtisch:
+   Sprache **Deutsch**, Tastatur **German**, dann **Festplatte löschen und Linux Mint installieren**,
+   Zeitzone **Berlin**, Name, Benutzername und Passwort festlegen.
+5. Nach der Installation den Stick abziehen und neu starten. Danach in der Aktualisierungsverwaltung
+   (Schild-Symbol unten rechts) alle Updates installieren.
+6. Damit das Gerät nie einschläft: **Menü → Einstellungen → Energieverwaltung** → Ruhezustand **Nie**;
+   bei einem Laptop zusätzlich „Beim Zuklappen des Deckels“ → **Nichts tun**.
+7. Ein Terminal öffnest du mit **Strg + Alt + T**. Dort geht es mit 4.1 weiter.
 
 **4.1 Docker installieren** (einmalig, im Terminal):
 
@@ -142,7 +162,7 @@ Klingelt eines deiner anderen Telefone und du gehst schneller ran, hast du das G
 - Die kostenlosen Kontingente von Groq können sich ändern.
 - Was dein Gesprächspartner sagt, wird zur Spracherkennung an Groq geschickt.
 - Läuft nur auf Linux. Docker Desktop unter Windows oder macOS unterstützt das hier nötige Host-Netzwerk
-  nicht zuverlässig.
+  nicht zuverlässig. Auf einem übrigen Windows-PC installiert man am besten Linux Mint (Schritt 4.0).
 
 ## Entwicklung
 
