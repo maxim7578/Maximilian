@@ -14,7 +14,7 @@ from telegram.ext import (
     filters,
 )
 
-from .anrufe import Anruf, Anrufverwaltung, jetzt
+from .auftrag import Anruf, jetzt
 from .einstellungen import Einstellungen
 from .ki import KI, Auftrag
 from .telefonbuch import Kontakte, NummernFehler, openstreetmap_suchen, pruefen
@@ -47,7 +47,7 @@ class TelegramBot:
         self.ki = ki
         self.kontakte = Kontakte(Path(einst.daten_ordner) / "kontakte.json")
         self.offen = Offen()
-        self.anrufe: Anrufverwaltung | None = None
+        self.anrufe = None  # Anrufverwaltung der PC- oder Handy-Version
         self.app = Application.builder().token(einst.telegram_token).build()
         self.app.add_handler(CommandHandler("start", self._start))
         self.app.add_handler(CommandHandler("hilfe", self._start))
@@ -84,9 +84,8 @@ class TelegramBot:
     async def _status(self, update: Update, _):
         if not self._erlaubt(update):
             return
-        asterisk_ok = await self.anrufe.ari.erreichbar()
         await update.effective_message.reply_text(
-            f"Telegram: ✅\nTelefonanlage (Asterisk): {'✅' if asterisk_ok else '❌ nicht erreichbar'}\n"
+            f"Telegram: ✅\n{await self.anrufe.status()}\n"
             f"Gerade ein Anruf aktiv: {'ja' if self.anrufe.beschaeftigt else 'nein'}\n"
             f"Eingehende Anrufe annehmen: {'an' if self.einst.eingehende_anrufe else 'aus'}"
         )

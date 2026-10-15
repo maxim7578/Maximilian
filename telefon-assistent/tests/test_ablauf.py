@@ -6,7 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 from assistent import anrufe as anrufe_modul
-from assistent.anrufe import Anruf, Anrufverwaltung
+from assistent.anrufe import Anrufverwaltung
+from assistent.auftrag import Anruf
 from assistent.einstellungen import Einstellungen
 from assistent.ki import Auftrag
 from assistent.telegram_bot import TelegramBot

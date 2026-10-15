@@ -55,7 +55,7 @@ class Einstellungen:
             max_gespraech_sekunden=int(_optional("MAX_GESPRAECH_SEKUNDEN", "300")),
             ari_url=_optional("ARI_URL", "http://127.0.0.1:8088/ari"),
             ari_benutzer="assistent",
-            ari_kennwort=_pflicht("ARI_KENNWORT"),
+            ari_kennwort=_optional("ARI_KENNWORT"),  # nur PC-Version; dort prüft konfig.py
             app_port=int(_optional("APP_PORT", "8765")),
             daten_ordner=_optional("DATEN_ORDNER", "/daten"),
         )

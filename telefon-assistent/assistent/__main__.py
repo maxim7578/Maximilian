@@ -1,6 +1,7 @@
 """Startet den Telefonassistenten: Telegram-Bot + Gesprächsserver für Asterisk."""
 
 import asyncio
+import os
 import sys
 
 import uvicorn
@@ -40,7 +41,8 @@ async def main() -> None:
         logger.error(str(fehler))
         sys.exit(1)
 
-    ki = KI(einst.groq_api_key, einst.llm_modell, einst.stt_modell, einst.inhaber, einst.wohnort)
+    ki = KI(einst.groq_api_key, einst.llm_modell, einst.stt_modell, einst.inhaber, einst.wohnort,
+            os.getenv("GROQ_URL", "https://api.groq.com/openai/v1"))
     bot = TelegramBot(einst, ki)
     ari = Ari(einst.ari_url, einst.ari_benutzer, einst.ari_kennwort)
     anrufe = Anrufverwaltung(einst, ari, ki, bot.melden)

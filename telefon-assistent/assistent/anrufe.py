@@ -1,39 +1,20 @@
 """Anrufe starten, verfolgen und Berichte verschicken."""
 
 import asyncio
-import uuid
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 from fastapi import WebSocket
 from loguru import logger
 
 from . import texte
 from .ari import Ari
+from .auftrag import Anruf, jetzt
 from .einstellungen import Einstellungen
 from .gespraech import Gespraechsergebnis, gespraech_fuehren
 from .ki import KI
 
-ZEITZONE = ZoneInfo("Europe/Berlin")
 Melden = Callable[[str], Awaitable[None]]
-
-
-def jetzt() -> datetime:
-    return datetime.now(ZEITZONE)
-
-
-@dataclass
-class Anruf:
-    ziel: str
-    nummer: str
-    auftrag: str
-    spielraum: str
-    id: str = field(default_factory=lambda: uuid.uuid4().hex[:8])
-    kanal_id: str = ""
-    verbunden: asyncio.Event = field(default_factory=asyncio.Event)
 
 
 class Anrufverwaltung:
@@ -61,6 +42,10 @@ class Anrufverwaltung:
             self.aktuell = None
             raise
         asyncio.create_task(self._ueberwachen(anruf))
+
+    async def status(self) -> str:
+        ok = await self.ari.erreichbar()
+        return f"Telefonanlage (Asterisk): {'✅' if ok else '❌ nicht erreichbar'}"
 
     async def auflegen(self) -> bool:
         anruf = self.aktuell

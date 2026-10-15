@@ -1,5 +1,8 @@
 # Telefonassistent
 
+> **Zwei Varianten:** auf einem übrigen **Android-Handy** (Anleitung: [HANDY.md](HANDY.md)) oder auf einem
+> **Linux-PC/Laptop** (diese Datei). Bedient wird beides gleich: per Telegram.
+
 Du schickst deinem Telegram-Bot eine Sprachnachricht, zum Beispiel:
 
 > „Ruf beim Restaurant Da Mario in Köln an und reservier einen Tisch für zwei Personen heute um 17 Uhr.“
