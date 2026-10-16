@@ -63,6 +63,30 @@ def saetze(text: str) -> list[str]:
     return teile or ([text.strip()] if text.strip() else [])
 
 
+class Satzton:
+    """Erzeugt den Ton eines Satzes im Hintergrund; die ersten Stücke können schon laufen,
+    während der Rest noch kommt."""
+
+    def __init__(self, stimme, satz: str):
+        self.stuecke: asyncio.Queue[np.ndarray | None] = asyncio.Queue()
+        self.aufgabe = asyncio.create_task(self._erzeugen(stimme, satz))
+
+    async def _erzeugen(self, stimme, satz: str) -> None:
+        try:
+            if hasattr(stimme, "sprechen_strom"):
+                async for stueck in stimme.sprechen_strom(satz):
+                    self.stuecke.put_nowait(stueck)
+            else:
+                self.stuecke.put_nowait(await stimme.sprechen(satz))
+        except Exception as fehler:
+            logger.warning(f"Satz konnte nicht gesprochen werden: {fehler}")
+        finally:
+            self.stuecke.put_nowait(None)
+
+    def abbrechen(self) -> None:
+        self.aufgabe.cancel()
+
+
 class Gespraech:
     def __init__(self, leitung, ki, stimme, systemtext: str, selbst_beginnen: bool, max_sekunden: int,
                  begruessung: str = "", gruss_ton: asyncio.Task | None = None):
@@ -161,16 +185,13 @@ class Gespraech:
 
     async def _abspielen(self, warteschlange: asyncio.Queue) -> None:
         """Spielt erzeugte Sätze der Reihe nach ab, sobald der jeweilige Ton fertig ist."""
-        while (aufgabe := await warteschlange.get()) is not None:
-            try:
-                ton = await aufgabe
-            except Exception as fehler:
-                logger.warning(f"Satz konnte nicht gesprochen werden: {fehler}")
-                continue
-            if self._unterbrochen:
-                continue
-            self._zeit_messen()
-            self.leitung.senden(ton)
+        while (satz := await warteschlange.get()) is not None:
+            while (stueck := await satz.stuecke.get()) is not None:
+                if self._unterbrochen:
+                    satz.abbrechen()
+                    continue
+                self._zeit_messen()
+                self.leitung.senden(stueck)
 
     async def _ki_antwort_holen(self):
         """Holt die Antwort der KI gestreamt: Sätze werden schon gesprochen, während sie entstehen."""
@@ -191,7 +212,7 @@ class Gespraech:
                 self._messung["ki"] = asyncio.get_running_loop().time()
             gesprochen.append(satz)
             if not self._unterbrochen:
-                await warteschlange.put(asyncio.create_task(self.stimme.sprechen(satz)))
+                await warteschlange.put(Satzton(self.stimme, satz))
 
         try:
             try:

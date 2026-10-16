@@ -2,6 +2,7 @@
 
 import asyncio
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -93,3 +94,62 @@ async def test_telegram_stimmen_befehl(tmp_path):
     await bot._stimmen(update, None)
     assert gesendet == [(b"OggS...", "Katja (weiblich)", "stimme:0")]
     assert any("Conrad" in t and "nicht erreichbar" in t for t in texte)
+
+
+TON_MP3 = (Path(__file__).parent / "ton.mp3").read_bytes()  # 2 s Sinus, wie von Microsoft (24 kHz MP3)
+
+
+class ScheinCommunicate:
+    """Ersetzt edge_tts.Communicate: liefert das MP3 in Stücken mit Verzögerung (wie übers Netz)."""
+
+    gesendet_um: list[float] = []
+
+    def __init__(self, text, stimme, rate="+0%"):
+        pass
+
+    async def stream(self):
+        for i in range(0, len(TON_MP3), 2000):
+            await asyncio.sleep(0.05)
+            ScheinCommunicate.gesendet_um.append(asyncio.get_running_loop().time())
+            yield {"type": "audio", "data": TON_MP3[i:i + 2000]}
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg fehlt")
+async def test_microsoft_ton_kommt_stueckweise(monkeypatch):
+    import edge_tts
+
+    monkeypatch.setattr(edge_tts, "Communicate", ScheinCommunicate)
+    ScheinCommunicate.gesendet_um = []
+    stuecke, erstes_um = [], None
+    async for stueck in EdgeStimme("de-DE-KatjaNeural").sprechen_strom("Hallo"):
+        erstes_um = erstes_um or asyncio.get_running_loop().time()
+        stuecke.append(stueck)
+    assert erstes_um < ScheinCommunicate.gesendet_um[-1]  # Ton beginnt, bevor alles übertragen ist
+    dauer = sum(len(s) for s in stuecke) / 8000
+    assert 1.9 < dauer < 2.2 and len(stuecke) > 3
+
+
+@pytest.mark.asyncio
+async def test_vorrat_kommt_sofort_und_ersatz_bei_ausfall():
+    class Zaehler(EdgeStimme):
+        aufrufe = 0
+
+        async def sprechen_strom(self, text):
+            Zaehler.aufrufe += 1
+            yield np.ones(800, dtype=np.int16)
+            yield np.ones(800, dtype=np.int16)
+
+    stimmen = Stimmen([Zaehler("de-DE-KatjaNeural"), Ersatz()])
+    erst = [s async for s in stimmen.sprechen_strom("Okay.")]
+    zweit = [s async for s in stimmen.sprechen_strom("Okay.")]
+    assert Zaehler.aufrufe == 1 and len(erst) == 2 and len(zweit) == 1 and len(zweit[0]) == 1600
+
+    class Kaputt(EdgeStimme):
+        async def sprechen_strom(self, text):
+            raise ConnectionError("weg")
+            yield  # noqa
+
+    stimmen = Stimmen([Kaputt("de-DE-KatjaNeural"), Ersatz()])
+    ton = [s async for s in stimmen.sprechen_strom("Ein langer Satz, der nicht im Vorrat ist.")]
+    assert len(ton) == 1 and stimmen.zuletzt == "Piper" and "weg" in stimmen.beschreibung()

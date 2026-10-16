@@ -94,6 +94,7 @@ async def main() -> None:
         if gemini is None:
             try:  # einmal ausprobieren, damit /status und die Startmeldung zeigen, ob Microsoft geht
                 await stimme.sprechen("Test.")
+                asyncio.create_task(stimme.vorrat_anlegen())  # kurze Reaktionen vorab erzeugen
             except Exception as fehler:
                 logger.warning(f"Keine Stimme funktioniert: {fehler}")
         logger.info(f"Telefonassistent läuft. {await bot.anrufe.status()}")

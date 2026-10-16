@@ -80,6 +80,7 @@ class HandyAnrufverwaltung:
     def stimme_waehlen(self, kurzname: str) -> str:
         self.stimme.microsoft_waehlen(kurzname)
         self._stimm_datei.write_text(kurzname, encoding="utf-8")
+        asyncio.create_task(self.stimme.vorrat_anlegen())
         return self.stimme.beschreibung()
 
     @staticmethod

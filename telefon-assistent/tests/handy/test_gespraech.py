@@ -287,3 +287,23 @@ def test_zeiten_im_bericht():
     text = HandyAnrufverwaltung._zeiten_text(e)
     assert "Antwortzeit im Schnitt: 2,0 s" in text.replace(".", ",")
     assert "Spracherkennung 0,4 · KI 0,7 · Stimme 0,4 s · gehört je 2,0 s" in text
+
+
+class StromStimme(Stimme):
+    async def sprechen_strom(self, text):
+        self.texte.append(text)
+        for _ in range(3):
+            await asyncio.sleep(0.05)
+            yield np.ones(400, dtype=np.int16)
+
+
+@pytest.mark.asyncio
+async def test_stimme_stueckweise_abgespielt():
+    leitung = Leitung(np.concatenate([sprache(0.8), stille(5)]))
+    ki, stimme = StromKI(["Okay.", "Für wie viele Personen?"]), StromStimme()
+    aufgabe = asyncio.create_task(Gespraech(leitung, ki, stimme, "System", False, 60).fuehren())
+    await asyncio.sleep(2.5)
+    assert stimme.texte == ["Okay.", "Für wie viele Personen?"]
+    assert len(leitung.gesendet) == 6 and all(len(t) == 400 for t in leitung.gesendet)
+    await leitung.auflegen()
+    await aufgabe
