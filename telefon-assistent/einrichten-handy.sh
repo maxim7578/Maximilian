@@ -106,7 +106,7 @@ GEMINI_STIMME=Kore
 # Stimme der klassischen Variante: microsoft (sehr natürlich, braucht Internet) oder piper (lokal)
 STIMME=microsoft
 # Andere natürliche Stimmen: de-DE-ConradNeural, de-DE-AmalaNeural, de-DE-SeraphinaMultilingualNeural
-MICROSOFT_STIMME=de-DE-KatjaNeural
+MICROSOFT_STIMME=de-DE-SeraphinaMultilingualNeural
 DATEN_ORDNER=$DATEN
 ENDE
   chmod 600 .env

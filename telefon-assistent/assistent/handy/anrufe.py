@@ -3,6 +3,7 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 import aiohttp
 from loguru import logger
@@ -13,6 +14,7 @@ from ..einstellungen import Einstellungen
 from .gemini import GEMINI_URL, GeminiFehler, GeminiGespraech
 from .gespraech import Gespraech, Gespraechsergebnis
 from .sip import AnrufFehler, Telefon, Telefonat
+from .stimme import MICROSOFT_STIMMEN, PROBESATZ, EdgeStimme, pcm_zu_ogg
 
 Melden = Callable[[str], Awaitable[None]]
 
@@ -50,9 +52,38 @@ class HandyAnrufverwaltung:
 
     async def status(self) -> str:
         art = f"Gesprächs-KI: {'Gemini Live (' + self.gemini.modell + ')' if self.gemini else 'Groq + Stimme'}"
+        if not self.gemini and hasattr(self.stimme, "beschreibung"):
+            art += f"\n{self.stimme.beschreibung()}"
         if self.telefon.angemeldet:
             return f"FRITZ!Box-Anmeldung: ✅ ({self.telefon.lokale_ip})\n{art}"
         return f"FRITZ!Box-Anmeldung: ❌ {self.telefon.letzter_fehler or 'noch nicht verbunden'}\n{art}"
+
+    # ---------- Stimme auswählen ----------
+
+    @property
+    def _stimm_datei(self) -> Path:
+        return Path(self.einst.daten_ordner) / "stimme.txt"
+
+    def _vorstellung(self) -> tuple[str, bool]:
+        if self.gemini or not hasattr(self.stimme, "vorstellung"):
+            return "", True
+        return self.stimme.vorstellung()
+
+    async def stimmprobe(self, kurzname: str) -> bytes:
+        """Probesatz mit einer Microsoft-Stimme als Telegram-Sprachnachricht (Telefonqualität)."""
+        probe = EdgeStimme(kurzname)
+        rolle = "die KI-Assistentin" if probe.weiblich else "der KI-Assistent"
+        text = PROBESATZ.format(name=probe.vorname, rolle=rolle, inhaber=self.einst.inhaber)
+        return await pcm_zu_ogg(await asyncio.wait_for(probe.sprechen(text), 20))
+
+    def stimme_waehlen(self, kurzname: str) -> str:
+        self.stimme.microsoft_waehlen(kurzname)
+        self._stimm_datei.write_text(kurzname, encoding="utf-8")
+        return self.stimme.beschreibung()
+
+    @staticmethod
+    def stimmen_liste() -> list[tuple[str, str, bool]]:
+        return MICROSOFT_STIMMEN
 
     async def _gemini_vorbereiten(self, telefonat, systemtext: str, selbst_beginnen: bool) -> GeminiGespraech | None:
         """Verbindet mit Gemini Live; klappt das nicht, wird die klassische Variante genutzt."""
@@ -98,8 +129,9 @@ class HandyAnrufverwaltung:
         return True
 
     async def _ausgehend(self, anruf: Anruf) -> None:
+        name, weiblich = self._vorstellung()
         systemtext = texte.gespraech_raus(self.einst.inhaber, anruf.ziel, anruf.auftrag, anruf.spielraum,
-                                          self.einst.rueckrufnummer, jetzt())
+                                          self.einst.rueckrufnummer, jetzt(), name, weiblich)
         gemini = None
         try:
             # Gemini schon vor dem Wählen verbinden, damit nach dem Abheben keine Zeit verloren geht
@@ -137,7 +169,7 @@ class HandyAnrufverwaltung:
             await telefonat.auflegen()
             return
         self._telefonat = telefonat
-        systemtext = texte.gespraech_rein(self.einst.inhaber, jetzt())
+        systemtext = texte.gespraech_rein(self.einst.inhaber, jetzt(), *self._vorstellung())
         try:
             gemini = await self._gemini_vorbereiten(telefonat, systemtext, selbst_beginnen=True)
             ergebnis = await self._gespraech(telefonat, systemtext, True, gemini)

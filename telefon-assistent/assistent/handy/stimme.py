@@ -5,6 +5,7 @@ import ctypes
 import ctypes.util
 import json
 import re
+import time
 import unicodedata
 from pathlib import Path
 
@@ -16,6 +17,29 @@ from . import audio
 
 class StimmenFehler(Exception):
     pass
+
+
+# Deutsche Microsoft-Stimmen zur Auswahl: (Kurzname, Vorname für die Vorstellung, weiblich?)
+MICROSOFT_STIMMEN = [
+    ("de-DE-SeraphinaMultilingualNeural", "Seraphina", True),
+    ("de-DE-KatjaNeural", "Katja", True),
+    ("de-DE-AmalaNeural", "Amala", True),
+    ("de-DE-FlorianMultilingualNeural", "Florian", False),
+    ("de-DE-ConradNeural", "Conrad", False),
+    ("de-DE-KillianNeural", "Killian", False),
+]
+PROBESATZ = ("Hallo, hier ist {name}, {rolle} von {inhaber}. Ich wollte mal fragen, ob heute Abend "
+             "so gegen sieben noch ein Tisch für zwei Personen frei ist?")
+PAUSE_NACH_FEHLER = 300  # s
+
+
+def stimme_info(kurzname: str) -> tuple[str, bool]:
+    """Vorname und Geschlecht zu einer Microsoft-Stimme (unbekannt: Vorname aus dem Namen)."""
+    for name, vorname, weiblich in MICROSOFT_STIMMEN:
+        if name.lower() == kurzname.lower():
+            return vorname, weiblich
+    vorname = re.sub(r"(Multilingual)?Neural$", "", kurzname.split("-")[-1]) or "Assistent"
+    return vorname, True
 
 
 async def mp3_zu_pcm(mp3: bytes) -> np.ndarray:
@@ -31,14 +55,31 @@ async def mp3_zu_pcm(mp3: bytes) -> np.ndarray:
     return np.frombuffer(ausgabe, dtype=np.int16)
 
 
+async def pcm_zu_ogg(pcm: np.ndarray) -> bytes:
+    """8-kHz-PCM → OGG/Opus (Telegram-Sprachnachricht) – klingt so, wie es am Telefon ankommt."""
+    roh = audio.als_int16(pcm).tobytes()
+    fehler = b""
+    for kodierer in (["-c:a", "libopus"], ["-c:a", "opus", "-strict", "-2"]):  # ohne libopus: eingebauter
+        prozess = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "s16le", "-ar", str(audio.ABTASTRATE),
+            "-ac", "1", "-i", "pipe:0", *kodierer, "-ar", "48000", "-b:a", "32k", "-f", "ogg", "pipe:1",
+            stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        ausgabe, fehler = await prozess.communicate(roh)
+        if prozess.returncode == 0 and ausgabe:
+            return ausgabe
+    raise StimmenFehler(f"ffmpeg: {fehler.decode(errors='replace')[:200]}")
+
+
 class EdgeStimme:
     """Microsoft-Neural-Stimmen (wie beim Vorlesen im Edge-Browser). Sehr natürlich, braucht Internet."""
 
     name = "Microsoft"
 
-    def __init__(self, stimme: str = "de-DE-KatjaNeural", tempo: str = "+5%"):
+    def __init__(self, stimme: str = "de-DE-SeraphinaMultilingualNeural", tempo: str = "+0%"):
         self.stimme = stimme
         self.tempo = tempo
+        self.vorname, self.weiblich = stimme_info(stimme)
 
     async def sprechen(self, text: str) -> np.ndarray:
         import edge_tts
@@ -143,18 +184,60 @@ class Stimmen:
         if not stimmen:
             raise StimmenFehler("Keine Stimme verfügbar")
         self.stimmen = stimmen
+        self.zuletzt = ""  # Name der zuletzt benutzten Stimme
+        self.fehler: dict[str, str] = {}  # letzter Fehler je Stimme
+        self._pause_bis: dict[str, float] = {}
+
+    @property
+    def microsoft(self) -> EdgeStimme | None:
+        return next((s for s in self.stimmen if isinstance(s, EdgeStimme)), None)
+
+    def vorstellung(self) -> tuple[str, bool]:
+        """Vorname und Geschlecht, mit denen sich der Assistent am Telefon vorstellt."""
+        ms = self.microsoft
+        return (ms.vorname, ms.weiblich) if ms else ("", True)
+
+    def microsoft_waehlen(self, kurzname: str) -> None:
+        ms = self.microsoft
+        if ms is None:
+            ms = EdgeStimme(kurzname)
+            self.stimmen.insert(0, ms)
+        ms.stimme = kurzname
+        ms.vorname, ms.weiblich = stimme_info(kurzname)
+        self.stimmen.remove(ms)
+        self.stimmen.insert(0, ms)  # die gewählte Stimme wieder zuerst probieren
+        self.fehler.pop(ms.name, None)
+        self._pause_bis.pop(ms.name, None)
+
+    def beschreibung(self) -> str:
+        ms = self.microsoft
+        if ms is None:
+            return "Stimme: Piper (lokal, klingt künstlich)"
+        text = f"Stimme: Microsoft {ms.vorname}"
+        if ms.name in self.fehler:
+            text += f" ⚠️ zuletzt nicht erreichbar ({self.fehler[ms.name][:80]}) – Ersatz: Piper (klingt künstlich)"
+        elif self.zuletzt and self.zuletzt != ms.name:
+            text += f" ⚠️ zuletzt sprach die Ersatzstimme {self.zuletzt}"
+        return text
 
     async def sprechen(self, text: str) -> np.ndarray:
         letzter_fehler = None
-        for stimme in list(self.stimmen):
+        jetzt = time.monotonic()
+        # Eine kurz ausgefallene Stimme wird ein paar Minuten übersprungen, danach wieder probiert.
+        reihenfolge = sorted(self.stimmen, key=lambda s: self._pause_bis.get(s.name, 0) > jetzt)
+        for stimme in reihenfolge:
             try:
-                return await asyncio.wait_for(stimme.sprechen(text), 15)
+                ton = await asyncio.wait_for(stimme.sprechen(text), 10 if isinstance(stimme, EdgeStimme) else 30)
+                self.zuletzt = stimme.name
+                self.fehler.pop(stimme.name, None)
+                self._pause_bis.pop(stimme.name, None)
+                return ton
             except Exception as fehler:
                 letzter_fehler = fehler
-                logger.warning(f"Stimme {stimme.name} fehlgeschlagen: {fehler}")
-                if len(self.stimmen) > 1 and stimme is self.stimmen[0]:
-                    # Für den Rest des Tages die Ersatzstimme zuerst nehmen
-                    self.stimmen = self.stimmen[1:] + [stimme]
+                self.fehler[stimme.name] = f"{fehler.__class__.__name__}: {fehler}"
+                if len(self.stimmen) > 1:
+                    self._pause_bis[stimme.name] = time.monotonic() + PAUSE_NACH_FEHLER
+                logger.warning(f"Stimme {stimme.name} fehlgeschlagen: {fehler!r}")
         raise StimmenFehler(f"Keine Stimme funktioniert: {letzter_fehler}")
 
 

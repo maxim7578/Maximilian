@@ -16,7 +16,7 @@ Ist Gemini einmal nicht erreichbar, etwa weil ein Limit erreicht ist, übernimmt
 automatisch die klassische Variante. Du bekommst dann einen Hinweis in Telegram.
 
 **Stimme (klassische Variante):** Standardmäßig spricht der Assistent mit einer sehr natürlichen Microsoft-Neural-Stimme
-(„Katja“). Fällt sie aus, übernimmt automatisch die lokale Piper-Stimme. Die klingt künstlicher, läuft
+(„Seraphina“, auswählbar mit `/stimmen`). Fällt sie aus, übernimmt automatisch die lokale Piper-Stimme. Die klingt künstlicher, läuft
 aber ohne Internet.
 
 **Kosten:**
@@ -108,7 +108,8 @@ Der Ablauf:
 |---|---|
 | `/merken Da Mario: 0221 123456` | Nummer für später speichern |
 | `/auflegen` | laufenden Anruf beenden |
-| `/status` | zeigt, ob die FRITZ!Box-Anmeldung steht |
+| `/status` | zeigt, ob die FRITZ!Box-Anmeldung steht und welche Stimme spricht |
+| `/stimmen` | Stimmen anhören und auswählen |
 | `/abbrechen` | offene Rückfrage verwerfen |
 
 **Gemini Live nachträglich ein- oder ausschalten:** In `.env` `GESPRAECH=gemini` bzw.
@@ -124,9 +125,11 @@ probierst du ein paar aus, indem der Assistent dich selbst anruft.
   unter **Billing** ein Zahlungsmittel hinterlegen. Dort siehst du auch die aktuellen Preise und
   kannst ein Ausgabenlimit festlegen.
 
-**Andere Stimme (klassisch):** In `~/Maximilian/telefon-assistent/.env` bei `MICROSOFT_STIMME` z. B.
-`de-DE-ConradNeural` (männlich) oder `de-DE-SeraphinaMultilingualNeural` eintragen. Danach den
-Assistenten neu starten.
+**Andere Stimme (klassisch):** Schick dem Bot `/stimmen`. Du bekommst von jeder Microsoft-Stimme eine
+Hörprobe in Telefonqualität und tippst unter deiner Lieblingsstimme auf **„… nehmen“**. Der Assistent
+stellt sich dann mit diesem Vornamen vor, z. B. „Hallo, hier ist Seraphina, die KI-Assistentin von …“.
+Klingt es sehr künstlich, zeigt `/status`, ob gerade die Ersatzstimme Piper spricht, weil Microsoft
+nicht erreichbar war. Nach fünf Minuten probiert der Assistent Microsoft automatisch wieder.
 
 **Eingehende Anrufe annehmen:** In `.env` `EINGEHENDE_ANRUFE=an` setzen und neu starten.
 

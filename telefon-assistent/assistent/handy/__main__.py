@@ -54,8 +54,11 @@ async def main() -> None:
     daten = Path(einst.daten_ordner)
     daten.mkdir(parents=True, exist_ok=True)
     piper = Path(os.getenv("PIPER_MODELL", str(daten / "piper" / f"{einst.piper_stimme}.onnx")))
+    gewaehlt = daten / "stimme.txt"  # per Telegram (/stimme) ausgewählte Stimme
+    microsoft = gewaehlt.read_text(encoding="utf-8").strip() if gewaehlt.exists() else ""
     stimme = stimmen_laden(
-        os.getenv("STIMME", "microsoft").lower(), os.getenv("MICROSOFT_STIMME", "de-DE-KatjaNeural"), piper
+        os.getenv("STIMME", "microsoft").lower(),
+        microsoft or os.getenv("MICROSOFT_STIMME", "de-DE-SeraphinaMultilingualNeural"), piper,
     )
     logger.info(f"Stimmen: {', '.join(s.name for s in stimme.stimmen)}")
 
@@ -87,6 +90,11 @@ async def main() -> None:
             if telefon.angemeldet:
                 break
             await asyncio.sleep(0.2)
+        if gemini is None:
+            try:  # einmal ausprobieren, damit /status und die Startmeldung zeigen, ob Microsoft geht
+                await stimme.sprechen("Test.")
+            except Exception as fehler:
+                logger.warning(f"Keine Stimme funktioniert: {fehler}")
         logger.info(f"Telefonassistent läuft. {await bot.anrufe.status()}")
         if einst.telegram_chat_id is None:
             logger.warning("TELEGRAM_CHAT_ID fehlt: Schick deinem Bot /start, um deine Chat-ID zu erfahren.")

@@ -28,6 +28,7 @@ HILFE = (
     "/merken Name: Nummer – Nummer speichern, z. B. /merken Da Mario: 0221 123456\n"
     "/auflegen – laufenden Anruf beenden\n"
     "/status – prüfen, ob alles läuft\n"
+    "/stimmen – Stimmen anhören und auswählen\n"
     "/abbrechen – offene Rückfrage verwerfen"
 )
 
@@ -55,6 +56,7 @@ class TelegramBot:
         self.app.add_handler(CommandHandler("auflegen", self._auflegen))
         self.app.add_handler(CommandHandler("status", self._status))
         self.app.add_handler(CommandHandler("abbrechen", self._abbrechen))
+        self.app.add_handler(CommandHandler(["stimmen", "stimme"], self._stimmen))
         self.app.add_handler(CallbackQueryHandler(self._knopf))
         self.app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, self._sprachnachricht))
         self.app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._textnachricht))
@@ -116,6 +118,38 @@ class TelegramBot:
             return
         self.offen = Offen()
         await update.effective_message.reply_text("Alles klar, verworfen.")
+
+    async def _stimmen(self, update: Update, _):
+        """Schickt von jeder Stimme eine Hörprobe in Telefonqualität, mit Knopf zum Auswählen."""
+        if not self._erlaubt(update):
+            return
+        nachricht = update.effective_message
+        if not hasattr(self.anrufe, "stimmprobe"):
+            await nachricht.reply_text("Die Stimmauswahl gibt es nur in der Handy-Version.")
+            return
+        await nachricht.reply_text(
+            f"{await self.anrufe.status()}\n\nHier sind die Stimmen zum Anhören – so klingen sie am Telefon. "
+            "Tipp unter deiner Lieblingsstimme auf „Diese nehmen“."
+        )
+        for i, (kurzname, vorname, weiblich) in enumerate(self.anrufe.stimmen_liste()):
+            knopf = InlineKeyboardMarkup([[InlineKeyboardButton(f"✅ {vorname} nehmen", callback_data=f"stimme:{i}")]])
+            try:
+                ogg = await self.anrufe.stimmprobe(kurzname)
+            except Exception as fehler:
+                logger.warning(f"Hörprobe {kurzname} fehlgeschlagen: {fehler!r}")
+                await nachricht.reply_text(
+                    f"❌ {vorname}: Microsoft-Stimme nicht erreichbar ({fehler.__class__.__name__}: {fehler})"[:500])
+                continue
+            await nachricht.reply_voice(ogg, caption=f"{vorname} ({'weiblich' if weiblich else 'männlich'})",
+                                        reply_markup=knopf)
+
+    async def _stimme_gewaehlt(self, abfrage, nummer: str) -> None:
+        liste = self.anrufe.stimmen_liste()
+        if not nummer.isdigit() or int(nummer) >= len(liste):
+            return
+        kurzname, vorname, _ = liste[int(nummer)]
+        beschreibung = self.anrufe.stimme_waehlen(kurzname)
+        await abfrage.message.reply_text(f"✅ Ab jetzt spricht {vorname}. ({beschreibung})")
 
     async def _sprachnachricht(self, update: Update, _):
         if not self._erlaubt(update):
@@ -224,6 +258,9 @@ class TelegramBot:
         if not self._erlaubt(update):
             return
         aktion, _, anruf_id = (abfrage.data or "").partition(":")
+        if aktion == "stimme":
+            await self._stimme_gewaehlt(abfrage, anruf_id)
+            return
         anruf = self.offen.anruf
         if anruf is None or anruf.id != anruf_id:
             await abfrage.edit_message_reply_markup(None)
