@@ -76,7 +76,7 @@ class EdgeStimme:
 
     name = "Microsoft"
 
-    def __init__(self, stimme: str = "de-DE-SeraphinaMultilingualNeural", tempo: str = "+0%"):
+    def __init__(self, stimme: str = "de-DE-SeraphinaMultilingualNeural", tempo: str = "+8%"):
         self.stimme = stimme
         self.tempo = tempo
         self.vorname, self.weiblich = stimme_info(stimme)
@@ -241,10 +241,10 @@ class Stimmen:
         raise StimmenFehler(f"Keine Stimme funktioniert: {letzter_fehler}")
 
 
-def stimmen_laden(art: str, edge_stimme: str, piper_modell: Path | None) -> Stimmen:
+def stimmen_laden(art: str, edge_stimme: str, piper_modell: Path | None, tempo: str = "+8%") -> Stimmen:
     liste = []
     if art in ("microsoft", "edge"):
-        liste.append(EdgeStimme(edge_stimme))
+        liste.append(EdgeStimme(edge_stimme, tempo))
     if piper_modell and piper_modell.exists():
         try:
             liste.append(PiperStimme(piper_modell))

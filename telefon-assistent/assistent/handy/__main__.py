@@ -59,6 +59,7 @@ async def main() -> None:
     stimme = stimmen_laden(
         os.getenv("STIMME", "microsoft").lower(),
         microsoft or os.getenv("MICROSOFT_STIMME", "de-DE-SeraphinaMultilingualNeural"), piper,
+        os.getenv("MICROSOFT_TEMPO", "+8%"),  # Sprechtempo, z. B. "+15%" schneller, "-5%" langsamer
     )
     logger.info(f"Stimmen: {', '.join(s.name for s in stimme.stimmen)}")
 

@@ -71,7 +71,8 @@ class HandyAnrufverwaltung:
 
     async def stimmprobe(self, kurzname: str) -> bytes:
         """Probesatz mit einer Microsoft-Stimme als Telegram-Sprachnachricht (Telefonqualität)."""
-        probe = EdgeStimme(kurzname)
+        aktuell = getattr(self.stimme, "microsoft", None)
+        probe = EdgeStimme(kurzname, aktuell.tempo) if aktuell else EdgeStimme(kurzname)
         rolle = "die KI-Assistentin" if probe.weiblich else "der KI-Assistent"
         text = PROBESATZ.format(name=probe.vorname, rolle=rolle, inhaber=self.einst.inhaber)
         return await pcm_zu_ogg(await asyncio.wait_for(probe.sprechen(text), 20))
@@ -157,7 +158,8 @@ class HandyAnrufverwaltung:
                 f"Ergebnis laut Assistent: {ergebnis.ergebnis or 'nicht festgehalten'}\n"
                 f"Erledigt: {'ja' if ergebnis.erfolgreich else 'nein oder unklar'}"
             )
-            await self._bericht_senden("raus", f"📋 Bericht – Anruf bei {anruf.ziel}", details, ergebnis)
+            await self._bericht_senden("raus", f"📋 Bericht – Anruf bei {anruf.ziel}", details, ergebnis,
+                                       self._ruckel_hinweis(self._telefonat))
         finally:
             if gemini is not None and gemini._ws is not None:
                 await gemini._ws.close()  # Anruf kam nicht zustande
@@ -179,9 +181,20 @@ class HandyAnrufverwaltung:
             f"Anrufer-Nummer: {ergebnis.anrufer or 'unterdrückt'}\n"
             f"Notiz des Assistenten: {ergebnis.ergebnis or 'keine'}"
         )
-        await self._bericht_senden("rein", f"📥 Anruf von {ergebnis.anrufer or 'unbekannt'}", details, ergebnis)
+        await self._bericht_senden("rein", f"📥 Anruf von {ergebnis.anrufer or 'unbekannt'}", details, ergebnis,
+                                   self._ruckel_hinweis(telefonat))
 
-    async def _bericht_senden(self, richtung: str, titel: str, details: str, ergebnis: Gespraechsergebnis) -> None:
+    @staticmethod
+    def _ruckel_hinweis(telefonat) -> str:
+        anzahl = getattr(getattr(telefonat, "rtp", None), "verspaetet", 0)
+        if not anzahl:
+            return ""
+        return (f"\n\n⚠️ Der Ton hat während des Gesprächs {anzahl}× gestockt, weil das Samsung ausgebremst "
+                "wurde. Das klingt am Telefon roboterhaft. Abhilfe: Entwickleroptionen → „Aktiv lassen“ "
+                "und Termux beim Akku auf „Nicht eingeschränkt“.")
+
+    async def _bericht_senden(self, richtung: str, titel: str, details: str, ergebnis: Gespraechsergebnis,
+                              hinweis: str = "") -> None:
         protokoll = ergebnis.protokoll_text()
         try:
             bericht = await self.ki.bericht_schreiben(richtung, details, protokoll)
@@ -191,4 +204,4 @@ class HandyAnrufverwaltung:
         text = f"{titel}\n\n{bericht}"
         if protokoll:
             text += f"\n\n— Protokoll —\n{protokoll}"
-        await self.melden(text[:4000])
+        await self.melden(text[:4000 - len(hinweis)] + hinweis)

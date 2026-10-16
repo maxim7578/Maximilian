@@ -6,9 +6,12 @@ G.711 (A-law/µ-law), Auflegen in beide Richtungen, Abbrechen (CANCEL), Besetzt 
 
 import asyncio
 import hashlib
+import os
 import random
 import re
 import socket
+import threading
+import time
 import uuid
 from collections import deque
 from collections.abc import Awaitable, Callable
@@ -171,7 +174,10 @@ class RtpStrom(asyncio.DatagramProtocol):
         self.eingang: asyncio.Queue[np.ndarray] = asyncio.Queue(maxsize=500)
         self._ausgang: deque[np.ndarray] = deque()
         self._transport: asyncio.DatagramTransport | None = None
-        self._sender: asyncio.Task | None = None
+        self._sender: threading.Thread | None = None
+        self._stopp = threading.Event()
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self.verspaetet = 0  # wie oft das Senden > 100 ms hinterher war (Handy ausgebremst)
         self._seq = random.randint(0, 65535)
         self._zeit = random.randint(0, 2**31)
         self._ssrc = random.randint(0, 2**31)
@@ -195,8 +201,11 @@ class RtpStrom(asyncio.DatagramProtocol):
         self.ziel, self.nutzlast = (ip, port), nutzlast
         while not self.eingang.empty():  # Freizeichen o. Ä. von vor dem Abheben verwerfen
             self.eingang.get_nowait()
-        if self._sender is None:
-            self._sender = asyncio.create_task(self._senden_im_takt())
+        if self._sender is None and self._transport is not None:
+            self._loop = asyncio.get_running_loop()
+            sock = socket.socket(fileno=os.dup(self._transport.get_extra_info("socket").fileno()))
+            self._sender = threading.Thread(target=self._senden_im_takt, args=(sock,), daemon=True)
+            self._sender.start()
 
     def datagram_received(self, daten: bytes, adresse) -> None:
         if len(daten) < 12 or daten[0] >> 6 != 2 or self.ziel is None:
@@ -236,30 +245,50 @@ class RtpStrom(asyncio.DatagramProtocol):
     async def warte_bis_ausgegeben(self) -> None:
         await self._leer.wait()
 
-    async def _senden_im_takt(self) -> None:
-        loop = asyncio.get_running_loop()
+    def _ausgabe_pruefen(self) -> None:
+        if not self._ausgang:
+            self._leer.set()
+
+    def _senden_im_takt(self, sock: socket.socket) -> None:
+        """Eigener Thread: sendet alle 20 ms ein Paket – unabhängig davon, was sonst gerade läuft.
+
+        Kommt der Thread zu spät dran (Handy kurz ausgelastet), werden die fälligen Pakete
+        sofort nachgeschickt, damit die Sprache nicht langsamer wird.
+        """
         stille = np.zeros(audio.RAHMEN, dtype=np.int16)
-        naechster = loop.time()
-        while True:
-            rahmen = self._ausgang.popleft() if self._ausgang else stille
-            if not self._ausgang:
-                self._leer.set()
-            if self._transport and self.ziel:
-                kopf = bytes([0x80, self.nutzlast]) + self._seq.to_bytes(2, "big")
-                kopf += self._zeit.to_bytes(4, "big") + self._ssrc.to_bytes(4, "big")
-                self._transport.sendto(kopf + audio.kodieren(rahmen, self.nutzlast), self.ziel)
-            self._seq = (self._seq + 1) % 65536
-            self._zeit = (self._zeit + audio.RAHMEN) % 2**32
-            naechster += 0.02
-            warten = naechster - loop.time()
-            if warten < -0.2:  # zu weit hinterher (z. B. Handy war kurz ausgelastet)
-                naechster = loop.time()
-                warten = 0
-            await asyncio.sleep(max(0.0, warten))
+        naechster = time.perf_counter()
+        hinterher = False
+        try:
+            while not self._stopp.is_set():
+                rahmen = self._ausgang.popleft() if self._ausgang else stille
+                if not self._ausgang and self._loop is not None and not self._leer.is_set():
+                    self._loop.call_soon_threadsafe(self._ausgabe_pruefen)
+                if self.ziel:
+                    kopf = bytes([0x80, self.nutzlast]) + self._seq.to_bytes(2, "big")
+                    kopf += self._zeit.to_bytes(4, "big") + self._ssrc.to_bytes(4, "big")
+                    try:
+                        sock.sendto(kopf + audio.kodieren(rahmen, self.nutzlast), self.ziel)
+                    except OSError:
+                        pass
+                self._seq = (self._seq + 1) % 65536
+                self._zeit = (self._zeit + audio.RAHMEN) % 2**32
+                naechster += 0.02
+                warten = naechster - time.perf_counter()
+                if warten > 0:
+                    hinterher = False
+                    time.sleep(warten)
+                elif warten < -0.1 and not hinterher:
+                    hinterher = True
+                    self.verspaetet += 1
+                if warten < -1.0:  # mehr als 1 s hinterher: nicht alles nachholen
+                    naechster = time.perf_counter()
+        finally:
+            sock.close()
 
     def schliessen(self) -> None:
+        self._stopp.set()
         if self._sender:
-            self._sender.cancel()
+            self._sender.join(0.2)
         if self._transport:
             self._transport.close()
 

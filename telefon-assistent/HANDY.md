@@ -88,7 +88,11 @@ One-UI-Version heißen die Menüpunkte leicht anders; die Suche (Lupe) in den Ei
 4. Das Handy bleibt am **Ladekabel** und im **WLAN**.
 5. *Empfohlen:* In der FRITZ!Box unter **Heimnetz → Netzwerk** beim Samsung „**Diesem Netzwerkgerät immer
    die gleiche IPv4-Adresse zuweisen**“ einschalten.
-6. *Falls der Assistent trotzdem nach einiger Zeit verschwindet:* **Einstellungen → Telefoninfo →
+6. **Ton klingt nach einer Weile roboterhaft oder langsam?** Dann bremst Android das Handy bei
+   ausgeschaltetem Bildschirm aus. Abhilfe: Entwickleroptionen freischalten (siehe Punkt 7) und dort
+   „**Aktiv lassen**“ einschalten. Dann bleibt der Bildschirm beim Laden an (ganz dunkel stellen).
+   Der Bericht nach jedem Anruf warnt, wenn der Ton gestockt hat.
+7. *Falls der Assistent trotzdem nach einiger Zeit verschwindet:* **Einstellungen → Telefoninfo →
    Softwareinformationen** → 7× auf **Buildnummer** tippen. Dann unter **Einstellungen →
    Entwickleroptionen** „**Einschränkungen für untergeordnete Prozesse deaktivieren**“ einschalten.
 
@@ -130,6 +134,7 @@ Hörprobe in Telefonqualität und tippst unter deiner Lieblingsstimme auf **„�
 stellt sich dann mit diesem Vornamen vor, z. B. „Hallo, hier ist Seraphina, die KI-Assistentin von …“.
 Klingt es sehr künstlich, zeigt `/status`, ob gerade die Ersatzstimme Piper spricht, weil Microsoft
 nicht erreichbar war. Nach fünf Minuten probiert der Assistent Microsoft automatisch wieder.
+Zu langsam oder zu schnell? In `.env` z. B. `MICROSOFT_TEMPO=+15%` (schneller) oder `-5%` eintragen.
 
 **Eingehende Anrufe annehmen:** In `.env` `EINGEHENDE_ANRUFE=an` setzen und neu starten.
 
