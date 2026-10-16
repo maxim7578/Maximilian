@@ -57,7 +57,7 @@ aber ohne Internet.
    Termux lange tippen → **Einfügen**.
 
    ```
-   yes | pkg upgrade && pkg install -y curl && curl -sL https://raw.githubusercontent.com/maxim7578/Maximilian/claude/gracious-sagan-dus97i/telefon-assistent/einrichten-handy.sh | bash
+   apt update && yes | apt full-upgrade && pkg install -y curl && curl -sL https://raw.githubusercontent.com/maxim7578/Maximilian/claude/gracious-sagan-dus97i/telefon-assistent/einrichten-handy.sh | bash
    ```
 
 3. Das Skript installiert alles. Das dauert einige Minuten. Danach fragt es nach:
