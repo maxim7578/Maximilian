@@ -232,3 +232,46 @@ async def test_begruessung_faellt_aus_dann_wie_bisher():
         begruessung="Hallo, guten Tag!").fuehren(), 10)
     assert ki.verlaeufe[0][-1] == {"role": "user", "content": "Restaurant Da Mario, guten Tag."}
     assert leitung.aufgelegt and ergebnis.erfolgreich
+
+
+class StromKI(KI):
+    """Schein-KI mit gestreamter Antwort: liefert Satz für Satz mit Verzögerung."""
+
+    def __init__(self, saetze, transkript="Hallo, Da Mario?"):
+        super().__init__([], transkript)
+        self.saetze = saetze
+        self.zeitpunkte = []
+
+    async def gespraech_antwort_strom(self, verlauf, werkzeuge, bei_satz):
+        self.verlaeufe.append(list(verlauf))
+        for satz in self.saetze:
+            await bei_satz(satz)
+            self.zeitpunkte.append(asyncio.get_running_loop().time())
+            await asyncio.sleep(0.3)  # die KI "schreibt" noch weiter
+        return Antwort(text=" ".join(self.saetze), roh={"role": "assistant", "content": " ".join(self.saetze)})
+
+
+class ZeitStimme(Stimme):
+    def __init__(self):
+        super().__init__()
+        self.zeitpunkte = []
+
+    async def sprechen(self, text):
+        self.zeitpunkte.append(asyncio.get_running_loop().time())
+        return await super().sprechen(text)
+
+
+@pytest.mark.asyncio
+async def test_erster_satz_wird_gesprochen_waehrend_die_ki_noch_schreibt():
+    leitung = Leitung(np.concatenate([sprache(0.8), stille(5)]))
+    gesendet_um = []
+    original = leitung.senden
+    leitung.senden = lambda pcm: (gesendet_um.append(asyncio.get_running_loop().time()), original(pcm))
+    ki, stimme = StromKI(["Okay.", "Für wie viele Personen?", "Und um wie viel Uhr?"]), ZeitStimme()
+    aufgabe = asyncio.create_task(Gespraech(leitung, ki, stimme, "System", False, 60).fuehren())
+    await asyncio.sleep(2.5)
+    assert stimme.texte == ["Okay.", "Für wie viele Personen?", "Und um wie viel Uhr?"]
+    assert gesendet_um[0] < ki.zeitpunkte[-1]  # schon gesprochen, bevor die KI fertig war
+    await leitung.auflegen()
+    ergebnis = await aufgabe
+    assert len(ergebnis.antwortzeiten) == 1 and ergebnis.antwortzeiten[0] < 0.5

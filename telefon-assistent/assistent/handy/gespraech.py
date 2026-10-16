@@ -13,6 +13,7 @@ SELBST_BEGINNEN_NACH = 3.0  # s: meldet sich niemand hörbar, beginnt der Assist
 VORLAUF_RAHMEN = 15  # 300 ms Ton vor dem erkannten Sprechbeginn mitnehmen
 MAX_AEUSSERUNG_S = 25
 MIN_WOERTER_VOR_AUFLEGEN = 4  # so wenig Gehörtes reicht nicht, um auf "Anrufbeantworter" zu schließen
+ENDE_NACH_STILLE_MS = 500  # so lange Pause = Gegenüber ist fertig (kürzer = schnellere Antwort)
 UNTERBRECHEN_NACH_RAHMEN = 20  # 400 ms Sprache des Gegenübers unterbricht den Assistenten
 
 # Whisper "hört" in Stille gern solche Sätze – die ignorieren wir.
@@ -48,6 +49,7 @@ class Gespraechsergebnis:
     erfolgreich: bool | None = None
     protokoll: list[tuple[str, str]] = field(default_factory=list)
     anrufer: str = ""
+    antwortzeiten: list[float] = field(default_factory=list)  # s vom Ende des Zuhörens bis zum Sprechen
 
     def protokoll_text(self) -> str:
         return "\n".join(f"{wer}: {text}" for wer, text in self.protokoll)
@@ -77,11 +79,12 @@ class Gespraech:
         self._spricht_seit = 0
         self._beenden = False
         self._unterbrochen = False
+        self._denken_seit: float | None = None  # seit wann auf die Antwort gewartet wird
 
     # ---------- Zuhören ----------
 
     async def _zuhoeren(self) -> None:
-        erkennung = audio.Sprecherkennung()
+        erkennung = audio.Sprecherkennung(ende_ms=ENDE_NACH_STILLE_MS)
         vorlauf: list[np.ndarray] = []
         aktuell: list[np.ndarray] = []
         rest = np.zeros(0, dtype=np.int16)
@@ -124,6 +127,7 @@ class Gespraech:
                 ton = await aufgabe
                 if self._unterbrochen:
                     break
+                self._zeit_messen()
                 self.leitung.senden(ton)
         finally:
             for aufgabe in aufgaben:
@@ -136,8 +140,61 @@ class Gespraech:
         gehoert = " ".join(text for wer, text in self.ergebnis.protokoll if wer == "Gegenüber")
         return len(gehoert.split()) < MIN_WOERTER_VOR_AUFLEGEN
 
+    def _zeit_messen(self) -> None:
+        if self._denken_seit is not None:
+            dauer = asyncio.get_running_loop().time() - self._denken_seit
+            self.ergebnis.antwortzeiten.append(dauer)
+            logger.info(f"Antwort nach {dauer:.1f} s (+ {ENDE_NACH_STILLE_MS} ms Pause)")
+            self._denken_seit = None
+
+    async def _abspielen(self, warteschlange: asyncio.Queue) -> None:
+        """Spielt erzeugte Sätze der Reihe nach ab, sobald der jeweilige Ton fertig ist."""
+        while (aufgabe := await warteschlange.get()) is not None:
+            try:
+                ton = await aufgabe
+            except Exception as fehler:
+                logger.warning(f"Satz konnte nicht gesprochen werden: {fehler}")
+                continue
+            if self._unterbrochen:
+                continue
+            self._zeit_messen()
+            self.leitung.senden(ton)
+
+    async def _ki_antwort_holen(self):
+        """Holt die Antwort der KI gestreamt: Sätze werden schon gesprochen, während sie entstehen."""
+        strom = getattr(self.ki, "gespraech_antwort_strom", None)
+        if strom is None:
+            antwort = await self.ki.gespraech_antwort(self.verlauf, [BEENDEN])
+            if antwort.text:
+                await self._sprechen(antwort.text)
+            return antwort
+        self._unterbrochen = False
+        warteschlange: asyncio.Queue = asyncio.Queue()
+        abspieler = asyncio.create_task(self._abspielen(warteschlange))
+        gesprochen: list[str] = []
+
+        async def bei_satz(satz: str) -> None:
+            gesprochen.append(satz)
+            if not self._unterbrochen:
+                await warteschlange.put(asyncio.create_task(self.stimme.sprechen(satz)))
+
+        try:
+            try:
+                return await strom(self.verlauf, [BEENDEN], bei_satz)
+            except Exception as fehler:
+                if gesprochen:
+                    raise
+                logger.warning(f"Gestreamte Antwort fehlgeschlagen, versuche es normal: {fehler}")
+                antwort = await self.ki.gespraech_antwort(self.verlauf, [BEENDEN])
+                for satz in saetze(antwort.text):
+                    await bei_satz(satz)
+                return antwort
+        finally:
+            await warteschlange.put(None)
+            await abspieler
+
     async def _ki_antwort(self, nachfassen: bool = True) -> None:
-        antwort = await self.ki.gespraech_antwort(self.verlauf, [BEENDEN])
+        antwort = await self._ki_antwort_holen()
         self.verlauf.append(antwort.roh)
         if antwort.werkzeug == "gespraech_beenden" and not antwort.text and nachfassen and self._zu_frueh_zum_auflegen():
             logger.info("KI wollte sofort auflegen, obwohl kaum etwas zu hören war – Assistent meldet sich stattdessen.")
@@ -148,7 +205,6 @@ class Gespraech:
             return
         if antwort.text:
             self.ergebnis.protokoll.append(("Assistent", antwort.text))
-            await self._sprechen(antwort.text)
         if antwort.werkzeug == "gespraech_beenden":
             argumente = antwort.argumente or {}
             self.ergebnis.ergebnis = str(argumente.get("ergebnis", ""))
@@ -228,8 +284,10 @@ class Gespraech:
             # Kurz hintereinander Gesagtes zusammenfassen
             while not self._aeusserungen.empty():
                 ton = np.concatenate([ton, self._aeusserungen.get_nowait()])
+            self._denken_seit = asyncio.get_running_loop().time()
             text = await self._verstehen(ton)
             if not text:
+                self._denken_seit = None
                 continue
             self._gehoert(text)
             await self._ki_antwort()

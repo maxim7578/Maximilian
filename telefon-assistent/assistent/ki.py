@@ -5,6 +5,8 @@ ohne zusätzliche Pakete läuft.
 """
 
 import json
+import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -13,6 +15,7 @@ import httpx
 from . import texte
 
 GROQ_URL = "https://api.groq.com/openai/v1"
+SATZENDE = re.compile(r"[.!?…](?=\s)|[.!?…]$")
 
 
 class KIFehler(Exception):
@@ -148,3 +151,62 @@ class KI:
             except json.JSONDecodeError:
                 antwort.argumente = {}
         return antwort
+
+    async def gespraech_antwort_strom(
+        self, nachrichten: list[dict], werkzeuge: list[dict], bei_satz: Callable[[str], Awaitable[None]],
+    ) -> Antwort:
+        """Wie gespraech_antwort, aber gestreamt: jeder fertige Satz geht sofort an bei_satz,
+        damit er schon gesprochen wird, während die KI noch weiterschreibt."""
+        nutzlast = {"model": self._llm_modell, "messages": nachrichten, "tools": werkzeuge,
+                    "tool_choice": "auto", "max_tokens": 400, "stream": True}
+        if self._llm_modell.startswith("openai/gpt-oss"):
+            nutzlast["reasoning_effort"] = "low"
+        text, offen = "", ""
+        aufrufe: dict[int, dict] = {}
+        async with self._client.stream("POST", "/chat/completions", json=nutzlast) as antwort:
+            if antwort.status_code >= 400:
+                inhalt = (await antwort.aread()).decode(errors="replace")
+                raise KIFehler(f"Groq-Fehler {antwort.status_code}: {inhalt[:300]}")
+            async for zeile in antwort.aiter_lines():
+                if not zeile.startswith("data:"):
+                    continue
+                daten = zeile[5:].strip()
+                if daten == "[DONE]":
+                    break
+                try:
+                    stueck = json.loads(daten)
+                except json.JSONDecodeError:
+                    continue
+                if "error" in stueck:
+                    raise KIFehler(f"Groq-Fehler: {str(stueck['error'])[:300]}")
+                delta = (stueck.get("choices") or [{}])[0].get("delta") or {}
+                for teil in delta.get("tool_calls") or []:
+                    eintrag = aufrufe.setdefault(teil.get("index", 0), {
+                        "id": "", "type": "function", "function": {"name": "", "arguments": ""}})
+                    eintrag["id"] = teil.get("id") or eintrag["id"]
+                    funktion = teil.get("function") or {}
+                    eintrag["function"]["name"] += funktion.get("name") or ""
+                    eintrag["function"]["arguments"] += funktion.get("arguments") or ""
+                neu = delta.get("content") or ""
+                if not neu:
+                    continue
+                text += neu
+                offen += neu
+                while (treffer := SATZENDE.search(offen)) is not None:
+                    satz, offen = offen[:treffer.end()].strip(), offen[treffer.end():]
+                    if satz:
+                        await bei_satz(satz)
+        if offen.strip():
+            await bei_satz(offen.strip())
+        roh = {"role": "assistant", "content": text}
+        ergebnis = Antwort(text=text.strip(), roh=roh)
+        if aufrufe:
+            aufruf = aufrufe[min(aufrufe)]
+            roh["tool_calls"] = [aufruf]
+            ergebnis.werkzeug = aufruf["function"]["name"]
+            ergebnis.werkzeug_id = aufruf["id"]
+            try:
+                ergebnis.argumente = json.loads(aufruf["function"]["arguments"] or "{}")
+            except json.JSONDecodeError:
+                ergebnis.argumente = {}
+        return ergebnis

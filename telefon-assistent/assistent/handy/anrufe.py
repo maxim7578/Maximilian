@@ -218,6 +218,9 @@ class HandyAnrufverwaltung:
             logger.warning(f"Bericht konnte nicht erstellt werden: {fehler}")
             bericht = details
         text = f"{titel}\n\n{bericht}"
+        if ergebnis.antwortzeiten:
+            schnitt = sum(ergebnis.antwortzeiten) / len(ergebnis.antwortzeiten) + 0.5  # + Pause bis "fertig"
+            text += f"\n\n⏱️ Antwortzeit im Schnitt: {schnitt:.1f} Sekunden"
         if protokoll:
             text += f"\n\n— Protokoll —\n{protokoll}"
         await self.melden(text[:4000 - len(hinweis)] + hinweis)
