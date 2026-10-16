@@ -19,12 +19,19 @@ from .stimme import MICROSOFT_STIMMEN, PROBESATZ, EdgeStimme, pcm_zu_ogg
 Melden = Callable[[str], Awaitable[None]]
 
 
+# gemini-3.8-live wechselt bei "Kore" manchmal für eine ganze Antwort auf eine Männerstimme
+# (Bericht im Google-Entwicklerforum, Oktober 2026); 2.5 native audio ist davon nicht betroffen.
+GEMINI_MODELL = "gemini-2.5-flash-native-audio-latest"
+GEMINI_ERSATZ_MODELL = "gemini-3.8-live"
+
+
 @dataclass
 class GeminiEinstellungen:
     api_key: str
-    modell: str = "gemini-3.8-live"
+    modell: str = GEMINI_MODELL
     stimme: str = "Kore"
     url: str = GEMINI_URL
+    ersatz_modell: str = GEMINI_ERSATZ_MODELL
 
 
 class HandyAnrufverwaltung:
@@ -88,22 +95,27 @@ class HandyAnrufverwaltung:
         return MICROSOFT_STIMMEN
 
     async def _gemini_vorbereiten(self, telefonat, systemtext: str, selbst_beginnen: bool) -> GeminiGespraech | None:
-        """Verbindet mit Gemini Live; klappt das nicht, wird die klassische Variante genutzt."""
+        """Verbindet mit Gemini Live (erst das eingestellte Modell, dann das Ersatzmodell);
+        klappt beides nicht, wird die klassische Variante genutzt."""
         if not self.gemini:
             return None
         if self._sitzung is None or self._sitzung.closed:
             self._sitzung = aiohttp.ClientSession(trust_env=True)
-        gespraech = GeminiGespraech(
-            telefonat, self.gemini.api_key, systemtext, selbst_beginnen, self.einst.max_gespraech_sekunden,
-            modell=self.gemini.modell, stimme=self.gemini.stimme, url=self.gemini.url,
-        )
-        try:
-            await gespraech.verbinden(self._sitzung)
-            return gespraech
-        except GeminiFehler as fehler:
-            logger.warning(f"Gemini Live nicht verfügbar, nutze klassische Variante: {fehler}")
-            await self.melden(f"ℹ️ Gemini Live ist gerade nicht verfügbar ({fehler}). Ich nutze diesmal die klassische Stimme.")
-            return None
+        modelle = [self.gemini.modell] + [m for m in [self.gemini.ersatz_modell] if m and m != self.gemini.modell]
+        fehler: GeminiFehler | None = None
+        for modell in modelle:
+            gespraech = GeminiGespraech(
+                telefonat, self.gemini.api_key, systemtext, selbst_beginnen, self.einst.max_gespraech_sekunden,
+                modell=modell, stimme=self.gemini.stimme, url=self.gemini.url,
+            )
+            try:
+                await gespraech.verbinden(self._sitzung)
+                return gespraech
+            except GeminiFehler as f:
+                fehler = f
+                logger.warning(f"Gemini-Modell {modell} nicht verfügbar: {f}")
+        await self.melden(f"ℹ️ Gemini Live ist gerade nicht verfügbar ({fehler}). Ich nutze diesmal die klassische Stimme.")
+        return None
 
     async def _gespraech(self, telefonat, systemtext: str, selbst_beginnen: bool,
                          gemini: GeminiGespraech | None, begruessung: str = "",

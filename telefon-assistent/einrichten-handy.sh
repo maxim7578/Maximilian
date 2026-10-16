@@ -100,7 +100,7 @@ EINGEHENDE_ANRUFE=aus
 #               oder klassisch (Groq + Stimme unten). Bei Problemen mit Gemini springt "klassisch" ein.
 GESPRAECH=$GESPRAECH
 GEMINI_API_KEY=$GEMINI
-GEMINI_MODELL=gemini-3.8-live
+GEMINI_MODELL=gemini-2.5-flash-native-audio-latest
 # Gemini-Stimmen z. B.: Kore, Aoede, Leda, Zephyr, Puck, Charon, Fenrir, Orus
 GEMINI_STIMME=Kore
 # Stimme der klassischen Variante: microsoft (sehr natürlich, braucht Internet) oder piper (lokal)

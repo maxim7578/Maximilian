@@ -118,7 +118,9 @@ Der Ablauf:
 
 **Gemini Live nachträglich ein- oder ausschalten:** In `.env` `GESPRAECH=gemini` bzw.
 `GESPRAECH=klassisch` setzen; für Gemini zusätzlich `GEMINI_API_KEY` eintragen. Danach den Assistenten
-neu starten. Die Gemini-Stimme wechselst du mit `GEMINI_STIMME`, z. B. `Aoede` oder `Puck`. Am besten
+neu starten. Die Gemini-Stimme wechselst du mit `GEMINI_STIMME`, z. B. `Aoede` oder `Puck`.
+Als Modell nimmt der Assistent `gemini-2.5-flash-native-audio-latest`, weil `gemini-3.8-live` derzeit
+manchmal mitten im Gespräch die Stimme wechselt. Ist das Modell nicht verfügbar, probiert er `gemini-3.8-live`. Am besten
 probierst du ein paar aus, indem der Assistent dich selbst anruft.
 
 **Was kostet Gemini Live?**

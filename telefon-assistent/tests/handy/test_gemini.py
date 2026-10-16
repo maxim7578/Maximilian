@@ -20,7 +20,7 @@ async def test_gemini_hoert_spricht_und_legt_auf():
         ergebnis = await asyncio.wait_for(g.fuehren(sitzung), 15)
     await server.stoppen()
     setup = server.setup
-    assert setup["model"] == "models/gemini-3.8-live"
+    assert setup["model"] == "models/gemini-2.5-flash-native-audio-latest"
     assert setup["generationConfig"]["responseModalities"] == ["AUDIO"]
     assert setup["generationConfig"]["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == "Kore"
     assert "Du bist ein Test." in setup["systemInstruction"]["parts"][0]["text"]
@@ -76,3 +76,32 @@ def test_abtaster_ohne_knackser():
 def test_hochtasten():
     x = np.array([0, 100, 200], dtype=np.int16)
     assert hochtasten(x).tolist() == [0, 50, 100, 150, 200, 200]
+
+
+@pytest.mark.asyncio
+async def test_ersatzmodell_wenn_modell_nicht_verfuegbar():
+    from types import SimpleNamespace
+
+    from assistent.handy.anrufe import GeminiEinstellungen, HandyAnrufverwaltung
+
+    server = ScheinGemini(nur_modell="gemini-3.8-live")
+    url = await server.starten()
+    meldungen = []
+
+    async def melden(text):
+        meldungen.append(text)
+
+    verwaltung = HandyAnrufverwaltung.__new__(HandyAnrufverwaltung)
+    verwaltung.einst = SimpleNamespace(max_gespraech_sekunden=60)
+    verwaltung.gemini = GeminiEinstellungen(api_key="k", url=url)
+    verwaltung._sitzung = None
+    verwaltung.melden = melden
+    try:
+        gespraech = await verwaltung._gemini_vorbereiten(None, "System", False)
+        assert gespraech is not None and gespraech.modell == "gemini-3.8-live"
+        assert server.modelle == ["models/gemini-2.5-flash-native-audio-latest", "models/gemini-3.8-live"]
+        assert meldungen == []
+        await gespraech._ws.close()
+    finally:
+        await verwaltung._sitzung.close()
+        await server.stoppen()

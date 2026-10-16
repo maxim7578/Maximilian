@@ -79,7 +79,7 @@ class GeminiGespraech:
         systemtext: str,
         selbst_beginnen: bool,
         max_sekunden: int,
-        modell: str = "gemini-3.8-live",
+        modell: str = "gemini-2.5-flash-native-audio-latest",
         stimme: str = "Kore",
         url: str = GEMINI_URL,
     ):

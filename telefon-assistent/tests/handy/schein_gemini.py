@@ -9,8 +9,10 @@ from aiohttp import web
 
 
 class ScheinGemini:
-    def __init__(self, ablehnen: str = ""):
+    def __init__(self, ablehnen: str = "", nur_modell: str = ""):
         self.ablehnen = ablehnen
+        self.nur_modell = nur_modell  # andere Modelle werden abgelehnt
+        self.modelle: list[str] = []
         self.setup: dict = {}
         self.hinweise: list[str] = []
         self.audio_sekunden = 0.0
@@ -38,8 +40,9 @@ class ScheinGemini:
         await ws.prepare(request)
         assert request.query.get("key")
         self.setup = json.loads((await ws.receive()).data)["setup"]
-        if self.ablehnen:
-            await ws.close(code=1008, message=self.ablehnen.encode())
+        self.modelle.append(self.setup["model"])
+        if self.ablehnen or (self.nur_modell and self.setup["model"] != f"models/{self.nur_modell}"):
+            await ws.close(code=1008, message=(self.ablehnen or "model not found").encode())
             return ws
         await ws.send_str(json.dumps({"setupComplete": {}}))
         laut = 0.0

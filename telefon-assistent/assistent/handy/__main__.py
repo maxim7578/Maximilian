@@ -13,7 +13,7 @@ from loguru import logger
 from ..einstellungen import Einstellungen, EinstellungsFehler
 from ..ki import KI
 from ..telegram_bot import TelegramBot
-from .anrufe import GeminiEinstellungen, HandyAnrufverwaltung
+from .anrufe import GEMINI_ERSATZ_MODELL, GEMINI_MODELL, GeminiEinstellungen, HandyAnrufverwaltung
 from .gemini import GEMINI_URL
 from .sip import Telefon
 from .stimme import stimmen_laden
@@ -75,7 +75,8 @@ async def main() -> None:
         try:
             gemini = GeminiEinstellungen(
                 api_key=_pflicht("GEMINI_API_KEY"),
-                modell=os.getenv("GEMINI_MODELL", "gemini-3.8-live"),
+                modell=os.getenv("GEMINI_MODELL", GEMINI_MODELL),
+                ersatz_modell=os.getenv("GEMINI_ERSATZ_MODELL", GEMINI_ERSATZ_MODELL),
                 stimme=os.getenv("GEMINI_STIMME", "Kore"),
                 url=os.getenv("GEMINI_URL", GEMINI_URL),
             )
