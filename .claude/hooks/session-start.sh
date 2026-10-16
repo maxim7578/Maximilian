@@ -44,3 +44,21 @@ if [ "$(cat "$MARKER" 2>/dev/null || true)" != "$HEAD_SHA" ]; then
 fi
 
 echo "gstack $(cat "$GSTACK_DIR/VERSION") ist installiert (Skills in ~/.claude/skills)."
+
+# Installiert graphify (https://github.com/Graphify-Labs/graphify) samt /graphify-Skill.
+# Ein Fehler hier bricht die Session nicht ab, gstack bleibt nutzbar.
+export PATH="$HOME/.local/bin:$PATH"
+GRAPHIFY_LOG="$HOME/.cache/gstack-session-start/graphify.log"
+if ! command -v graphify > /dev/null 2>&1; then
+  if ! uv tool install --quiet graphifyy > "$GRAPHIFY_LOG" 2>&1; then
+    echo "graphify-Installation ist fehlgeschlagen, Log: $GRAPHIFY_LOG" >&2
+    exit 0
+  fi
+fi
+if [ ! -f "$HOME/.claude/skills/graphify/SKILL.md" ]; then
+  graphify install --platform claude >> "$GRAPHIFY_LOG" 2>&1 || {
+    echo "graphify install ist fehlgeschlagen, Log: $GRAPHIFY_LOG" >&2
+    exit 0
+  }
+fi
+echo "$(graphify --version) ist installiert (Skill: /graphify)."
