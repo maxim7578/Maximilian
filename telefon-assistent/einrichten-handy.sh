@@ -7,9 +7,14 @@ ZWEIG="${ZWEIG:-claude/gracious-sagan-dus97i}"
 ORDNER="$HOME/Maximilian/telefon-assistent"
 DATEN="$HOME/telefon-daten"
 
-frage() { # frage VARIABLE "Text" [geheim]
+frage() { # frage VARIABLE "Text" [geheim] [Prüfmuster] [Hinweis bei falscher Eingabe]
   local antwort
-  if [ "$3" = "geheim" ]; then read -r -s -p "$2: " antwort < /dev/tty; echo; else read -r -p "$2: " antwort < /dev/tty; fi
+  while true; do
+    if [ "$3" = "geheim" ]; then read -r -s -p "$2: " antwort < /dev/tty; echo; else read -r -p "$2: " antwort < /dev/tty; fi
+    antwort="${antwort#"${antwort%%[![:space:]]*}"}"; antwort="${antwort%"${antwort##*[![:space:]]}"}"
+    if [ -z "$4" ] || [[ "$antwort" =~ $4 ]]; then break; fi
+    echo "  ⚠️  $5 Bitte nochmal eingeben."
+  done
   printf -v "$1" '%s' "$antwort"
 }
 
@@ -42,13 +47,22 @@ echo "=== 4/5 Deine Angaben ==="
 if [ -f .env ]; then
   echo "Es gibt schon eine .env – ich lasse sie unverändert. (Zum Neu-Eingeben: rm $ORDNER/.env und Skript erneut starten.)"
 else
-  frage TOKEN "Telegram-Token von BotFather"
-  frage GROQ "Groq-Schlüssel (gsk_...)"
-  frage FB_BENUTZER "FRITZ!Box: Benutzername des IP-Telefons"
-  frage FB_KENNWORT "FRITZ!Box: Kennwort des IP-Telefons (wird nicht angezeigt)" geheim
-  frage NAME "Dein Name, wie im Satz 'der digitale Assistent von ...' (z. B. Herrn Mustermann)"
+  frage TOKEN "Telegram-Token von BotFather (Form 1234567890:AA...)" "" '^[0-9]{6,}:[A-Za-z0-9_-]{30,}$' \
+    "Das ist kein vollständiger Token: Er muss mit Zahlen und Doppelpunkt beginnen, danach ca. 35 Zeichen."
+  if ! curl -s "https://api.telegram.org/bot$TOKEN/getMe" | grep -q '"ok":true'; then
+    echo "  ⚠️  Telegram kennt diesen Token nicht (vielleicht durch /revoke ungültig). Bitte Skript neu starten."
+    exit 1
+  fi
+  echo "  ✅ Token gültig."
+  frage GROQ "Groq-Schlüssel (beginnt mit gsk_)" "" '^gsk_[A-Za-z0-9]{30,}$' \
+    "Das ist kein vollständiger Groq-Schlüssel (beginnt mit gsk_, ca. 56 Zeichen)."
+  frage FB_BENUTZER "FRITZ!Box: Benutzername des IP-Telefons (aus den Anmeldedaten, ohne Leerzeichen)" "" '^[^[:space:]]+$' \
+    "Der Benutzername darf keine Leerzeichen enthalten (steht in der FRITZ!Box unter Telefoniegeräte → KI-Assistent → Anmeldedaten)."
+  frage FB_KENNWORT "FRITZ!Box: Kennwort des IP-Telefons (wird nicht angezeigt)" geheim '.+' "Das Kennwort ist leer."
+  frage NAME "Dein Name, wie im Satz 'der digitale Assistent von ...' (z. B. Herrn Mustermann)" "" '.+' "Der Name ist leer."
   frage ORT "Dein Wohnort (für die Nummernsuche)"
-  frage GEMINI "Gemini-Schlüssel für Gemini Live (menschlicher, fast ohne Pause) – leer lassen = ohne"
+  frage GEMINI "Gemini-Schlüssel für Gemini Live – einfach nur die Enter-Taste drücken = ohne" "" '^$|^[A-Za-z0-9_.-]{20,}$' \
+    "Das sieht nicht wie ein Gemini-Schlüssel aus. Für 'ohne' einfach nur die Enter-Taste drücken."
   if [ -n "$GEMINI" ]; then GESPRAECH=gemini; else GESPRAECH=klassisch; fi
   echo
   echo ">>> Öffne jetzt Telegram, such deinen Bot und schick ihm: /start"
