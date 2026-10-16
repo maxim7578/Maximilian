@@ -28,8 +28,16 @@ def web_erreichbar(ip: str) -> bool:
 
 def sip_antwort(ip: str, port: int = 5060) -> str:
     """Schickt eine SIP-OPTIONS-Anfrage und gibt die erste Antwortzeile zurück ("" = keine Antwort)."""
+    return sip_antwort_von(ip, port, 0)
+
+
+def sip_antwort_von(ip: str, port: int, eigener: int) -> str:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.settimeout(3)
+        try:
+            s.bind(("", eigener))
+        except OSError:
+            return "Port belegt (läuft der Assistent noch?)"
         s.connect((ip, port))
         eigene_ip, eigener_port = s.getsockname()
         anfrage = (
@@ -44,6 +52,37 @@ def sip_antwort(ip: str, port: int = 5060) -> str:
             return s.recv(4096).decode(errors="replace").split("\r\n")[0]
         except OSError:
             return ""
+
+
+def udp_dns_test(ip: str) -> bool:
+    """Prüft, ob UDP zur FRITZ!Box überhaupt durchgeht (DNS-Anfrage an Port 53)."""
+    anfrage = bytes.fromhex("abcd01000001000000000000") + b"\x05fritz\x03box\x00\x00\x01\x00\x01"
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.settimeout(3)
+        try:
+            s.sendto(anfrage, (ip, 53))
+            return len(s.recvfrom(512)[0]) > 0
+        except OSError:
+            return False
+
+
+def sip_tcp_antwort(ip: str, port: int = 5060) -> str:
+    """SIP-OPTIONS über TCP ("" = Port zu oder keine Antwort)."""
+    try:
+        with socket.create_connection((ip, port), timeout=3) as s:
+            s.settimeout(3)
+            eigene_ip, eigener_port = s.getsockname()
+            anfrage = (
+                f"OPTIONS sip:{ip} SIP/2.0\r\n"
+                f"Via: SIP/2.0/TCP {eigene_ip}:{eigener_port};branch=z9hG4bK{_zufall(12)};rport\r\n"
+                f"Max-Forwards: 70\r\nFrom: <sip:pruefung@{eigene_ip}>;tag={_zufall(8)}\r\n"
+                f"To: <sip:{ip}>\r\nCall-ID: {_zufall(16)}\r\nCSeq: 1 OPTIONS\r\n"
+                f"Content-Length: 0\r\n\r\n"
+            )
+            s.sendall(anfrage.encode())
+            return s.recv(4096).decode(errors="replace").split("\r\n")[0] or "verbunden, aber keine Antwort"
+    except OSError as fehler:
+        return f"nein ({fehler.__class__.__name__})"
 
 
 async def anmelden_testen(ip: str, port: int, benutzer: str, kennwort: str) -> str:
@@ -87,6 +126,11 @@ def main() -> None:
 
     print()
     if not gefunden:
+        print("Weitere Tests mit", adresse, "…")
+        print(f"  UDP allgemein (DNS, Port 53): {'ja' if udp_dns_test(adresse) else 'nein'}")
+        print(f"  SIP über TCP (Port {port}):    {sip_tcp_antwort(adresse, port)}")
+        print(f"  SIP über UDP von Port 5062:   {sip_antwort_von(adresse, port, 5062) or 'keine Antwort'}")
+        print()
         print("❌ Keine Telefonanlage antwortet. Ist das Handy im WLAN der FRITZ!Box (nicht Gastzugang)?")
         print("   Ist in der FRITZ!Box die Telefonie eingerichtet?")
         return
