@@ -135,7 +135,9 @@ Assistenten neu starten.
 - **Protokoll ansehen:** In Termux `tail -f ~/telefon-daten/assistent.log` eingeben (beenden mit Strg+C;
   die Strg-Taste ist in der Leiste über der Tastatur).
 - **„FRITZ!Box-Anmeldung ❌“:**
-  - Prüfe Benutzername und Kennwort in `.env`; bearbeiten mit `nano ~/Maximilian/telefon-assistent/.env`.
+  - Benutzername und Kennwort neu eintragen und gleich testen:
+    `~/Maximilian/telefon-assistent/fritzbox-zugang.sh`. Der Benutzername steht in der FRITZ!Box
+    beim Gerät im Reiter **„Anmeldedaten“**, nicht im Feld „Name“.
   - Prüfe, ob das Handy im WLAN der FRITZ!Box ist.
   - Prüfe, ob das IP-Telefon in der FRITZ!Box eingerichtet ist.
 - **Neu starten:** Termux öffnen, mit Strg+C stoppen, dann `./start-handy.sh`.
