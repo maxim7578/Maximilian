@@ -13,6 +13,7 @@ SELBST_BEGINNEN_NACH = 3.0  # s: meldet sich niemand hörbar, beginnt der Assist
 VORLAUF_RAHMEN = 15  # 300 ms Ton vor dem erkannten Sprechbeginn mitnehmen
 MAX_AEUSSERUNG_S = 25
 MIN_WOERTER_VOR_AUFLEGEN = 4  # so wenig Gehörtes reicht nicht, um auf "Anrufbeantworter" zu schließen
+VORPUFFER = int(0.25 * audio.ABTASTRATE)  # 250 ms Ton sammeln, bevor ein Satz losläuft
 ENDE_NACH_STILLE_MS = 500  # so lange Pause = Gegenüber ist fertig (kürzer = schnellere Antwort)
 UNTERBRECHEN_NACH_RAHMEN = 20  # 400 ms Sprache des Gegenübers unterbricht den Assistenten
 
@@ -186,12 +187,26 @@ class Gespraech:
     async def _abspielen(self, warteschlange: asyncio.Queue) -> None:
         """Spielt erzeugte Sätze der Reihe nach ab, sobald der jeweilige Ton fertig ist."""
         while (satz := await warteschlange.get()) is not None:
+            rest = np.zeros(0, dtype=np.int16)
+            gestartet = False
             while (stueck := await satz.stuecke.get()) is not None:
                 if self._unterbrochen:
                     satz.abbrechen()
                     continue
+                rest = np.concatenate([rest, stueck])
+                # Kleiner Vorlauf, damit der Satz nicht stockt, falls die Daten ungleichmäßig kommen
+                if not gestartet and not self.leitung.spielt and len(rest) < VORPUFFER:
+                    continue
+                gestartet = True
+                # Nur volle 20-ms-Rahmen senden – sonst entstehen Lücken mitten im Satz
+                ganz = len(rest) // audio.RAHMEN * audio.RAHMEN
+                if ganz:
+                    self._zeit_messen()
+                    self.leitung.senden(rest[:ganz])
+                    rest = rest[ganz:]
+            if len(rest) and not self._unterbrochen:
                 self._zeit_messen()
-                self.leitung.senden(stueck)
+                self.leitung.senden(rest)
 
     async def _ki_antwort_holen(self):
         """Holt die Antwort der KI gestreamt: Sätze werden schon gesprochen, während sie entstehen."""
