@@ -14,7 +14,7 @@ VORLAUF_RAHMEN = 15  # 300 ms Ton vor dem erkannten Sprechbeginn mitnehmen
 MAX_AEUSSERUNG_S = 25
 MIN_WOERTER_VOR_AUFLEGEN = 4  # so wenig Gehörtes reicht nicht, um auf "Anrufbeantworter" zu schließen
 VORPUFFER = int(0.25 * audio.ABTASTRATE)  # 250 ms Ton sammeln, bevor ein Satz losläuft
-ENDE_NACH_STILLE_MS = 500  # so lange Pause = Gegenüber ist fertig (kürzer = schnellere Antwort)
+ENDE_NACH_STILLE_MS = 300  # so lange Pause = Gegenüber ist fertig (kürzer = schnellere Antwort)
 UNTERBRECHEN_NACH_RAHMEN = 20  # 400 ms Sprache des Gegenübers unterbricht den Assistenten
 
 # Whisper "hört" in Stille gern solche Sätze – die ignorieren wir.
@@ -108,11 +108,12 @@ class Gespraech:
         self._unterbrochen = False
         self._denken_seit: float | None = None  # seit wann auf die Antwort gewartet wird
         self._messung: dict[str, float] = {}
+        self._erkennung: audio.Sprecherkennung | None = None
 
     # ---------- Zuhören ----------
 
     async def _zuhoeren(self) -> None:
-        erkennung = audio.Sprecherkennung(ende_ms=ENDE_NACH_STILLE_MS)
+        erkennung = self._erkennung = audio.Sprecherkennung(ende_ms=ENDE_NACH_STILLE_MS)
         vorlauf: list[np.ndarray] = []
         aktuell: list[np.ndarray] = []
         rest = np.zeros(0, dtype=np.int16)
@@ -279,6 +280,9 @@ class Gespraech:
         logger.info(f"Gegenüber: {text}")
         return text
 
+    def _spricht_weiter(self) -> bool:
+        return not self._aeusserungen.empty() or bool(self._erkennung and self._erkennung.spricht)
+
     def _gehoert(self, text: str) -> None:
         self.ergebnis.protokoll.append(("Gegenüber", text))
         self.verlauf.append({"role": "user", "content": text})
@@ -335,10 +339,18 @@ class Gespraech:
             # Kurz hintereinander Gesagtes zusammenfassen
             while not self._aeusserungen.empty():
                 ton = np.concatenate([ton, self._aeusserungen.get_nowait()])
-            self._denken_seit = asyncio.get_running_loop().time()
-            self._messung = {"laenge": len(ton) / audio.ABTASTRATE}
-            text = await self._verstehen(ton)
-            self._messung["erkannt"] = asyncio.get_running_loop().time()
+            while True:
+                self._denken_seit = asyncio.get_running_loop().time()
+                self._messung = {"laenge": len(ton) / audio.ABTASTRATE}
+                text = await self._verstehen(ton)
+                self._messung["erkannt"] = asyncio.get_running_loop().time()
+                # Hat das Gegenüber nur kurz Luft geholt und spricht weiter? Dann alles zusammen nehmen.
+                if not self._spricht_weiter():
+                    break
+                logger.info("Gegenüber spricht weiter – warte, bis der Satz fertig ist.")
+                ton = np.concatenate([ton, await self._aeusserungen.get()])
+                while not self._aeusserungen.empty():
+                    ton = np.concatenate([ton, self._aeusserungen.get_nowait()])
             if not text:
                 self._denken_seit = None
                 continue

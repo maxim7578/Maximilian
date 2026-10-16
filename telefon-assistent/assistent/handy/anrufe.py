@@ -12,7 +12,7 @@ from .. import texte
 from ..auftrag import Anruf, jetzt
 from ..einstellungen import Einstellungen
 from .gemini import GEMINI_URL, GeminiFehler, GeminiGespraech
-from .gespraech import Gespraech, Gespraechsergebnis
+from .gespraech import ENDE_NACH_STILLE_MS, Gespraech, Gespraechsergebnis
 from .sip import AnrufFehler, Telefon, Telefonat
 from .stimme import MICROSOFT_STIMMEN, PROBESATZ, EdgeStimme, pcm_zu_ogg
 
@@ -205,12 +205,13 @@ class HandyAnrufverwaltung:
     def _zeiten_text(ergebnis: Gespraechsergebnis) -> str:
         if not ergebnis.antwortzeiten:
             return ""
-        schnitt = sum(ergebnis.antwortzeiten) / len(ergebnis.antwortzeiten) + 0.5  # + Pause bis "fertig"
+        pause = ENDE_NACH_STILLE_MS / 1000
+        schnitt = sum(ergebnis.antwortzeiten) / len(ergebnis.antwortzeiten) + pause  # + Pause bis "fertig"
         text = f"\n\n⏱️ Antwortzeit im Schnitt: {schnitt:.1f} s"
         if ergebnis.messungen:
             def mittel(name: str) -> float:
                 return sum(m[name] for m in ergebnis.messungen) / len(ergebnis.messungen)
-            text += (f"\n(Pause 0,5 · Spracherkennung {mittel('erkennung'):.1f} · KI {mittel('ki'):.1f} · "
+            text += (f"\n(Pause {pause:.1f} · Spracherkennung {mittel('erkennung'):.1f} · KI {mittel('ki'):.1f} · "
                      f"Stimme {mittel('stimme'):.1f} s · gehört je {mittel('gehoert'):.1f} s)")
         return text.replace(".", ",")
 

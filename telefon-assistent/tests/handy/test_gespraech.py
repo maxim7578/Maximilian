@@ -285,7 +285,7 @@ def test_zeiten_im_bericht():
 
     e = Gespraechsergebnis(antwortzeiten=[1.5], messungen=[{"gehoert": 2.0, "erkennung": 0.4, "ki": 0.7, "stimme": 0.4}])
     text = HandyAnrufverwaltung._zeiten_text(e)
-    assert "Antwortzeit im Schnitt: 2,0 s" in text.replace(".", ",")
+    assert "Antwortzeit im Schnitt: 1,8 s" in text and "Pause 0,3" in text
     assert "Spracherkennung 0,4 · KI 0,7 · Stimme 0,4 s · gehört je 2,0 s" in text
 
 
@@ -308,3 +308,19 @@ async def test_stimme_stueckweise_abgespielt():
     assert [len(t) for t in leitung.gesendet] == [1920, 480, 1920, 480]
     await leitung.auflegen()
     await aufgabe
+
+
+@pytest.mark.asyncio
+async def test_kurze_atempause_wird_zusammengefasst():
+    """Spricht das Gegenüber nach einer kurzen Pause weiter, wird beides zusammen verstanden."""
+    leitung = Leitung(np.concatenate([sprache(0.6), stille(0.4), sprache(0.6), stille(5)]))
+
+    class LangsameKI(KI):
+        async def transkribieren(self, wav, name):
+            await asyncio.sleep(0.5)  # währenddessen spricht das Gegenüber weiter
+            return await super().transkribieren(wav, name)
+
+    ki = LangsameKI([TSCHUESS], transkript="Ja, also für zwei Personen bitte.")
+    ergebnis = await asyncio.wait_for(Gespraech(leitung, ki, Stimme(), "System", False, 60).fuehren(), 10)
+    assert ki.transkribiert == 2 and len(ki.verlaeufe) == 1  # nur einmal geantwortet
+    assert ergebnis.messungen[0]["gehoert"] > 1.2
