@@ -4,13 +4,17 @@ import asyncio
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-ZEITZONE = ZoneInfo("Europe/Berlin")
+try:
+    ZEITZONE = ZoneInfo("Europe/Berlin")
+except ZoneInfoNotFoundError:
+    # Ohne Zeitzonen-Datenbank (z. B. Termux ohne Paket tzdata): Uhrzeit des Geräts nehmen
+    ZEITZONE = None
 
 
 def jetzt() -> datetime:
-    return datetime.now(ZEITZONE)
+    return datetime.now(ZEITZONE).astimezone() if ZEITZONE is None else datetime.now(ZEITZONE)
 
 
 @dataclass
