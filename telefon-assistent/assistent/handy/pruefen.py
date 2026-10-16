@@ -131,9 +131,8 @@ def main() -> None:
         print(f"  SIP über TCP (Port {port}):    {sip_tcp_antwort(adresse, port)}")
         print(f"  SIP über UDP von Port 5062:   {sip_antwort_von(adresse, port, 5062) or 'keine Antwort'}")
         print()
-        print("❌ Keine Telefonanlage antwortet. Ist das Handy im WLAN der FRITZ!Box (nicht Gastzugang)?")
-        print("   Ist in der FRITZ!Box die Telefonie eingerichtet?")
-        return
+        # Die FRITZ!Box ignoriert Anfragen unbekannter Geräte absichtlich – die echte Anmeldung zählt.
+        gefunden = adresse
     if gefunden != adresse:
         print(f"➡️  Die FRITZ!Box antwortet unter {gefunden}, eingetragen ist aber {adresse}.")
         print("   Korrigieren mit diesem Befehl:")
@@ -141,6 +140,9 @@ def main() -> None:
     print(f"Anmeldung als IP-Telefon an {gefunden} wird getestet …")
     ergebnis = asyncio.run(anmelden_testen(gefunden, port, benutzer, kennwort))
     print(ergebnis)
+    if "keine Antwort" in ergebnis.lower():
+        print("➡️  Die FRITZ!Box schweigt. Meist passt der Benutzername nicht genau zu den Anmeldedaten")
+        print("   des IP-Telefons (Telefonie → Telefoniegeräte → Stift → Reiter „Anmeldedaten“).")
     if "abgelehnt" in ergebnis:
         print("➡️  Benutzername oder Kennwort passen nicht zu den Anmeldedaten des IP-Telefons in der FRITZ!Box.")
 
