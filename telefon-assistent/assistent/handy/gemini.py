@@ -20,7 +20,7 @@ GEMINI_URL = (
     "wss://generativelanguage.googleapis.com/ws/"
     "google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 )
-SELBST_BEGINNEN_NACH = 5.0
+SELBST_BEGINNEN_NACH = 3.0
 
 BEENDEN = {
     "name": "gespraech_beenden",
