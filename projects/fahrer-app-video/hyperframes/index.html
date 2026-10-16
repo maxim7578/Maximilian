@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Fahrer App – Präsentationsvideo</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0e1f4d; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      .stage { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; }
+      .bg { position: absolute; inset: 0; width: 1920px; height: 1080px; background: #0e1f4d; }
+      .slide { position: absolute; inset: 0; width: 1920px; height: 1080px; opacity: 0; }
+      .slide img { display: block; width: 1920px; height: 1080px; object-fit: cover; }
+      .progress-track { position: absolute; left: 0; top: 1074px; width: 1920px; height: 6px; background: rgba(14, 31, 77, 0.35); }
+      .progress { position: absolute; left: 0; top: 1074px; width: 1920px; height: 6px; background: #3d8bfd; transform-origin: 0 50%; }
+      .fade { position: absolute; inset: 0; width: 1920px; height: 1080px; background: #0e1f4d; opacity: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="120" data-width="1920" data-height="1080">
+      <div id="stage" class="clip stage" data-start="0" data-duration="120" data-track-index="1">
+        <div class="bg"></div>
+        <div id="sl00" class="slide" style="transform-origin: 20% 50%"><img src="assets/slides/s-01.jpg" alt="Folie 1" /></div>
+        <div id="sl01" class="slide" style="transform-origin: 50% 40%"><img src="assets/slides/s-03.jpg" alt="Folie 3" /></div>
+        <div id="sl02" class="slide" style="transform-origin: 50% 45%"><img src="assets/slides/s-04.jpg" alt="Folie 4" /></div>
+        <div id="sl03" class="slide" style="transform-origin: 50% 40%"><img src="assets/slides/s-05.jpg" alt="Folie 5" /></div>
+        <div id="sl04" class="slide" style="transform-origin: 50% 40%"><img src="assets/slides/s-06.jpg" alt="Folie 6" /></div>
+        <div id="sl05" class="slide" style="transform-origin: 30% 45%"><img src="assets/slides/s-07.jpg" alt="Folie 7" /></div>
+        <div id="sl06" class="slide" style="transform-origin: 50% 40%"><img src="assets/slides/s-08.jpg" alt="Folie 8" /></div>
+        <div id="sl07" class="slide" style="transform-origin: 35% 45%"><img src="assets/slides/s-10.jpg" alt="Folie 10" /></div>
+        <div id="sl08" class="slide" style="transform-origin: 60% 50%"><img src="assets/slides/s-11.jpg" alt="Folie 11" /></div>
+        <div id="sl09" class="slide" style="transform-origin: 50% 40%"><img src="assets/slides/s-12.jpg" alt="Folie 12" /></div>
+        <div id="sl10" class="slide" style="transform-origin: 65% 45%"><img src="assets/slides/s-13.jpg" alt="Folie 13" /></div>
+        <div id="sl11" class="slide" style="transform-origin: 45% 45%"><img src="assets/slides/s-14.jpg" alt="Folie 14" /></div>
+        <div id="sl12" class="slide" style="transform-origin: 75% 40%"><img src="assets/slides/s-16.jpg" alt="Folie 16" /></div>
+        <div id="sl13" class="slide" style="transform-origin: 50% 50%"><img src="assets/slides/s-18.jpg" alt="Folie 18" /></div>
+        <div id="sl14" class="slide" style="transform-origin: 50% 40%"><img src="assets/slides/s-19.jpg" alt="Folie 19" /></div>
+        <div id="sl15" class="slide" style="transform-origin: 50% 45%"><img src="assets/slides/s-20.jpg" alt="Folie 20" /></div>
+        <div id="sl16" class="slide" style="transform-origin: 40% 50%"><img src="assets/slides/s-23.jpg" alt="Folie 23" /></div>
+        <div id="sl17" class="slide" style="transform-origin: 20% 35%"><img src="assets/slides/s-25.jpg" alt="Folie 25" /></div>
+        <div id="sl18" class="slide" style="transform-origin: 50% 40%"><img src="assets/slides/s-27.jpg" alt="Folie 27" /></div>
+        <div id="sl19" class="slide" style="transform-origin: 65% 50%"><img src="assets/slides/s-26.jpg" alt="Folie 26" /></div>
+        <div class="progress-track"></div>
+        <div id="progress" class="progress"></div>
+        <div id="fade" class="fade"></div>
+      </div>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      var tl = gsap.timeline({ paused: true });
+      tl.fromTo("#sl00", { opacity: 0 }, { opacity: 1, duration: 0.8, ease: "power1.out" }, 0);
+      tl.fromTo("#sl00", { scale: 1.0 }, { scale: 1.06, duration: 6.30, ease: "none" }, 0.00);
+      tl.fromTo("#sl01", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 5.70);
+      tl.fromTo("#sl01", { scale: 1.0 }, { scale: 1.06, duration: 7.90, ease: "none" }, 5.40);
+      tl.set("#sl00", { opacity: 0 }, 6.35);
+      tl.fromTo("#sl02", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 12.70);
+      tl.fromTo("#sl02", { scale: 1.0 }, { scale: 1.06, duration: 7.90, ease: "none" }, 12.40);
+      tl.set("#sl01", { opacity: 0 }, 13.35);
+      tl.fromTo("#sl03", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 19.70);
+      tl.fromTo("#sl03", { scale: 1.0 }, { scale: 1.06, duration: 7.90, ease: "none" }, 19.40);
+      tl.set("#sl02", { opacity: 0 }, 20.35);
+      tl.fromTo("#sl04", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 26.70);
+      tl.fromTo("#sl04", { scale: 1.0 }, { scale: 1.06, duration: 7.90, ease: "none" }, 26.40);
+      tl.set("#sl03", { opacity: 0 }, 27.35);
+      tl.fromTo("#sl05", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 33.70);
+      tl.fromTo("#sl05", { scale: 1.0 }, { scale: 1.06, duration: 5.90, ease: "none" }, 33.40);
+      tl.set("#sl04", { opacity: 0 }, 34.35);
+      tl.fromTo("#sl06", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 38.70);
+      tl.fromTo("#sl06", { scale: 1.0 }, { scale: 1.06, duration: 7.90, ease: "none" }, 38.40);
+      tl.set("#sl05", { opacity: 0 }, 39.35);
+      tl.fromTo("#sl07", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 45.70);
+      tl.fromTo("#sl07", { scale: 1.0 }, { scale: 1.06, duration: 7.90, ease: "none" }, 45.40);
+      tl.set("#sl06", { opacity: 0 }, 46.35);
+      tl.fromTo("#sl08", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 52.70);
+      tl.fromTo("#sl08", { scale: 1.0 }, { scale: 1.06, duration: 5.90, ease: "none" }, 52.40);
+      tl.set("#sl07", { opacity: 0 }, 53.35);
+      tl.fromTo("#sl09", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 57.70);
+      tl.fromTo("#sl09", { scale: 1.0 }, { scale: 1.06, duration: 6.90, ease: "none" }, 57.40);
+      tl.set("#sl08", { opacity: 0 }, 58.35);
+      tl.fromTo("#sl10", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 63.70);
+      tl.fromTo("#sl10", { scale: 1.0 }, { scale: 1.06, duration: 7.90, ease: "none" }, 63.40);
+      tl.set("#sl09", { opacity: 0 }, 64.35);
+      tl.fromTo("#sl11", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 70.70);
+      tl.fromTo("#sl11", { scale: 1.0 }, { scale: 1.06, duration: 5.90, ease: "none" }, 70.40);
+      tl.set("#sl10", { opacity: 0 }, 71.35);
+      tl.fromTo("#sl12", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 75.70);
+      tl.fromTo("#sl12", { scale: 1.0 }, { scale: 1.06, duration: 7.90, ease: "none" }, 75.40);
+      tl.set("#sl11", { opacity: 0 }, 76.35);
+      tl.fromTo("#sl13", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 82.70);
+      tl.fromTo("#sl13", { scale: 1.0 }, { scale: 1.06, duration: 6.90, ease: "none" }, 82.40);
+      tl.set("#sl12", { opacity: 0 }, 83.35);
+      tl.fromTo("#sl14", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 88.70);
+      tl.fromTo("#sl14", { scale: 1.0 }, { scale: 1.06, duration: 6.90, ease: "none" }, 88.40);
+      tl.set("#sl13", { opacity: 0 }, 89.35);
+      tl.fromTo("#sl15", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 94.70);
+      tl.fromTo("#sl15", { scale: 1.0 }, { scale: 1.06, duration: 5.90, ease: "none" }, 94.40);
+      tl.set("#sl14", { opacity: 0 }, 95.35);
+      tl.fromTo("#sl16", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 99.70);
+      tl.fromTo("#sl16", { scale: 1.0 }, { scale: 1.06, duration: 6.90, ease: "none" }, 99.40);
+      tl.set("#sl15", { opacity: 0 }, 100.35);
+      tl.fromTo("#sl17", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 105.70);
+      tl.fromTo("#sl17", { scale: 1.0 }, { scale: 1.06, duration: 4.90, ease: "none" }, 105.40);
+      tl.set("#sl16", { opacity: 0 }, 106.35);
+      tl.fromTo("#sl18", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 109.70);
+      tl.fromTo("#sl18", { scale: 1.0 }, { scale: 1.06, duration: 5.90, ease: "none" }, 109.40);
+      tl.set("#sl17", { opacity: 0 }, 110.35);
+      tl.fromTo("#sl19", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 114.70);
+      tl.fromTo("#sl19", { scale: 1.0 }, { scale: 1.06, duration: 5.60, ease: "none" }, 114.40);
+      tl.set("#sl18", { opacity: 0 }, 115.35);
+      tl.fromTo("#progress", { scaleX: 0 }, { scaleX: 1, duration: 120, ease: "none" }, 0);
+      tl.fromTo("#fade", { opacity: 0 }, { opacity: 1, duration: 1.0, ease: "power1.in" }, 119.0);
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
