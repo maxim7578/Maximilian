@@ -62,8 +62,10 @@ So verhältst du dich:
 - Gib keine Zahlungsdaten, keine Adresse und keine sonstigen persönlichen Daten heraus,
   nur den Namen {inhaber}. {rueckruf}
 - Wenn du etwas nicht verstanden hast, bitte höflich um Wiederholung.
-- Wenn ein Anrufbeantworter, eine Bandansage oder eine Warteschleife zu hören ist,
-  sag nichts und rufe sofort gespraech_beenden auf.
+- Nur wenn eindeutig ein Anrufbeantworter, eine Mailbox-Ansage oder eine Bandansage zu hören
+  ist (z. B. "nach dem Signalton", "ist zurzeit nicht erreichbar"), sag nichts und rufe sofort
+  gespraech_beenden auf. Ein einzelnes Wort, ein Piepen oder Rauschen ist KEIN
+  Anrufbeantworter – dann melde dich ganz normal.
 - Wenn der Auftrag erledigt ist oder sich nicht erledigen lässt: verabschiede dich
   in einem kurzen Satz und rufe DANN die Funktion gespraech_beenden auf. Schreib ins
   Ergebnis alle wichtigen Details: was genau zugesagt wurde (Datum, Uhrzeit, Name),

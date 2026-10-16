@@ -138,3 +138,46 @@ async def test_ki_fehler_entschuldigung_und_auflegen():
         Gespraech(leitung, KI([RuntimeError("Groq weg")]), stimme, "System", False, 60).fuehren(), 10)
     assert "technische Probleme" in " ".join(stimme.texte)
     assert leitung.aufgelegt and "Groq weg" in ergebnis.ergebnis
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("transkript", ["Beep.", "Piep, piep, piep.", "Tuut tuut"])
+async def test_piepen_wird_ignoriert(monkeypatch, transkript):
+    monkeypatch.setattr(modul, "SELBST_BEGINNEN_NACH", 30)
+    leitung = Leitung(np.concatenate([sprache(1.0), stille(3)]))
+    ki = KI([TSCHUESS], transkript=transkript)
+    aufgabe = asyncio.create_task(Gespraech(leitung, ki, Stimme(), "System", False, 60).fuehren())
+    await asyncio.sleep(2)
+    assert ki.transkribiert == 1 and ki.verlaeufe == [] and not leitung.aufgelegt
+    await leitung.auflegen()
+    await aufgabe
+
+
+SOFORT_AUFLEGEN = Antwort(
+    text="", werkzeug="gespraech_beenden", werkzeug_id="c0",
+    argumente={"ergebnis": "Anrufbeantworter", "erfolgreich": False},
+    roh={"role": "assistant", "content": "", "tool_calls": [{"id": "c0"}]},
+)
+VORSTELLEN = Antwort(text="Guten Tag, hier ist der digitale Assistent von Herrn Koch.",
+                     roh={"role": "assistant", "content": "Guten Tag …"})
+
+
+@pytest.mark.asyncio
+async def test_legt_bei_kurzem_hallo_nicht_sofort_auf():
+    leitung = Leitung(np.concatenate([sprache(1.0), stille(4)]))
+    ki, stimme = KI([SOFORT_AUFLEGEN, VORSTELLEN], transkript="Hallo?"), Stimme()
+    aufgabe = asyncio.create_task(Gespraech(leitung, ki, stimme, "System", False, 60).fuehren())
+    await asyncio.sleep(2)
+    assert not leitung.aufgelegt
+    assert stimme.texte == ["Guten Tag, hier ist der digitale Assistent von Herrn Koch."]
+    assert "Nicht aufgelegt" in ki.verlaeufe[1][-1]["content"]
+    await leitung.auflegen()
+    await aufgabe
+
+
+@pytest.mark.asyncio
+async def test_legt_bei_eindeutiger_ansage_auf():
+    leitung = Leitung(np.concatenate([sprache(1.0), stille(5)]))
+    ki = KI([SOFORT_AUFLEGEN], transkript="Der Teilnehmer ist zurzeit nicht erreichbar, bitte sprechen Sie nach dem Signalton.")
+    ergebnis = await asyncio.wait_for(Gespraech(leitung, ki, Stimme(), "System", False, 60).fuehren(), 10)
+    assert leitung.aufgelegt and ergebnis.ergebnis == "Anrufbeantworter"

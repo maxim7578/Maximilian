@@ -193,12 +193,14 @@ class RtpStrom(asyncio.DatagramProtocol):
 
     def verbinden(self, ip: str, port: int, nutzlast: int) -> None:
         self.ziel, self.nutzlast = (ip, port), nutzlast
+        while not self.eingang.empty():  # Freizeichen o. Ä. von vor dem Abheben verwerfen
+            self.eingang.get_nowait()
         if self._sender is None:
             self._sender = asyncio.create_task(self._senden_im_takt())
 
     def datagram_received(self, daten: bytes, adresse) -> None:
-        if len(daten) < 12 or daten[0] >> 6 != 2:
-            return
+        if len(daten) < 12 or daten[0] >> 6 != 2 or self.ziel is None:
+            return  # vor dem Abheben (z. B. Freizeichen als "early media") nicht zuhören
         nutzlast = daten[1] & 0x7F
         if nutzlast not in (audio.PCMA, audio.PCMU):
             return  # z. B. Tastentöne oder Komfortrauschen

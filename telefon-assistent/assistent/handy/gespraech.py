@@ -12,12 +12,13 @@ from . import audio
 SELBST_BEGINNEN_NACH = 5.0  # s: meldet sich niemand hörbar, beginnt der Assistent
 VORLAUF_RAHMEN = 15  # 300 ms Ton vor dem erkannten Sprechbeginn mitnehmen
 MAX_AEUSSERUNG_S = 25
+MIN_WOERTER_VOR_AUFLEGEN = 4  # so wenig Gehörtes reicht nicht, um auf "Anrufbeantworter" zu schließen
 UNTERBRECHEN_NACH_RAHMEN = 20  # 400 ms Sprache des Gegenübers unterbricht den Assistenten
 
 # Whisper "hört" in Stille gern solche Sätze – die ignorieren wir.
 HALLUZINATIONEN = re.compile(
     r"^(untertitel.*|vielen dank( fürs zuschauen)?\.?|danke\.?|tschüss\.?|"
-    r"copyright.*|swr.*|zdf.*|\W*)$",
+    r"copyright.*|swr.*|zdf.*|((beep|piep|bip|tu+t|dü+t)\W*)+|\W*)$",
     re.IGNORECASE,
 )
 
@@ -123,9 +124,23 @@ class Gespraech:
             for aufgabe in aufgaben:
                 aufgabe.cancel()
 
-    async def _ki_antwort(self) -> None:
+    def _zu_frueh_zum_auflegen(self) -> bool:
+        """Noch nichts gesagt und kaum etwas gehört (z. B. nur "Beep") – dann nicht gleich auflegen."""
+        if any(wer == "Assistent" for wer, _ in self.ergebnis.protokoll):
+            return False
+        gehoert = " ".join(text for wer, text in self.ergebnis.protokoll if wer == "Gegenüber")
+        return len(gehoert.split()) < MIN_WOERTER_VOR_AUFLEGEN
+
+    async def _ki_antwort(self, nachfassen: bool = True) -> None:
         antwort = await self.ki.gespraech_antwort(self.verlauf, [BEENDEN])
         self.verlauf.append(antwort.roh)
+        if antwort.werkzeug == "gespraech_beenden" and not antwort.text and nachfassen and self._zu_frueh_zum_auflegen():
+            logger.info("KI wollte sofort auflegen, obwohl kaum etwas zu hören war – Assistent meldet sich stattdessen.")
+            self.verlauf.append({"role": "tool", "tool_call_id": antwort.werkzeug_id, "content": (
+                "Nicht aufgelegt: Das war zu wenig, um sicher zu sein, dass niemand dran ist. "
+                "Melde dich jetzt und stell dich vor.")})
+            await self._ki_antwort(nachfassen=False)
+            return
         if antwort.text:
             self.ergebnis.protokoll.append(("Assistent", antwort.text))
             await self._sprechen(antwort.text)
