@@ -47,18 +47,29 @@ if [ ! -d "$GSTACK_DIR/.git" ]; then
   git clone --quiet --single-branch --depth 1 "$GSTACK_REPO" "$GSTACK_DIR"
 fi
 
-# ./setup nur ausführen, wenn sich der gstack-Stand seit dem letzten Lauf geändert hat.
+# ./setup nur ausführen, wenn sich der gstack-Stand oder die Setup-Optionen seit dem
+# letzten Lauf geändert haben. Die Plan-Tune-Hooks protokollieren Rückfragen für /plan-tune.
 HEAD_SHA="$(git -C "$GSTACK_DIR" rev-parse HEAD)"
-if [ "$(cat "$MARKER" 2>/dev/null || true)" != "$HEAD_SHA" ]; then
-  if ! (cd "$GSTACK_DIR" && ./setup --quiet < /dev/null > "$LOG" 2>&1); then
+SETUP_STAMP="$HEAD_SHA plan-tune-hooks"
+if [ "$(cat "$MARKER" 2>/dev/null || true)" != "$SETUP_STAMP" ]; then
+  if ! (cd "$GSTACK_DIR" && GSTACK_PLAN_TUNE_HOOKS=yes ./setup --quiet < /dev/null > "$LOG" 2>&1); then
     echo "gstack ./setup ist fehlgeschlagen, Log: $LOG" >&2
     tail -n 30 "$LOG" >&2
     exit 1
   fi
-  echo "$HEAD_SHA" > "$MARKER"
+  echo "$SETUP_STAMP" > "$MARKER"
 fi
 
 echo "gstack $(cat "$GSTACK_DIR/VERSION") ist installiert (Skills in ~/.claude/skills)."
+
+# Codex-CLI für unabhängige Zweitmeinungen in /review, /ship und /office-hours.
+# Nur mit OPENAI_API_KEY (Umgebungsvariable der Cloud-Umgebung), sonst nutzt gstack
+# einen Claude-Subagent.
+if [ -n "${OPENAI_API_KEY:-}" ] && ! command -v codex > /dev/null 2>&1; then
+  if ! npm install -g --silent @openai/codex > "$HOME/.cache/gstack-session-start/codex.log" 2>&1; then
+    echo "Codex-Installation ist fehlgeschlagen, Log: $HOME/.cache/gstack-session-start/codex.log" >&2
+  fi
+fi
 
 # Installiert graphify (https://github.com/Graphify-Labs/graphify) samt /graphify-Skill.
 # Ein Fehler hier bricht die Session nicht ab, gstack bleibt nutzbar.
