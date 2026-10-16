@@ -53,11 +53,28 @@ NATUERLICH = """- Sprich wie ein freundlicher Mensch am Telefon, locker und höf
   z. B. "um fünf" oder "siebzehn Uhr", "zwei Personen"."""
 
 
+def begruessung_raus(inhaber: str, name: str = "", weiblich: bool = True) -> str:
+    """Erster Satz bei ausgehenden Anrufen – wird vorab erzeugt, damit er sofort kommt."""
+    return f"Guten Tag, {_rolle(name, weiblich)[0]} von {inhaber}."
+
+
+def begruessung_rein(inhaber: str, name: str = "", weiblich: bool = True) -> str:
+    return f"Hallo, {_rolle(name, weiblich)[0]} von {inhaber}. Worum geht es denn?"
+
+
 def gespraech_raus(
     inhaber: str, ziel: str, auftrag: str, spielraum: str, rueckrufnummer: str, jetzt: datetime,
-    name: str = "", weiblich: bool = True,
+    name: str = "", weiblich: bool = True, begruessung: str = "",
 ) -> str:
     vorstellung, wer = _rolle(name, weiblich)
+    if begruessung:
+        erster = (f'- Sobald sich jemand meldet, wird automatisch deine Begrüßung gesprochen: "{begruessung}"\n'
+                  "  Wiederhole sie nicht. Komm danach direkt in einem kurzen Satz zum Anliegen, z. B.\n"
+                  '  "Ich würde gern einen Tisch reservieren."')
+    else:
+        erster = ("- Warte, bis sich dein Gesprächspartner meldet. Stell dich dann in EINEM natürlichen Satz\n"
+                  "  vor, sag dabei kurz, dass du eine KI bist, und komm direkt zum Anliegen. Beispiel:\n"
+                  f'  "Guten Tag, {vorstellung} von {inhaber}. Ich würde gern einen Tisch reservieren."')
     nachname = inhaber.split()[-1] if inhaber.split() else inhaber
     rueckruf = (
         f"Falls nach einer Rückrufnummer gefragt wird: {rueckrufnummer}."
@@ -72,9 +89,7 @@ Dein Auftrag: {auftrag}
 Spielraum: {spielraum or "keiner – weiche nicht vom Auftrag ab."}
 
 So verhältst du dich:
-- Warte, bis sich dein Gesprächspartner meldet. Stell dich dann in EINEM natürlichen Satz
-  vor, sag dabei kurz, dass du eine KI bist, und komm direkt zum Anliegen. Beispiel:
-  "Guten Tag, {vorstellung} von {inhaber}. Ich würde gern einen Tisch reservieren."
+{erster}
   Danach erwähnst du die KI nicht mehr, außer jemand fragt.
 - Reservierungen und Termine machst du auf den Namen {nachname}.
 {NATUERLICH}
@@ -93,16 +108,23 @@ So verhältst du dich:
   angebotene Alternativen und, falls genannt, den Namen deines Gesprächspartners."""
 
 
-def gespraech_rein(inhaber: str, jetzt: datetime, name: str = "", weiblich: bool = True) -> str:
+def gespraech_rein(
+    inhaber: str, jetzt: datetime, name: str = "", weiblich: bool = True, begruessung: str = ""
+) -> str:
     vorstellung, wer = _rolle(name, weiblich)
+    if begruessung:
+        erster = (f'- Deine Begrüßung wurde schon automatisch gesprochen: "{begruessung}"\n'
+                  "  Wiederhole sie nicht, hör zu und antworte auf das, was der Anrufer sagt.")
+    else:
+        erster = ("- Begrüße den Anrufer in einem natürlichen Satz und sag dabei kurz, dass du eine KI bist.\n"
+                  f'  Beispiel: "Hallo, {vorstellung} von {inhaber}. Gerade ist niemand erreichbar,\n'
+                  '  kann ich etwas ausrichten?"')
     return f"""Du bist {wer} von {inhaber} und nimmst gerade stellvertretend einen
 Anruf auf Deutsch entgegen.
 Jetzt ist {_zeit(jetzt)}.
 
 So verhältst du dich:
-- Begrüße den Anrufer in einem natürlichen Satz und sag dabei kurz, dass du eine KI bist.
-  Beispiel: "Hallo, {vorstellung} von {inhaber}. Gerade ist niemand erreichbar,
-  kann ich etwas ausrichten?"
+{erster}
 - Frag freundlich nach Name, Anliegen und Rückrufnummer, falls der Anrufer das nicht
   von selbst sagt. Frag bei Bedarf, ob es dringend ist.
 {NATUERLICH}

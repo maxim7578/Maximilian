@@ -9,7 +9,7 @@ from loguru import logger
 
 from . import audio
 
-SELBST_BEGINNEN_NACH = 5.0  # s: meldet sich niemand hörbar, beginnt der Assistent
+SELBST_BEGINNEN_NACH = 3.0  # s: meldet sich niemand hörbar, beginnt der Assistent
 VORLAUF_RAHMEN = 15  # 300 ms Ton vor dem erkannten Sprechbeginn mitnehmen
 MAX_AEUSSERUNG_S = 25
 MIN_WOERTER_VOR_AUFLEGEN = 4  # so wenig Gehörtes reicht nicht, um auf "Anrufbeantworter" zu schließen
@@ -60,7 +60,12 @@ def saetze(text: str) -> list[str]:
 
 
 class Gespraech:
-    def __init__(self, leitung, ki, stimme, systemtext: str, selbst_beginnen: bool, max_sekunden: int):
+    def __init__(self, leitung, ki, stimme, systemtext: str, selbst_beginnen: bool, max_sekunden: int,
+                 begruessung: str = "", gruss_ton: asyncio.Task | None = None):
+        """begruessung: fester erster Satz, der ohne KI-Wartezeit sofort gesprochen wird.
+        gruss_ton: schon vorab (z. B. während es klingelt) erzeugter Ton dazu."""
+        self.begruessung = begruessung
+        self._gruss_ton = gruss_ton
         self.leitung = leitung
         self.ki = ki
         self.stimme = stimme
@@ -155,8 +160,62 @@ class Gespraech:
         self.verlauf.append({"role": "user", "content": f"({text})"})
         await self._ki_antwort()
 
+    async def _verstehen(self, ton: np.ndarray) -> str:
+        """Spracherkennung; "" bei Fehler oder typischen Whisper-Halluzinationen."""
+        try:
+            text = await self.ki.transkribieren(audio.wav_bytes(ton), "aeusserung.wav")
+        except Exception as fehler:
+            logger.warning(f"Spracherkennung fehlgeschlagen: {fehler}")
+            return ""
+        if not text or HALLUZINATIONEN.match(text.strip()):
+            return ""
+        logger.info(f"Gegenüber: {text}")
+        return text
+
+    def _gehoert(self, text: str) -> None:
+        self.ergebnis.protokoll.append(("Gegenüber", text))
+        self.verlauf.append({"role": "user", "content": text})
+
+    async def _begruessen(self) -> bool:
+        """Spricht den vorbereiteten ersten Satz sofort – ohne auf Spracherkennung und KI zu warten."""
+        if not self.begruessung:
+            return False
+        try:
+            if self._gruss_ton is None:
+                self._gruss_ton = asyncio.create_task(self.stimme.sprechen(self.begruessung))
+            ton = await self._gruss_ton
+        except Exception as fehler:
+            logger.warning(f"Begrüßung konnte nicht vorbereitet werden: {fehler}")
+            return False
+        self.leitung.senden(ton)
+        return True
+
+    async def _anfangen_mit_begruessung(self) -> bool:
+        erste = None
+        if not self.selbst_beginnen:
+            try:  # bis sich jemand meldet ("Hallo?"), höchstens ein paar Sekunden
+                erste = await asyncio.wait_for(self._aeusserungen.get(), SELBST_BEGINNEN_NACH)
+            except TimeoutError:
+                pass
+        verstehen = asyncio.create_task(self._verstehen(erste)) if erste is not None else None
+        if not await self._begruessen():
+            if verstehen:
+                verstehen.cancel()
+                await self._aeusserungen.put(erste)
+            return False
+        if verstehen and (text := await verstehen):
+            self._gehoert(text)
+        self.ergebnis.protokoll.append(("Assistent", self.begruessung))
+        self.verlauf.append({"role": "assistant", "content": self.begruessung})
+        if not self.selbst_beginnen:
+            # Während die Begrüßung läuft, schon das Anliegen formulieren lassen
+            await self._hinweis("Deine Begrüßung wurde gerade gesprochen. Nenne jetzt direkt und kurz dein Anliegen.")
+        return True
+
     async def _verarbeiten(self) -> None:
-        if self.selbst_beginnen:
+        if await self._anfangen_mit_begruessung():
+            pass
+        elif self.selbst_beginnen:
             await self._hinweis("Der Anruf wurde angenommen.")
         else:
             try:
@@ -169,16 +228,10 @@ class Gespraech:
             # Kurz hintereinander Gesagtes zusammenfassen
             while not self._aeusserungen.empty():
                 ton = np.concatenate([ton, self._aeusserungen.get_nowait()])
-            try:
-                text = await self.ki.transkribieren(audio.wav_bytes(ton), "aeusserung.wav")
-            except Exception as fehler:
-                logger.warning(f"Spracherkennung fehlgeschlagen: {fehler}")
+            text = await self._verstehen(ton)
+            if not text:
                 continue
-            if not text or HALLUZINATIONEN.match(text.strip()):
-                continue
-            logger.info(f"Gegenüber: {text}")
-            self.ergebnis.protokoll.append(("Gegenüber", text))
-            self.verlauf.append({"role": "user", "content": text})
+            self._gehoert(text)
             await self._ki_antwort()
 
     async def _zeitlimit(self) -> None:

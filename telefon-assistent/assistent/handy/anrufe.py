@@ -105,7 +105,8 @@ class HandyAnrufverwaltung:
             return None
 
     async def _gespraech(self, telefonat, systemtext: str, selbst_beginnen: bool,
-                         gemini: GeminiGespraech | None) -> Gespraechsergebnis:
+                         gemini: GeminiGespraech | None, begruessung: str = "",
+                         gruss_ton: asyncio.Task | None = None) -> Gespraechsergebnis:
         if gemini is not None:
             gemini.leitung = telefonat
             gemini.ergebnis.anrufer = getattr(telefonat, "fern_nummer", "")
@@ -113,7 +114,16 @@ class HandyAnrufverwaltung:
         return await Gespraech(
             telefonat, self.ki, self.stimme, systemtext,
             selbst_beginnen=selbst_beginnen, max_sekunden=self.einst.max_gespraech_sekunden,
+            begruessung=begruessung, gruss_ton=gruss_ton,
         ).fuehren()
+
+    def _gruss_vorbereiten(self, text: str) -> asyncio.Task | None:
+        """Erzeugt den ersten Satz schon vorab (z. B. während es klingelt), damit er sofort kommt."""
+        if self.gemini:
+            return None
+        aufgabe = asyncio.create_task(self.stimme.sprechen(text))
+        aufgabe.add_done_callback(lambda a: a.cancelled() or a.exception())  # Fehler nicht "verlieren"
+        return aufgabe
 
     async def starten(self, anruf: Anruf) -> None:
         if self.beschaeftigt:
@@ -131,9 +141,11 @@ class HandyAnrufverwaltung:
 
     async def _ausgehend(self, anruf: Anruf) -> None:
         name, weiblich = self._vorstellung()
+        begruessung = "" if self.gemini else texte.begruessung_raus(self.einst.inhaber, name, weiblich)
         systemtext = texte.gespraech_raus(self.einst.inhaber, anruf.ziel, anruf.auftrag, anruf.spielraum,
-                                          self.einst.rueckrufnummer, jetzt(), name, weiblich)
+                                          self.einst.rueckrufnummer, jetzt(), name, weiblich, begruessung)
         gemini = None
+        gruss_ton = self._gruss_vorbereiten(begruessung) if begruessung else None
         try:
             # Gemini schon vor dem Wählen verbinden, damit nach dem Abheben keine Zeit verloren geht
             gemini = await self._gemini_vorbereiten(None, systemtext, selbst_beginnen=False)
@@ -151,7 +163,7 @@ class HandyAnrufverwaltung:
                 return
             anruf.verbunden.set()
             await self.melden(f"☎️ {anruf.ziel} hat abgenommen, ich spreche gerade …")
-            ergebnis = await self._gespraech(self._telefonat, systemtext, False, gemini)
+            ergebnis = await self._gespraech(self._telefonat, systemtext, False, gemini, begruessung, gruss_ton)
             gemini = None
             details = (
                 f"Angerufen: {anruf.ziel} ({anruf.nummer})\nAuftrag: {anruf.auftrag}\n"
@@ -161,6 +173,8 @@ class HandyAnrufverwaltung:
             await self._bericht_senden("raus", f"📋 Bericht – Anruf bei {anruf.ziel}", details, ergebnis,
                                        self._ruckel_hinweis(self._telefonat))
         finally:
+            if gruss_ton is not None and not gruss_ton.done():
+                gruss_ton.cancel()
             if gemini is not None and gemini._ws is not None:
                 await gemini._ws.close()  # Anruf kam nicht zustande
             self.aktuell = None
@@ -171,10 +185,12 @@ class HandyAnrufverwaltung:
             await telefonat.auflegen()
             return
         self._telefonat = telefonat
-        systemtext = texte.gespraech_rein(self.einst.inhaber, jetzt(), *self._vorstellung())
+        name, weiblich = self._vorstellung()
+        begruessung = "" if self.gemini else texte.begruessung_rein(self.einst.inhaber, name, weiblich)
+        systemtext = texte.gespraech_rein(self.einst.inhaber, jetzt(), name, weiblich, begruessung)
         try:
             gemini = await self._gemini_vorbereiten(telefonat, systemtext, selbst_beginnen=True)
-            ergebnis = await self._gespraech(telefonat, systemtext, True, gemini)
+            ergebnis = await self._gespraech(telefonat, systemtext, True, gemini, begruessung)
         finally:
             self._telefonat = None
         details = (

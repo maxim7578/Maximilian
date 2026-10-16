@@ -181,3 +181,54 @@ async def test_legt_bei_eindeutiger_ansage_auf():
     ki = KI([SOFORT_AUFLEGEN], transkript="Der Teilnehmer ist zurzeit nicht erreichbar, bitte sprechen Sie nach dem Signalton.")
     ergebnis = await asyncio.wait_for(Gespraech(leitung, ki, Stimme(), "System", False, 60).fuehren(), 10)
     assert leitung.aufgelegt and ergebnis.ergebnis == "Anrufbeantworter"
+
+
+ANLIEGEN = Antwort(text="Ich würde gern einen Tisch reservieren.", roh={"role": "assistant", "content": "…"})
+
+
+@pytest.mark.asyncio
+async def test_begruessung_kommt_sofort_ohne_ki():
+    """Nach dem "Hallo" des Gegenübers kommt sofort die vorbereitete Begrüßung, dann das Anliegen."""
+    leitung = Leitung(np.concatenate([stille(0.2), sprache(0.8), stille(5)]))
+    ki, stimme = KI([ANLIEGEN], transkript="Hallo?"), Stimme()
+    gruss = "Guten Tag, hier ist Katja, die KI-Assistentin von Herrn Koch."
+    gespraech = Gespraech(leitung, ki, stimme, "System", False, 60, begruessung=gruss)
+    aufgabe = asyncio.create_task(gespraech.fuehren())
+    await asyncio.sleep(2.5)
+    assert stimme.texte[:2] == [gruss, "Ich würde gern einen Tisch reservieren."]
+    verlauf = ki.verlaeufe[0]
+    assert verlauf[1] == {"role": "user", "content": "Hallo?"}
+    assert verlauf[2] == {"role": "assistant", "content": gruss}
+    assert "Anliegen" in verlauf[3]["content"]
+    await leitung.auflegen()
+    ergebnis = await aufgabe
+    assert ergebnis.protokoll[:2] == [("Gegenüber", "Hallo?"), ("Assistent", gruss)]
+
+
+@pytest.mark.asyncio
+async def test_eingehend_begruessung_ohne_ki():
+    leitung = Leitung(stille(30))
+    ki, stimme = KI([]), Stimme()
+    gruss = "Hallo, hier ist Katja, die KI-Assistentin von Herrn Koch. Worum geht es denn?"
+    aufgabe = asyncio.create_task(Gespraech(leitung, ki, stimme, "System", True, 60, begruessung=gruss).fuehren())
+    await asyncio.sleep(0.5)
+    assert stimme.texte == [gruss] and ki.verlaeufe == []
+    await leitung.auflegen()
+    await aufgabe
+
+
+@pytest.mark.asyncio
+async def test_begruessung_faellt_aus_dann_wie_bisher():
+    class KaputteStimme(Stimme):
+        async def sprechen(self, text):
+            if text.startswith("Guten Tag, hier ist Katja"):
+                raise ConnectionError("weg")
+            return await super().sprechen(text)
+
+    leitung = Leitung(np.concatenate([sprache(1.0), stille(5)]))
+    ki = KI([TSCHUESS])
+    ergebnis = await asyncio.wait_for(Gespraech(
+        leitung, ki, KaputteStimme(), "System", False, 60,
+        begruessung="Guten Tag, hier ist Katja.").fuehren(), 10)
+    assert ki.verlaeufe[0][-1] == {"role": "user", "content": "Restaurant Da Mario, guten Tag."}
+    assert leitung.aufgelegt and ergebnis.erfolgreich
