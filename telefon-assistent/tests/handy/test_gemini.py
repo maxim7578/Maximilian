@@ -21,6 +21,8 @@ async def test_gemini_hoert_spricht_und_legt_auf():
     await server.stoppen()
     setup = server.setup
     assert setup["model"] == "models/gemini-2.5-flash-native-audio-latest"
+    erkennung = setup["realtimeInputConfig"]["automaticActivityDetection"]
+    assert erkennung["silenceDurationMs"] == 300 and erkennung["endOfSpeechSensitivity"] == "END_SENSITIVITY_HIGH"
     assert setup["generationConfig"]["responseModalities"] == ["AUDIO"]
     assert setup["generationConfig"]["speechConfig"]["voiceConfig"]["prebuiltVoiceConfig"]["voiceName"] == "Kore"
     assert "Du bist ein Test." in setup["systemInstruction"]["parts"][0]["text"]
@@ -99,7 +101,7 @@ async def test_ersatzmodell_wenn_modell_nicht_verfuegbar():
     try:
         gespraech = await verwaltung._gemini_vorbereiten(None, "System", False)
         assert gespraech is not None and gespraech.modell == "gemini-3.8-live"
-        assert server.modelle == ["models/gemini-2.5-flash-native-audio-latest", "models/gemini-3.8-live"]
+        assert server.modelle == ["models/gemini-2.5-flash-native-audio-latest"] * 2 + ["models/gemini-3.8-live"]
         assert meldungen == []
         await gespraech._ws.close()
     finally:

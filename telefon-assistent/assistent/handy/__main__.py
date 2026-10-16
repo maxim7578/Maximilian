@@ -77,6 +77,7 @@ async def main() -> None:
                 api_key=_pflicht("GEMINI_API_KEY"),
                 modell=os.getenv("GEMINI_MODELL", GEMINI_MODELL),
                 ersatz_modell=os.getenv("GEMINI_ERSATZ_MODELL", GEMINI_ERSATZ_MODELL),
+                pause_ms=int(os.getenv("GEMINI_PAUSE_MS", "300")),
                 stimme=os.getenv("GEMINI_STIMME", "Kore"),
                 url=os.getenv("GEMINI_URL", GEMINI_URL),
             )

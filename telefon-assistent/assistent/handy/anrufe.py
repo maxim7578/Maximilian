@@ -32,6 +32,7 @@ class GeminiEinstellungen:
     stimme: str = "Kore"
     url: str = GEMINI_URL
     ersatz_modell: str = GEMINI_ERSATZ_MODELL
+    pause_ms: int = 300
 
 
 class HandyAnrufverwaltung:
@@ -103,10 +104,12 @@ class HandyAnrufverwaltung:
             self._sitzung = aiohttp.ClientSession(trust_env=True)
         modelle = [self.gemini.modell] + [m for m in [self.gemini.ersatz_modell] if m and m != self.gemini.modell]
         fehler: GeminiFehler | None = None
-        for modell in modelle:
+        # Erst mit kurzer Pause-Erkennung; lehnt Google diese Einstellung ab, ohne sie (Standard von Google)
+        versuche = [(m, p) for m in modelle for p in (self.gemini.pause_ms, 0)]
+        for modell, pause_ms in versuche:
             gespraech = GeminiGespraech(
                 telefonat, self.gemini.api_key, systemtext, selbst_beginnen, self.einst.max_gespraech_sekunden,
-                modell=modell, stimme=self.gemini.stimme, url=self.gemini.url,
+                modell=modell, stimme=self.gemini.stimme, url=self.gemini.url, pause_ms=pause_ms,
             )
             try:
                 await gespraech.verbinden(self._sitzung)

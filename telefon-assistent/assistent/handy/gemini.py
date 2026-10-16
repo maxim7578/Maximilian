@@ -21,6 +21,8 @@ GEMINI_URL = (
     "google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
 )
 SELBST_BEGINNEN_NACH = 3.0
+PAUSE_MS = 300  # so lange Stille, bis Gemini annimmt, dass das Gegenüber fertig ist (Standard ist länger)
+SENDE_MS = 40  # Ton in so kleinen Stücken an Gemini schicken (kleiner = schneller)
 
 BEENDEN = {
     "name": "gespraech_beenden",
@@ -82,7 +84,9 @@ class GeminiGespraech:
         modell: str = "gemini-2.5-flash-native-audio-latest",
         stimme: str = "Kore",
         url: str = GEMINI_URL,
+        pause_ms: int = PAUSE_MS,
     ):
+        self.pause_ms = pause_ms
         self.leitung = leitung
         self.api_key = api_key
         self.systemtext = systemtext
@@ -113,6 +117,11 @@ class GeminiGespraech:
                     "parts": [{"text": self.systemtext + "\n\nSprich ausschließlich Deutsch."}]
                 },
                 "tools": [{"functionDeclarations": [BEENDEN]}],
+                **({"realtimeInputConfig": {"automaticActivityDetection": {
+                    "endOfSpeechSensitivity": "END_SENSITIVITY_HIGH",
+                    "silenceDurationMs": self.pause_ms,
+                    "prefixPaddingMs": 100,
+                }}} if self.pause_ms else {}),
                 "inputAudioTranscription": {},
                 "outputAudioTranscription": {},
             }
@@ -151,7 +160,7 @@ class GeminiGespraech:
             if erkennung.verarbeiten(stueck[: audio.RAHMEN]) == "anfang":
                 self._etwas_gehoert.set()
             puffer.append(stueck)
-            if sum(len(p) for p in puffer) >= 800:  # alle 100 ms senden
+            if sum(len(p) for p in puffer) >= SENDE_MS * audio.ABTASTRATE // 1000:
                 ton = hochtasten(np.concatenate(puffer))
                 puffer = []
                 await self._senden({"realtimeInput": {"audio": {
