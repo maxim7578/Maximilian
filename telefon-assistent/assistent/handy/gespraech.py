@@ -207,9 +207,11 @@ class Gespraech:
             self._gehoert(text)
         self.ergebnis.protokoll.append(("Assistent", self.begruessung))
         self.verlauf.append({"role": "assistant", "content": self.begruessung})
-        if not self.selbst_beginnen:
-            # Während die Begrüßung läuft, schon das Anliegen formulieren lassen
-            await self._hinweis("Deine Begrüßung wurde gerade gesprochen. Nenne jetzt direkt und kurz dein Anliegen.")
+        # Während die Begrüßung läuft, schon den nächsten Satz formulieren lassen
+        if self.selbst_beginnen:
+            await self._hinweis("Du hast den Anruf angenommen und gerade gegrüßt. Sag jetzt deinen ersten Satz.")
+        else:
+            await self._hinweis("Du hast gerade gegrüßt. Sag jetzt deinen ersten Satz mit deinem Anliegen.")
         return True
 
     async def _verarbeiten(self) -> None:

@@ -53,28 +53,41 @@ NATUERLICH = """- Sprich wie ein freundlicher Mensch am Telefon, locker und höf
   z. B. "um fünf" oder "siebzehn Uhr", "zwei Personen"."""
 
 
-def begruessung_raus(inhaber: str, name: str = "", weiblich: bool = True) -> str:
-    """Erster Satz bei ausgehenden Anrufen – wird vorab erzeugt, damit er sofort kommt."""
-    return f"Guten Tag, {_rolle(name, weiblich)[0]} von {inhaber}."
+def begruessung_raus(inhaber: str = "", name: str = "", weiblich: bool = True) -> str:
+    """Erstes Wort bei ausgehenden Anrufen – wird vorab erzeugt, damit sofort etwas kommt."""
+    return "Hallo, guten Tag!"
 
 
-def begruessung_rein(inhaber: str, name: str = "", weiblich: bool = True) -> str:
-    return f"Hallo, {_rolle(name, weiblich)[0]} von {inhaber}. Worum geht es denn?"
+def begruessung_rein(inhaber: str = "", name: str = "", weiblich: bool = True) -> str:
+    return "Ja, hallo, guten Tag!"
+
+
+def _offenlegung(inhaber: str, weiblich: bool, rein: bool) -> str:
+    """Kurzer, beiläufiger Hinweis auf die KI – Menschen sollen wissen, dass sie mit einer KI sprechen."""
+    rolle = "KI-Assistentin" if weiblich else "KI-Assistent"
+    if rein:
+        beispiel = f"Sie sprechen mit der {rolle} von {inhaber}, worum geht es denn?" if weiblich else \
+                   f"Sie sprechen mit dem {rolle}en von {inhaber}, worum geht es denn?"
+    else:
+        beispiel = f"Ich bin eine {rolle} und rufe für {inhaber} an, ich würde gern einen Tisch reservieren." \
+            if weiblich else f"Ich bin ein {rolle} und rufe für {inhaber} an, ich würde gern einen Tisch reservieren."
+    return ("- Sag in deinem ersten Satz ganz beiläufig, in wenigen Worten, dass du eine KI bist – ohne\n"
+            "  steife Vorstellung und ohne eigenen Vornamen. Beispiel:\n"
+            f'  "{beispiel}"\n'
+            "  Danach erwähnst du die KI nicht mehr, außer jemand fragt.")
 
 
 def gespraech_raus(
     inhaber: str, ziel: str, auftrag: str, spielraum: str, rueckrufnummer: str, jetzt: datetime,
     name: str = "", weiblich: bool = True, begruessung: str = "",
 ) -> str:
-    vorstellung, wer = _rolle(name, weiblich)
+    _, wer = _rolle("", weiblich)
+    erster = _offenlegung(inhaber, weiblich, rein=False)
     if begruessung:
-        erster = (f'- Sobald sich jemand meldet, wird automatisch deine Begrüßung gesprochen: "{begruessung}"\n'
-                  "  Wiederhole sie nicht. Komm danach direkt in einem kurzen Satz zum Anliegen, z. B.\n"
-                  '  "Ich würde gern einen Tisch reservieren."')
-    else:
-        erster = ("- Warte, bis sich dein Gesprächspartner meldet. Stell dich dann in EINEM natürlichen Satz\n"
-                  "  vor, sag dabei kurz, dass du eine KI bist, und komm direkt zum Anliegen. Beispiel:\n"
-                  f'  "Guten Tag, {vorstellung} von {inhaber}. Ich würde gern einen Tisch reservieren."')
+        erster = (f'- Sobald sich jemand meldet, sagst du automatisch "{begruessung}". Wiederhole das nicht.\n'
+                  + erster)
+    if name:
+        erster += f"\n- Falls jemand nach deinem Namen fragt: {name}."
     nachname = inhaber.split()[-1] if inhaber.split() else inhaber
     rueckruf = (
         f"Falls nach einer Rückrufnummer gefragt wird: {rueckrufnummer}."
@@ -90,7 +103,6 @@ Spielraum: {spielraum or "keiner – weiche nicht vom Auftrag ab."}
 
 So verhältst du dich:
 {erster}
-  Danach erwähnst du die KI nicht mehr, außer jemand fragt.
 - Reservierungen und Termine machst du auf den Namen {nachname}.
 {NATUERLICH}
 - Sag nur zu, was im Auftrag oder Spielraum steht. Wenn etwas anderes angeboten wird,
@@ -111,14 +123,12 @@ So verhältst du dich:
 def gespraech_rein(
     inhaber: str, jetzt: datetime, name: str = "", weiblich: bool = True, begruessung: str = ""
 ) -> str:
-    vorstellung, wer = _rolle(name, weiblich)
+    _, wer = _rolle("", weiblich)
+    erster = _offenlegung(inhaber, weiblich, rein=True)
     if begruessung:
-        erster = (f'- Deine Begrüßung wurde schon automatisch gesprochen: "{begruessung}"\n'
-                  "  Wiederhole sie nicht, hör zu und antworte auf das, was der Anrufer sagt.")
-    else:
-        erster = ("- Begrüße den Anrufer in einem natürlichen Satz und sag dabei kurz, dass du eine KI bist.\n"
-                  f'  Beispiel: "Hallo, {vorstellung} von {inhaber}. Gerade ist niemand erreichbar,\n'
-                  '  kann ich etwas ausrichten?"')
+        erster = f'- Du hast schon automatisch "{begruessung}" gesagt. Wiederhole das nicht.\n' + erster
+    if name:
+        erster += f"\n- Falls jemand nach deinem Namen fragt: {name}."
     return f"""Du bist {wer} von {inhaber} und nimmst gerade stellvertretend einen
 Anruf auf Deutsch entgegen.
 Jetzt ist {_zeit(jetzt)}.

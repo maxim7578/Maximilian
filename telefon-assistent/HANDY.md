@@ -131,7 +131,7 @@ probierst du ein paar aus, indem der Assistent dich selbst anruft.
 
 **Andere Stimme (klassisch):** Schick dem Bot `/stimmen`. Du bekommst von jeder Microsoft-Stimme eine
 Hörprobe in Telefonqualität und tippst unter deiner Lieblingsstimme auf **„… nehmen“**. Der Assistent
-stellt sich dann mit diesem Vornamen vor, z. B. „Hallo, hier ist Seraphina, die KI-Assistentin von …“.
+nennt den Vornamen nur, wenn jemand danach fragt.
 Klingt es sehr künstlich, zeigt `/status`, ob gerade die Ersatzstimme Piper spricht, weil Microsoft
 nicht erreichbar war. Nach fünf Minuten probiert der Assistent Microsoft automatisch wieder.
 Zu langsam oder zu schnell? In `.env` z. B. `MICROSOFT_TEMPO=+15%` (schneller) oder `-5%` eintragen.

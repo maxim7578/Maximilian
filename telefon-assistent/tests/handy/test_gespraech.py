@@ -191,7 +191,7 @@ async def test_begruessung_kommt_sofort_ohne_ki():
     """Nach dem "Hallo" des Gegenübers kommt sofort die vorbereitete Begrüßung, dann das Anliegen."""
     leitung = Leitung(np.concatenate([stille(0.2), sprache(0.8), stille(5)]))
     ki, stimme = KI([ANLIEGEN], transkript="Hallo?"), Stimme()
-    gruss = "Guten Tag, hier ist Katja, die KI-Assistentin von Herrn Koch."
+    gruss = "Hallo, guten Tag!"
     gespraech = Gespraech(leitung, ki, stimme, "System", False, 60, begruessung=gruss)
     aufgabe = asyncio.create_task(gespraech.fuehren())
     await asyncio.sleep(2.5)
@@ -206,13 +206,13 @@ async def test_begruessung_kommt_sofort_ohne_ki():
 
 
 @pytest.mark.asyncio
-async def test_eingehend_begruessung_ohne_ki():
+async def test_eingehend_begruessung_sofort():
     leitung = Leitung(stille(30))
-    ki, stimme = KI([]), Stimme()
-    gruss = "Hallo, hier ist Katja, die KI-Assistentin von Herrn Koch. Worum geht es denn?"
+    ki, stimme = KI([ANLIEGEN]), Stimme()
+    gruss = "Ja, hallo, guten Tag!"
     aufgabe = asyncio.create_task(Gespraech(leitung, ki, stimme, "System", True, 60, begruessung=gruss).fuehren())
     await asyncio.sleep(0.5)
-    assert stimme.texte == [gruss] and ki.verlaeufe == []
+    assert stimme.texte[0] == gruss and "angenommen" in ki.verlaeufe[0][-1]["content"]
     await leitung.auflegen()
     await aufgabe
 
@@ -221,7 +221,7 @@ async def test_eingehend_begruessung_ohne_ki():
 async def test_begruessung_faellt_aus_dann_wie_bisher():
     class KaputteStimme(Stimme):
         async def sprechen(self, text):
-            if text.startswith("Guten Tag, hier ist Katja"):
+            if text == "Hallo, guten Tag!":
                 raise ConnectionError("weg")
             return await super().sprechen(text)
 
@@ -229,6 +229,6 @@ async def test_begruessung_faellt_aus_dann_wie_bisher():
     ki = KI([TSCHUESS])
     ergebnis = await asyncio.wait_for(Gespraech(
         leitung, ki, KaputteStimme(), "System", False, 60,
-        begruessung="Guten Tag, hier ist Katja.").fuehren(), 10)
+        begruessung="Hallo, guten Tag!").fuehren(), 10)
     assert ki.verlaeufe[0][-1] == {"role": "user", "content": "Restaurant Da Mario, guten Tag."}
     assert leitung.aufgelegt and ergebnis.erfolgreich
