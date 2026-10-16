@@ -201,6 +201,19 @@ class HandyAnrufverwaltung:
                                    self._ruckel_hinweis(telefonat))
 
     @staticmethod
+    def _zeiten_text(ergebnis: Gespraechsergebnis) -> str:
+        if not ergebnis.antwortzeiten:
+            return ""
+        schnitt = sum(ergebnis.antwortzeiten) / len(ergebnis.antwortzeiten) + 0.5  # + Pause bis "fertig"
+        text = f"\n\n⏱️ Antwortzeit im Schnitt: {schnitt:.1f} s"
+        if ergebnis.messungen:
+            def mittel(name: str) -> float:
+                return sum(m[name] for m in ergebnis.messungen) / len(ergebnis.messungen)
+            text += (f"\n(Pause 0,5 · Spracherkennung {mittel('erkennung'):.1f} · KI {mittel('ki'):.1f} · "
+                     f"Stimme {mittel('stimme'):.1f} s · gehört je {mittel('gehoert'):.1f} s)")
+        return text.replace(".", ",")
+
+    @staticmethod
     def _ruckel_hinweis(telefonat) -> str:
         anzahl = getattr(getattr(telefonat, "rtp", None), "verspaetet", 0)
         if not anzahl:
@@ -218,9 +231,7 @@ class HandyAnrufverwaltung:
             logger.warning(f"Bericht konnte nicht erstellt werden: {fehler}")
             bericht = details
         text = f"{titel}\n\n{bericht}"
-        if ergebnis.antwortzeiten:
-            schnitt = sum(ergebnis.antwortzeiten) / len(ergebnis.antwortzeiten) + 0.5  # + Pause bis "fertig"
-            text += f"\n\n⏱️ Antwortzeit im Schnitt: {schnitt:.1f} Sekunden"
+        text += self._zeiten_text(ergebnis)
         if protokoll:
             text += f"\n\n— Protokoll —\n{protokoll}"
         await self.melden(text[:4000 - len(hinweis)] + hinweis)

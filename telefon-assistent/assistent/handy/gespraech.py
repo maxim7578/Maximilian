@@ -50,6 +50,8 @@ class Gespraechsergebnis:
     protokoll: list[tuple[str, str]] = field(default_factory=list)
     anrufer: str = ""
     antwortzeiten: list[float] = field(default_factory=list)  # s vom Ende des Zuhörens bis zum Sprechen
+    # je Antwort: Dauer des Gehörten, Spracherkennung, KI bis zum ersten Satz, Stimme bis zum Ton (s)
+    messungen: list[dict[str, float]] = field(default_factory=list)
 
     def protokoll_text(self) -> str:
         return "\n".join(f"{wer}: {text}" for wer, text in self.protokoll)
@@ -80,6 +82,7 @@ class Gespraech:
         self._beenden = False
         self._unterbrochen = False
         self._denken_seit: float | None = None  # seit wann auf die Antwort gewartet wird
+        self._messung: dict[str, float] = {}
 
     # ---------- Zuhören ----------
 
@@ -142,8 +145,17 @@ class Gespraech:
 
     def _zeit_messen(self) -> None:
         if self._denken_seit is not None:
-            dauer = asyncio.get_running_loop().time() - self._denken_seit
+            jetzt = asyncio.get_running_loop().time()
+            dauer = jetzt - self._denken_seit
             self.ergebnis.antwortzeiten.append(dauer)
+            m = self._messung
+            if "erkannt" in m:
+                ki = m.get("ki", jetzt)
+                self.ergebnis.messungen.append({
+                    "gehoert": m.get("laenge", 0.0), "erkennung": m["erkannt"] - self._denken_seit,
+                    "ki": ki - m["erkannt"], "stimme": jetzt - ki,
+                })
+            self._messung = {}
             logger.info(f"Antwort nach {dauer:.1f} s (+ {ENDE_NACH_STILLE_MS} ms Pause)")
             self._denken_seit = None
 
@@ -165,6 +177,7 @@ class Gespraech:
         strom = getattr(self.ki, "gespraech_antwort_strom", None)
         if strom is None:
             antwort = await self.ki.gespraech_antwort(self.verlauf, [BEENDEN])
+            self._messung.setdefault("ki", asyncio.get_running_loop().time())
             if antwort.text:
                 await self._sprechen(antwort.text)
             return antwort
@@ -174,6 +187,8 @@ class Gespraech:
         gesprochen: list[str] = []
 
         async def bei_satz(satz: str) -> None:
+            if not gesprochen and "ki" not in self._messung:
+                self._messung["ki"] = asyncio.get_running_loop().time()
             gesprochen.append(satz)
             if not self._unterbrochen:
                 await warteschlange.put(asyncio.create_task(self.stimme.sprechen(satz)))
@@ -285,7 +300,9 @@ class Gespraech:
             while not self._aeusserungen.empty():
                 ton = np.concatenate([ton, self._aeusserungen.get_nowait()])
             self._denken_seit = asyncio.get_running_loop().time()
+            self._messung = {"laenge": len(ton) / audio.ABTASTRATE}
             text = await self._verstehen(ton)
+            self._messung["erkannt"] = asyncio.get_running_loop().time()
             if not text:
                 self._denken_seit = None
                 continue

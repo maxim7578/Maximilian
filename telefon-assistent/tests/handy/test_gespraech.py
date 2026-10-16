@@ -275,3 +275,15 @@ async def test_erster_satz_wird_gesprochen_waehrend_die_ki_noch_schreibt():
     await leitung.auflegen()
     ergebnis = await aufgabe
     assert len(ergebnis.antwortzeiten) == 1 and ergebnis.antwortzeiten[0] < 0.5
+    m = ergebnis.messungen[0]
+    assert set(m) == {"gehoert", "erkennung", "ki", "stimme"} and m["gehoert"] > 0.5
+
+
+def test_zeiten_im_bericht():
+    from assistent.handy.anrufe import HandyAnrufverwaltung
+    from assistent.handy.gespraech import Gespraechsergebnis
+
+    e = Gespraechsergebnis(antwortzeiten=[1.5], messungen=[{"gehoert": 2.0, "erkennung": 0.4, "ki": 0.7, "stimme": 0.4}])
+    text = HandyAnrufverwaltung._zeiten_text(e)
+    assert "Antwortzeit im Schnitt: 2,0 s" in text.replace(".", ",")
+    assert "Spracherkennung 0,4 · KI 0,7 · Stimme 0,4 s · gehört je 2,0 s" in text
