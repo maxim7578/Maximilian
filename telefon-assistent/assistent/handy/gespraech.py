@@ -208,9 +208,7 @@ class Gespraech:
         self.ergebnis.protokoll.append(("Assistent", self.begruessung))
         self.verlauf.append({"role": "assistant", "content": self.begruessung})
         # Während die Begrüßung läuft, schon den nächsten Satz formulieren lassen
-        if self.selbst_beginnen:
-            await self._hinweis("Du hast den Anruf angenommen und gerade gegrüßt. Sag jetzt deinen ersten Satz.")
-        else:
+        if not self.selbst_beginnen:
             await self._hinweis("Du hast gerade gegrüßt. Sag jetzt deinen ersten Satz mit deinem Anliegen.")
         return True
 

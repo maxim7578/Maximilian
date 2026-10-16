@@ -25,8 +25,8 @@ def test_rueckrufnummer_nur_wenn_gesetzt():
 
 def test_begruessung_vorab():
     gruss = texte.begruessung_raus("Herrn Koch", "Katja", True)
-    assert gruss == "Hallo, guten Tag!" and "Katja" not in gruss
+    assert gruss == "Hallo! Hier ist die Telefonassistentin von Herrn Koch."
     raus = texte.gespraech_raus("Herrn Koch", "X", "Y", "", "", JETZT, "Katja", True, gruss)
-    assert gruss in raus and "Wiederhole das nicht" in raus and "Ich bin eine KI-Assistentin" in raus
-    rein = texte.gespraech_rein("Herrn Koch", JETZT, "Florian", False, texte.begruessung_rein())
-    assert "Sie sprechen mit dem KI-Assistenten von Herrn Koch" in rein
+    assert gruss in raus and "Wiederhole das nicht" in raus and "Gib dich nie als Mensch aus" in raus
+    rein = texte.gespraech_rein("Herrn Koch", JETZT, "Florian", False)
+    assert "Hallo, hier ist der Telefonassistent von Herrn Koch, worum geht es denn?" in rein

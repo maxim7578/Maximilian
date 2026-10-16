@@ -73,7 +73,7 @@ class HandyAnrufverwaltung:
         """Probesatz mit einer Microsoft-Stimme als Telegram-Sprachnachricht (Telefonqualität)."""
         aktuell = getattr(self.stimme, "microsoft", None)
         probe = EdgeStimme(kurzname, aktuell.tempo) if aktuell else EdgeStimme(kurzname)
-        rolle = "eine KI-Assistentin" if probe.weiblich else "ein KI-Assistent"
+        rolle = "die Telefonassistentin" if probe.weiblich else "der Telefonassistent"
         text = PROBESATZ.format(name=probe.vorname, rolle=rolle, inhaber=self.einst.inhaber)
         return await pcm_zu_ogg(await asyncio.wait_for(probe.sprechen(text), 20))
 

@@ -53,28 +53,38 @@ NATUERLICH = """- Sprich wie ein freundlicher Mensch am Telefon, locker und höf
   z. B. "um fünf" oder "siebzehn Uhr", "zwei Personen"."""
 
 
-def begruessung_raus(inhaber: str = "", name: str = "", weiblich: bool = True) -> str:
-    """Erstes Wort bei ausgehenden Anrufen – wird vorab erzeugt, damit sofort etwas kommt."""
-    return "Hallo, guten Tag!"
+def _assistent(inhaber: str, weiblich: bool) -> str:
+    return f"die Telefonassistentin von {inhaber}" if weiblich else f"der Telefonassistent von {inhaber}"
 
 
-def begruessung_rein(inhaber: str = "", name: str = "", weiblich: bool = True) -> str:
-    return "Ja, hallo, guten Tag!"
+def begruessung_raus(inhaber: str, name: str = "", weiblich: bool = True) -> str:
+    """Erster Satz bei ausgehenden Anrufen – wird vorab erzeugt, damit er sofort kommt."""
+    return f"Hallo! Hier ist {_assistent(inhaber, weiblich)}."
 
 
-def _offenlegung(inhaber: str, weiblich: bool, rein: bool) -> str:
-    """Kurzer, beiläufiger Hinweis auf die KI – Menschen sollen wissen, dass sie mit einer KI sprechen."""
-    rolle = "KI-Assistentin" if weiblich else "KI-Assistent"
-    if rein:
-        beispiel = f"Sie sprechen mit der {rolle} von {inhaber}, worum geht es denn?" if weiblich else \
-                   f"Sie sprechen mit dem {rolle}en von {inhaber}, worum geht es denn?"
+def begruessung_rein(inhaber: str, name: str = "", weiblich: bool = True) -> str:
+    return f"Hallo, hier ist {_assistent(inhaber, weiblich)}, worum geht es denn?"
+
+
+EHRLICH = ("- Fragt jemand, ob du ein Mensch, ein Roboter oder eine KI bist, sag ehrlich, dass du eine KI bist.\n"
+           "  Gib dich nie als Mensch aus.")
+
+
+def _offenlegung(inhaber: str, weiblich: bool, rein: bool, begruessung: str) -> str:
+    """Die Begrüßung macht klar, dass ein Assistent spricht – danach kein weiterer Hinweis nötig."""
+    if begruessung:
+        if rein:
+            text = (f'- Du hast den Anruf schon mit "{begruessung}" angenommen. Wiederhole das nicht,\n'
+                    "  hör zu und antworte auf das, was der Anrufer sagt.")
+        else:
+            text = (f'- Sobald sich jemand meldet, sagst du automatisch "{begruessung}" Wiederhole das nicht.\n'
+                    "  Komm danach direkt in einem kurzen Satz zum Anliegen, z. B.\n"
+                    '  "Ich würde gern einen Tisch für zwei reservieren."')
     else:
-        beispiel = f"Ich bin eine {rolle} und rufe für {inhaber} an, ich würde gern einen Tisch reservieren." \
-            if weiblich else f"Ich bin ein {rolle} und rufe für {inhaber} an, ich würde gern einen Tisch reservieren."
-    return ("- Sag in deinem ersten Satz ganz beiläufig, in wenigen Worten, dass du eine KI bist – ohne\n"
-            "  steife Vorstellung und ohne eigenen Vornamen. Beispiel:\n"
-            f'  "{beispiel}"\n'
-            "  Danach erwähnst du die KI nicht mehr, außer jemand fragt.")
+        beispiel = begruessung_rein(inhaber, weiblich=weiblich) if rein else \
+            f"{begruessung_raus(inhaber, weiblich=weiblich)} Ich würde gern einen Tisch für zwei reservieren."
+        text = f'- Beginne mit diesem Satz und komm direkt zur Sache:\n  "{beispiel}"'
+    return text + "\n" + EHRLICH
 
 
 def gespraech_raus(
@@ -82,10 +92,7 @@ def gespraech_raus(
     name: str = "", weiblich: bool = True, begruessung: str = "",
 ) -> str:
     _, wer = _rolle("", weiblich)
-    erster = _offenlegung(inhaber, weiblich, rein=False)
-    if begruessung:
-        erster = (f'- Sobald sich jemand meldet, sagst du automatisch "{begruessung}". Wiederhole das nicht.\n'
-                  + erster)
+    erster = _offenlegung(inhaber, weiblich, rein=False, begruessung=begruessung)
     if name:
         erster += f"\n- Falls jemand nach deinem Namen fragt: {name}."
     nachname = inhaber.split()[-1] if inhaber.split() else inhaber
@@ -124,9 +131,7 @@ def gespraech_rein(
     inhaber: str, jetzt: datetime, name: str = "", weiblich: bool = True, begruessung: str = ""
 ) -> str:
     _, wer = _rolle("", weiblich)
-    erster = _offenlegung(inhaber, weiblich, rein=True)
-    if begruessung:
-        erster = f'- Du hast schon automatisch "{begruessung}" gesagt. Wiederhole das nicht.\n' + erster
+    erster = _offenlegung(inhaber, weiblich, rein=True, begruessung=begruessung)
     if name:
         erster += f"\n- Falls jemand nach deinem Namen fragt: {name}."
     return f"""Du bist {wer} von {inhaber} und nimmst gerade stellvertretend einen

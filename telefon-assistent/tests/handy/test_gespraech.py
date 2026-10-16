@@ -191,7 +191,7 @@ async def test_begruessung_kommt_sofort_ohne_ki():
     """Nach dem "Hallo" des Gegenübers kommt sofort die vorbereitete Begrüßung, dann das Anliegen."""
     leitung = Leitung(np.concatenate([stille(0.2), sprache(0.8), stille(5)]))
     ki, stimme = KI([ANLIEGEN], transkript="Hallo?"), Stimme()
-    gruss = "Hallo, guten Tag!"
+    gruss = "Hallo! Hier ist die Telefonassistentin von Herrn Koch."
     gespraech = Gespraech(leitung, ki, stimme, "System", False, 60, begruessung=gruss)
     aufgabe = asyncio.create_task(gespraech.fuehren())
     await asyncio.sleep(2.5)
@@ -208,11 +208,11 @@ async def test_begruessung_kommt_sofort_ohne_ki():
 @pytest.mark.asyncio
 async def test_eingehend_begruessung_sofort():
     leitung = Leitung(stille(30))
-    ki, stimme = KI([ANLIEGEN]), Stimme()
-    gruss = "Ja, hallo, guten Tag!"
+    ki, stimme = KI([]), Stimme()
+    gruss = "Hallo, hier ist die Telefonassistentin von Herrn Koch, worum geht es denn?"
     aufgabe = asyncio.create_task(Gespraech(leitung, ki, stimme, "System", True, 60, begruessung=gruss).fuehren())
     await asyncio.sleep(0.5)
-    assert stimme.texte[0] == gruss and "angenommen" in ki.verlaeufe[0][-1]["content"]
+    assert stimme.texte == [gruss] and ki.verlaeufe == []  # sofort, ohne auf die KI zu warten
     await leitung.auflegen()
     await aufgabe
 

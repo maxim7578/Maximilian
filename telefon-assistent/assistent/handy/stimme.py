@@ -28,8 +28,8 @@ MICROSOFT_STIMMEN = [
     ("de-DE-ConradNeural", "Conrad", False),
     ("de-DE-KillianNeural", "Killian", False),
 ]
-PROBESATZ = ("Hallo, guten Tag! Ich bin {rolle} und rufe für {inhaber} an. Ich wollte mal fragen, ob heute "
-             "Abend so gegen sieben noch ein Tisch für zwei Personen frei ist?")
+PROBESATZ = ("Hallo! Hier ist {rolle} von {inhaber}. Ich wollte mal fragen, ob heute Abend so gegen "
+             "sieben noch ein Tisch für zwei Personen frei ist?")
 PAUSE_NACH_FEHLER = 300  # s
 
 
