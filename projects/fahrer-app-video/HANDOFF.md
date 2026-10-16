@@ -16,8 +16,15 @@ Quelle: `assets/source.pptx` (27 Folien, Rica Service GmbH).
 Lokale Piper-/CSS10-Stimmen gefallen nicht (zu langweilig). Gewünscht: **junge, sehr sanfte,
 sehr freundliche Frauenstimme von ElevenLabs**, die die **Folientexte vorliest**.
 
-## Nächste Schritte (neue Sitzung mit ELEVENLABS_API_KEY und Freigabe api.elevenlabs.io)
-1. Deutsche, junge, freundliche Frauenstimmen bei ElevenLabs suchen, Hörproben als Artifact-Seite zeigen,
+## Stimmen-Optionen
+- **Gemini-TTS (bevorzugt, falls `GEMINI_API_KEY` gesetzt):** `generativelanguage.googleapis.com` ist ohne
+  Freigabe erreichbar. Tool `tools/audio/gemini_tts.py` (liest `GOOGLE_API_KEY` oder `GEMINI_API_KEY`).
+  Stil per Anweisung steuerbar („sanft, warm, freundlich, junge Frau“). Kandidaten-Stimmen zum Vergleichen:
+  Leda, Aoede, Achernar, Sulafat, Vindemiatrix, Kore.
+- **ElevenLabs:** braucht `ELEVENLABS_API_KEY` und Freigabe von `api.elevenlabs.io`.
+
+## Nächste Schritte (neue Sitzung mit Gemini- oder ElevenLabs-Schlüssel)
+1. Junge, sanfte, freundliche deutsche Frauenstimmen beim verfügbaren Dienst suchen, Hörproben als Artifact-Seite zeigen,
    Nutzer wählen lassen.
 2. Folientexte je Folie mit der gewählten Stimme erzeugen (Text darf jetzt normal mit Zahlen sein,
    Vorlage: `artifacts/slide_reading.json` bzw. Folientexte aus `source.pptx`).
