@@ -1,0 +1,151 @@
+"""Prüft die Verbindung zur FRITZ!Box und findet ihre Adresse.
+
+Aufruf (im Ordner telefon-assistent): python -m assistent.handy.pruefen
+"""
+
+import asyncio
+import os
+import socket
+from pathlib import Path
+
+from .__main__ import env_laden
+from .sip import Telefon, _zufall
+
+
+def lokale_ip() -> str:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.connect(("8.8.8.8", 53))
+        return s.getsockname()[0]
+
+
+def web_erreichbar(ip: str) -> bool:
+    try:
+        with socket.create_connection((ip, 80), timeout=2):
+            return True
+    except OSError:
+        return False
+
+
+def sip_antwort(ip: str, port: int = 5060) -> str:
+    """Schickt eine SIP-OPTIONS-Anfrage und gibt die erste Antwortzeile zurück ("" = keine Antwort)."""
+    return sip_antwort_von(ip, port, 0)
+
+
+def sip_antwort_von(ip: str, port: int, eigener: int) -> str:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.settimeout(3)
+        try:
+            s.bind(("", eigener))
+        except OSError:
+            return "Port belegt (läuft der Assistent noch?)"
+        s.connect((ip, port))
+        eigene_ip, eigener_port = s.getsockname()
+        anfrage = (
+            f"OPTIONS sip:{ip} SIP/2.0\r\n"
+            f"Via: SIP/2.0/UDP {eigene_ip}:{eigener_port};branch=z9hG4bK{_zufall(12)};rport\r\n"
+            f"Max-Forwards: 70\r\nFrom: <sip:pruefung@{eigene_ip}>;tag={_zufall(8)}\r\n"
+            f"To: <sip:{ip}>\r\nCall-ID: {_zufall(16)}\r\nCSeq: 1 OPTIONS\r\n"
+            f"Contact: <sip:pruefung@{eigene_ip}:{eigener_port}>\r\nContent-Length: 0\r\n\r\n"
+        )
+        try:
+            s.send(anfrage.encode())
+            return s.recv(4096).decode(errors="replace").split("\r\n")[0]
+        except OSError:
+            return ""
+
+
+def udp_dns_test(ip: str) -> bool:
+    """Prüft, ob UDP zur FRITZ!Box überhaupt durchgeht (DNS-Anfrage an Port 53)."""
+    anfrage = bytes.fromhex("abcd01000001000000000000") + b"\x05fritz\x03box\x00\x00\x01\x00\x01"
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.settimeout(3)
+        try:
+            s.sendto(anfrage, (ip, 53))
+            return len(s.recvfrom(512)[0]) > 0
+        except OSError:
+            return False
+
+
+def sip_tcp_antwort(ip: str, port: int = 5060) -> str:
+    """SIP-OPTIONS über TCP ("" = Port zu oder keine Antwort)."""
+    try:
+        with socket.create_connection((ip, port), timeout=3) as s:
+            s.settimeout(3)
+            eigene_ip, eigener_port = s.getsockname()
+            anfrage = (
+                f"OPTIONS sip:{ip} SIP/2.0\r\n"
+                f"Via: SIP/2.0/TCP {eigene_ip}:{eigener_port};branch=z9hG4bK{_zufall(12)};rport\r\n"
+                f"Max-Forwards: 70\r\nFrom: <sip:pruefung@{eigene_ip}>;tag={_zufall(8)}\r\n"
+                f"To: <sip:{ip}>\r\nCall-ID: {_zufall(16)}\r\nCSeq: 1 OPTIONS\r\n"
+                f"Content-Length: 0\r\n\r\n"
+            )
+            s.sendall(anfrage.encode())
+            return s.recv(4096).decode(errors="replace").split("\r\n")[0] or "verbunden, aber keine Antwort"
+    except OSError as fehler:
+        return f"nein ({fehler.__class__.__name__})"
+
+
+async def anmelden_testen(ip: str, port: int, benutzer: str, kennwort: str) -> str:
+    telefon = Telefon(ip, benutzer, kennwort, server_port=port, lokaler_port=0)
+    await telefon.starten()
+    for _ in range(100):
+        if telefon.angemeldet or telefon.letzter_fehler:
+            break
+        await asyncio.sleep(0.1)
+    ergebnis = "✅ angemeldet" if telefon.angemeldet else f"❌ {telefon.letzter_fehler or 'keine Antwort'}"
+    await telefon.stoppen()
+    return ergebnis
+
+
+def main() -> None:
+    env_laden(Path.cwd() / ".env")
+    eingetragen = os.getenv("FRITZBOX_ADRESSE", "192.168.178.1")
+    adresse, _, port = eingetragen.partition(":")
+    port = int(port or 5060)
+    benutzer = os.getenv("FRITZBOX_BENUTZER", "")
+    kennwort = os.getenv("FRITZBOX_KENNWORT", "")
+
+    ich = lokale_ip()
+    print(f"Dieses Handy hat die Adresse: {ich}")
+    print(f"Eingetragene FRITZ!Box:        {eingetragen}")
+    print(f"Benutzername IP-Telefon:       {benutzer or '(leer!)'}")
+    print(f"Kennwort IP-Telefon:           {'(gesetzt, ' + str(len(kennwort)) + ' Zeichen)' if kennwort else '(leer!)'}\n")
+
+    kandidaten = [adresse]
+    for ip in (".".join(ich.split(".")[:3] + ["1"]), "192.168.178.1", "192.168.188.1", "192.168.0.1", "192.168.1.1"):
+        if ip not in kandidaten:
+            kandidaten.append(ip)
+
+    gefunden = ""
+    for ip in kandidaten:
+        web = web_erreichbar(ip)
+        sip = sip_antwort(ip, port)
+        print(f"{ip:16} Webseite: {'ja ' if web else 'nein'}  Telefonie (SIP): {sip or 'keine Antwort'}")
+        if sip and not gefunden:
+            gefunden = ip
+
+    print()
+    if not gefunden:
+        print("Weitere Tests mit", adresse, "…")
+        print(f"  UDP allgemein (DNS, Port 53): {'ja' if udp_dns_test(adresse) else 'nein'}")
+        print(f"  SIP über TCP (Port {port}):    {sip_tcp_antwort(adresse, port)}")
+        print(f"  SIP über UDP von Port 5062:   {sip_antwort_von(adresse, port, 5062) or 'keine Antwort'}")
+        print()
+        # Die FRITZ!Box ignoriert Anfragen unbekannter Geräte absichtlich – die echte Anmeldung zählt.
+        gefunden = adresse
+    if gefunden != adresse:
+        print(f"➡️  Die FRITZ!Box antwortet unter {gefunden}, eingetragen ist aber {adresse}.")
+        print("   Korrigieren mit diesem Befehl:")
+        print(f"   sed -i 's/^FRITZBOX_ADRESSE=.*/FRITZBOX_ADRESSE={gefunden}/' .env\n")
+    print(f"Anmeldung als IP-Telefon an {gefunden} wird getestet …")
+    ergebnis = asyncio.run(anmelden_testen(gefunden, port, benutzer, kennwort))
+    print(ergebnis)
+    if "keine Antwort" in ergebnis.lower():
+        print("➡️  Die FRITZ!Box schweigt. Meist passt der Benutzername nicht genau zu den Anmeldedaten")
+        print("   des IP-Telefons (Telefonie → Telefoniegeräte → Stift → Reiter „Anmeldedaten“).")
+    if "abgelehnt" in ergebnis:
+        print("➡️  Benutzername oder Kennwort passen nicht zu den Anmeldedaten des IP-Telefons in der FRITZ!Box.")
+
+
+if __name__ == "__main__":
+    main()

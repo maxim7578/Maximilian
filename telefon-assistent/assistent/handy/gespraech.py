@@ -1,0 +1,400 @@
+"""Gesprächssteuerung für die Handy-Version: Zuhören → Groq Whisper → Groq LLM → Stimme."""
+
+import asyncio
+import re
+from dataclasses import dataclass, field
+
+import numpy as np
+from loguru import logger
+
+from . import audio
+
+SELBST_BEGINNEN_NACH = 3.0  # s: meldet sich niemand hörbar, beginnt der Assistent
+VORLAUF_RAHMEN = 15  # 300 ms Ton vor dem erkannten Sprechbeginn mitnehmen
+MAX_AEUSSERUNG_S = 25
+MIN_WOERTER_VOR_AUFLEGEN = 4  # so wenig Gehörtes reicht nicht, um auf "Anrufbeantworter" zu schließen
+VORPUFFER = int(0.25 * audio.ABTASTRATE)  # 250 ms Ton sammeln, bevor ein Satz losläuft
+ENDE_NACH_STILLE_MS = 300  # so lange Pause = Gegenüber ist fertig (kürzer = schnellere Antwort)
+UNTERBRECHEN_NACH_RAHMEN = 20  # 400 ms Sprache des Gegenübers unterbricht den Assistenten
+
+# Whisper "hört" in Stille gern solche Sätze – die ignorieren wir.
+HALLUZINATIONEN = re.compile(
+    r"^(untertitel.*|vielen dank( fürs zuschauen)?\.?|danke\.?|tschüss\.?|"
+    r"copyright.*|swr.*|zdf.*|((beep|piep|bip|tu+t|dü+t)\W*)+|\W*)$",
+    re.IGNORECASE,
+)
+
+BEENDEN = {
+    "type": "function",
+    "function": {
+        "name": "gespraech_beenden",
+        "description": (
+            "Beendet das Telefonat (legt auf). Erst aufrufen, nachdem du dich verabschiedet hast "
+            "– oder sofort bei Anrufbeantworter oder Bandansage."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "ergebnis": {"type": "string", "description": "Alle wichtigen Details des Gesprächs für den Bericht."},
+                "erfolgreich": {"type": "boolean", "description": "true, wenn der Auftrag erledigt wurde bzw. alles Wichtige notiert ist."},
+            },
+            "required": ["ergebnis", "erfolgreich"],
+        },
+    },
+}
+
+
+@dataclass
+class Gespraechsergebnis:
+    ergebnis: str = ""
+    erfolgreich: bool | None = None
+    protokoll: list[tuple[str, str]] = field(default_factory=list)
+    anrufer: str = ""
+    antwortzeiten: list[float] = field(default_factory=list)  # s vom Ende des Zuhörens bis zum Sprechen
+    # je Antwort: Dauer des Gehörten, Spracherkennung, KI bis zum ersten Satz, Stimme bis zum Ton (s)
+    messungen: list[dict[str, float]] = field(default_factory=list)
+
+    def protokoll_text(self) -> str:
+        return "\n".join(f"{wer}: {text}" for wer, text in self.protokoll)
+
+
+def saetze(text: str) -> list[str]:
+    """Teilt eine Antwort in Sätze, damit der erste schon gesprochen wird, während der Rest entsteht."""
+    teile = [t.strip() for t in re.findall(r"[^.!?]+[.!?]*", text) if t.strip()]
+    return teile or ([text.strip()] if text.strip() else [])
+
+
+class Satzton:
+    """Erzeugt den Ton eines Satzes im Hintergrund; die ersten Stücke können schon laufen,
+    während der Rest noch kommt."""
+
+    def __init__(self, stimme, satz: str):
+        self.stuecke: asyncio.Queue[np.ndarray | None] = asyncio.Queue()
+        self.aufgabe = asyncio.create_task(self._erzeugen(stimme, satz))
+
+    async def _erzeugen(self, stimme, satz: str) -> None:
+        try:
+            if hasattr(stimme, "sprechen_strom"):
+                async for stueck in stimme.sprechen_strom(satz):
+                    self.stuecke.put_nowait(stueck)
+            else:
+                self.stuecke.put_nowait(await stimme.sprechen(satz))
+        except Exception as fehler:
+            logger.warning(f"Satz konnte nicht gesprochen werden: {fehler}")
+        finally:
+            self.stuecke.put_nowait(None)
+
+    def abbrechen(self) -> None:
+        self.aufgabe.cancel()
+
+
+class Gespraech:
+    def __init__(self, leitung, ki, stimme, systemtext: str, selbst_beginnen: bool, max_sekunden: int,
+                 begruessung: str = "", gruss_ton: asyncio.Task | None = None):
+        """begruessung: fester erster Satz, der ohne KI-Wartezeit sofort gesprochen wird.
+        gruss_ton: schon vorab (z. B. während es klingelt) erzeugter Ton dazu."""
+        self.begruessung = begruessung
+        self._gruss_ton = gruss_ton
+        self.leitung = leitung
+        self.ki = ki
+        self.stimme = stimme
+        self.verlauf: list[dict] = [{"role": "system", "content": systemtext}]
+        self.selbst_beginnen = selbst_beginnen
+        self.max_sekunden = max_sekunden
+        self.ergebnis = Gespraechsergebnis(anrufer=getattr(leitung, "fern_nummer", ""))
+        self._aeusserungen: asyncio.Queue[np.ndarray] = asyncio.Queue()
+        self._spricht_seit = 0
+        self._beenden = False
+        self._unterbrochen = False
+        self._denken_seit: float | None = None  # seit wann auf die Antwort gewartet wird
+        self._messung: dict[str, float] = {}
+        self._erkennung: audio.Sprecherkennung | None = None
+
+    # ---------- Zuhören ----------
+
+    async def _zuhoeren(self) -> None:
+        erkennung = self._erkennung = audio.Sprecherkennung(ende_ms=ENDE_NACH_STILLE_MS)
+        vorlauf: list[np.ndarray] = []
+        aktuell: list[np.ndarray] = []
+        rest = np.zeros(0, dtype=np.int16)
+        while True:
+            stueck = await self.leitung.empfangen()
+            if stueck is None:
+                return
+            rest = np.concatenate([rest, stueck])
+            while len(rest) >= audio.RAHMEN:
+                rahmen, rest = rest[:audio.RAHMEN], rest[audio.RAHMEN:]
+                # Während der Assistent spricht, braucht es mehr Lautstärke (Echo der eigenen Stimme)
+                ereignis = erkennung.verarbeiten(rahmen, 2.0 if self.leitung.spielt else 1.0)
+                if erkennung.spricht or ereignis == "ende":
+                    aktuell.append(rahmen)
+                else:
+                    vorlauf = (vorlauf + [rahmen])[-VORLAUF_RAHMEN:]
+                if ereignis == "anfang":
+                    aktuell = vorlauf + aktuell
+                    vorlauf = []
+                    self._spricht_seit = 0
+                if erkennung.spricht:
+                    self._spricht_seit += 1
+                    if self.leitung.spielt and self._spricht_seit >= UNTERBRECHEN_NACH_RAHMEN and not self._beenden:
+                        logger.info("Gegenüber unterbricht – Assistent hört auf zu sprechen.")
+                        self._unterbrochen = True
+                        self.leitung.leeren()
+                if ereignis == "ende" or len(aktuell) * 0.02 > MAX_AEUSSERUNG_S:
+                    if len(aktuell) >= 15:  # mindestens 300 ms
+                        await self._aeusserungen.put(np.concatenate(aktuell))
+                    aktuell = []
+
+    # ---------- Antworten ----------
+
+    async def _sprechen(self, text: str) -> None:
+        """Spricht Satz für Satz; der nächste Satz wird erzeugt, während der vorige läuft."""
+        self._unterbrochen = False
+        aufgaben = [asyncio.create_task(self.stimme.sprechen(s)) for s in saetze(text)]
+        try:
+            for aufgabe in aufgaben:
+                ton = await aufgabe
+                if self._unterbrochen:
+                    break
+                self._zeit_messen()
+                self.leitung.senden(ton)
+        finally:
+            for aufgabe in aufgaben:
+                aufgabe.cancel()
+
+    def _zu_frueh_zum_auflegen(self) -> bool:
+        """Noch nichts gesagt und kaum etwas gehört (z. B. nur "Beep") – dann nicht gleich auflegen."""
+        if any(wer == "Assistent" for wer, _ in self.ergebnis.protokoll):
+            return False
+        gehoert = " ".join(text for wer, text in self.ergebnis.protokoll if wer == "Gegenüber")
+        return len(gehoert.split()) < MIN_WOERTER_VOR_AUFLEGEN
+
+    def _zeit_messen(self) -> None:
+        if self._denken_seit is not None:
+            jetzt = asyncio.get_running_loop().time()
+            dauer = jetzt - self._denken_seit
+            self.ergebnis.antwortzeiten.append(dauer)
+            m = self._messung
+            if "erkannt" in m:
+                ki = m.get("ki", jetzt)
+                self.ergebnis.messungen.append({
+                    "gehoert": m.get("laenge", 0.0), "erkennung": m["erkannt"] - self._denken_seit,
+                    "ki": ki - m["erkannt"], "stimme": jetzt - ki,
+                })
+            self._messung = {}
+            logger.info(f"Antwort nach {dauer:.1f} s (+ {ENDE_NACH_STILLE_MS} ms Pause)")
+            self._denken_seit = None
+
+    async def _abspielen(self, warteschlange: asyncio.Queue) -> None:
+        """Spielt erzeugte Sätze der Reihe nach ab, sobald der jeweilige Ton fertig ist."""
+        while (satz := await warteschlange.get()) is not None:
+            rest = np.zeros(0, dtype=np.int16)
+            gestartet = False
+            while (stueck := await satz.stuecke.get()) is not None:
+                if self._unterbrochen:
+                    satz.abbrechen()
+                    continue
+                rest = np.concatenate([rest, stueck])
+                # Kleiner Vorlauf, damit der Satz nicht stockt, falls die Daten ungleichmäßig kommen
+                if not gestartet and not self.leitung.spielt and len(rest) < VORPUFFER:
+                    continue
+                gestartet = True
+                # Nur volle 20-ms-Rahmen senden – sonst entstehen Lücken mitten im Satz
+                ganz = len(rest) // audio.RAHMEN * audio.RAHMEN
+                if ganz:
+                    self._zeit_messen()
+                    self.leitung.senden(rest[:ganz])
+                    rest = rest[ganz:]
+            if len(rest) and not self._unterbrochen:
+                self._zeit_messen()
+                self.leitung.senden(rest)
+
+    async def _ki_antwort_holen(self):
+        """Holt die Antwort der KI gestreamt: Sätze werden schon gesprochen, während sie entstehen."""
+        strom = getattr(self.ki, "gespraech_antwort_strom", None)
+        if strom is None:
+            antwort = await self.ki.gespraech_antwort(self.verlauf, [BEENDEN])
+            self._messung.setdefault("ki", asyncio.get_running_loop().time())
+            if antwort.text:
+                await self._sprechen(antwort.text)
+            return antwort
+        self._unterbrochen = False
+        warteschlange: asyncio.Queue = asyncio.Queue()
+        abspieler = asyncio.create_task(self._abspielen(warteschlange))
+        gesprochen: list[str] = []
+
+        async def bei_satz(satz: str) -> None:
+            if not gesprochen and "ki" not in self._messung:
+                self._messung["ki"] = asyncio.get_running_loop().time()
+            gesprochen.append(satz)
+            if not self._unterbrochen:
+                await warteschlange.put(Satzton(self.stimme, satz))
+
+        try:
+            try:
+                return await strom(self.verlauf, [BEENDEN], bei_satz)
+            except Exception as fehler:
+                if gesprochen:
+                    raise
+                logger.warning(f"Gestreamte Antwort fehlgeschlagen, versuche es normal: {fehler}")
+                antwort = await self.ki.gespraech_antwort(self.verlauf, [BEENDEN])
+                for satz in saetze(antwort.text):
+                    await bei_satz(satz)
+                return antwort
+        finally:
+            await warteschlange.put(None)
+            await abspieler
+
+    async def _ki_antwort(self, nachfassen: bool = True) -> None:
+        antwort = await self._ki_antwort_holen()
+        self.verlauf.append(antwort.roh)
+        if antwort.werkzeug == "gespraech_beenden" and not antwort.text and nachfassen and self._zu_frueh_zum_auflegen():
+            logger.info("KI wollte sofort auflegen, obwohl kaum etwas zu hören war – Assistent meldet sich stattdessen.")
+            self.verlauf.append({"role": "tool", "tool_call_id": antwort.werkzeug_id, "content": (
+                "Nicht aufgelegt: Das war zu wenig, um sicher zu sein, dass niemand dran ist. "
+                "Melde dich jetzt und stell dich vor.")})
+            await self._ki_antwort(nachfassen=False)
+            return
+        if antwort.text:
+            self.ergebnis.protokoll.append(("Assistent", antwort.text))
+        if antwort.werkzeug == "gespraech_beenden":
+            argumente = antwort.argumente or {}
+            self.ergebnis.ergebnis = str(argumente.get("ergebnis", ""))
+            self.ergebnis.erfolgreich = bool(argumente.get("erfolgreich", False))
+            self.verlauf.append({"role": "tool", "tool_call_id": antwort.werkzeug_id, "content": "Aufgelegt."})
+            self._beenden = True
+
+    async def _hinweis(self, text: str) -> None:
+        self.verlauf.append({"role": "user", "content": f"({text})"})
+        await self._ki_antwort()
+
+    async def _verstehen(self, ton: np.ndarray) -> str:
+        """Spracherkennung; "" bei Fehler oder typischen Whisper-Halluzinationen."""
+        try:
+            text = await self.ki.transkribieren(audio.wav_bytes(ton), "aeusserung.wav")
+        except Exception as fehler:
+            logger.warning(f"Spracherkennung fehlgeschlagen: {fehler}")
+            return ""
+        if not text or HALLUZINATIONEN.match(text.strip()):
+            return ""
+        logger.info(f"Gegenüber: {text}")
+        return text
+
+    def _spricht_weiter(self) -> bool:
+        return not self._aeusserungen.empty() or bool(self._erkennung and self._erkennung.spricht)
+
+    def _gehoert(self, text: str) -> None:
+        self.ergebnis.protokoll.append(("Gegenüber", text))
+        self.verlauf.append({"role": "user", "content": text})
+
+    async def _begruessen(self) -> bool:
+        """Spricht den vorbereiteten ersten Satz sofort – ohne auf Spracherkennung und KI zu warten."""
+        if not self.begruessung:
+            return False
+        try:
+            if self._gruss_ton is None:
+                self._gruss_ton = asyncio.create_task(self.stimme.sprechen(self.begruessung))
+            ton = await self._gruss_ton
+        except Exception as fehler:
+            logger.warning(f"Begrüßung konnte nicht vorbereitet werden: {fehler}")
+            return False
+        self.leitung.senden(ton)
+        return True
+
+    async def _anfangen_mit_begruessung(self) -> bool:
+        erste = None
+        if not self.selbst_beginnen:
+            try:  # bis sich jemand meldet ("Hallo?"), höchstens ein paar Sekunden
+                erste = await asyncio.wait_for(self._aeusserungen.get(), SELBST_BEGINNEN_NACH)
+            except TimeoutError:
+                pass
+        verstehen = asyncio.create_task(self._verstehen(erste)) if erste is not None else None
+        if not await self._begruessen():
+            if verstehen:
+                verstehen.cancel()
+                await self._aeusserungen.put(erste)
+            return False
+        if verstehen and (text := await verstehen):
+            self._gehoert(text)
+        self.ergebnis.protokoll.append(("Assistent", self.begruessung))
+        self.verlauf.append({"role": "assistant", "content": self.begruessung})
+        # Während die Begrüßung läuft, schon den nächsten Satz formulieren lassen
+        if not self.selbst_beginnen:
+            await self._hinweis("Du hast gerade gegrüßt. Sag jetzt deinen ersten Satz mit deinem Anliegen.")
+        return True
+
+    async def _verarbeiten(self) -> None:
+        if await self._anfangen_mit_begruessung():
+            pass
+        elif self.selbst_beginnen:
+            await self._hinweis("Der Anruf wurde angenommen.")
+        else:
+            try:
+                erste = await asyncio.wait_for(self._aeusserungen.get(), SELBST_BEGINNEN_NACH)
+                await self._aeusserungen.put(erste)
+            except TimeoutError:
+                await self._hinweis("Am anderen Ende meldet sich niemand hörbar. Beginne du das Gespräch.")
+        while not self._beenden:
+            ton = await self._aeusserungen.get()
+            # Kurz hintereinander Gesagtes zusammenfassen
+            while not self._aeusserungen.empty():
+                ton = np.concatenate([ton, self._aeusserungen.get_nowait()])
+            while True:
+                self._denken_seit = asyncio.get_running_loop().time()
+                self._messung = {"laenge": len(ton) / audio.ABTASTRATE}
+                text = await self._verstehen(ton)
+                self._messung["erkannt"] = asyncio.get_running_loop().time()
+                # Hat das Gegenüber nur kurz Luft geholt und spricht weiter? Dann alles zusammen nehmen.
+                if not self._spricht_weiter():
+                    break
+                logger.info("Gegenüber spricht weiter – warte, bis der Satz fertig ist.")
+                ton = np.concatenate([ton, await self._aeusserungen.get()])
+                while not self._aeusserungen.empty():
+                    ton = np.concatenate([ton, self._aeusserungen.get_nowait()])
+            if not text:
+                self._denken_seit = None
+                continue
+            self._gehoert(text)
+            await self._ki_antwort()
+
+    async def _zeitlimit(self) -> None:
+        await asyncio.sleep(max(self.max_sekunden - 30, 10))
+        if not self._beenden:
+            await self._hinweis("Die Gesprächszeit ist fast um. Fasse kurz zusammen, verabschiede dich "
+                                "und rufe gespraech_beenden auf.")
+        await asyncio.sleep(30)
+        self._beenden = True
+
+    async def fuehren(self) -> Gespraechsergebnis:
+        hoeren = asyncio.create_task(self._zuhoeren())
+        denken = asyncio.create_task(self._verarbeiten())
+        uhr = asyncio.create_task(self._zeitlimit())
+        aufgelegt = asyncio.create_task(self.leitung.beendet.wait())
+        try:
+            while not self.leitung.beendet.is_set():
+                fertig, _ = await asyncio.wait({denken, aufgelegt, uhr}, return_when=asyncio.FIRST_COMPLETED)
+                if aufgelegt in fertig:
+                    break
+                if denken in fertig and denken.exception():
+                    logger.error(f"Gesprächsfehler: {denken.exception()}")
+                    try:
+                        self.leitung.leeren()
+                        await self._sprechen("Entschuldigung, ich habe gerade technische Probleme. "
+                                             "Ich melde mich später noch einmal. Auf Wiederhören.")
+                    except Exception:
+                        pass
+                    self.ergebnis.ergebnis = self.ergebnis.ergebnis or f"Technischer Fehler: {denken.exception()}"
+                    self._beenden = True
+                if self._beenden or denken.done() or uhr.done():
+                    # Abschied noch ausreden lassen, dann auflegen
+                    try:
+                        await asyncio.wait_for(self.leitung.warte_bis_ausgegeben(), 20)
+                    except TimeoutError:
+                        pass
+                    await asyncio.sleep(0.8)
+                    await self.leitung.auflegen()
+                    break
+        finally:
+            for aufgabe in (hoeren, denken, uhr, aufgelegt):
+                aufgabe.cancel()
+        return self.ergebnis
