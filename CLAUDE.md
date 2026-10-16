@@ -13,3 +13,9 @@ OpenMontage liegt im Hauptverzeichnis (`pipeline_defs/`, `tools/`, `skills/`,
 `remotion-composer/` usw.). Bei Aufgaben zu Videoproduktion, Montage, Rendering
 oder den OpenMontage-Pipelines zuerst [`AGENT_GUIDE.md`](AGENT_GUIDE.md) lesen
 und dessen Routing-Regeln folgen. Für andere Aufgaben im Repo gilt das nicht.
+
+## Tests immer auf Deutsch
+
+Alle Tests auf Deutsch zeigen und schreiben: Testnamen (`describe`/`it`,
+pgTAP-Beschreibungen), Testausgaben-Zusammenfassungen und Testberichte an den
+Nutzer. Gilt für alle Projekte.
