@@ -25,6 +25,7 @@
   --pill-ink: #0e2a33;
   --fig: #0e2a33;
   --fig-far: rgba(14, 42, 51, .34);
+  --skin: #c48558; --skin-far: #9f6a45; --cloth: #1c2225; --cloth-far: #5b6468; --hair: #2c1b12;
   --mat: rgba(19, 143, 176, .24);
   --prop: #7b9099;
   --blob-a: #3db6d4;
@@ -43,7 +44,8 @@
     --line: rgba(255, 255, 255, .08); --line-strong: rgba(255, 255, 255, .2);
     --teal: #48c1df; --teal-soft: rgba(72, 193, 223, .16); --orange: #ff9d3e; --orange-soft: rgba(255, 157, 62, .17);
     --good: #4cc790; --bad: #ff6b5e; --pill-bg: #e5f1f4; --pill-ink: #09161b;
-    --fig: #e5f1f4; --fig-far: rgba(229, 241, 244, .34); --mat: rgba(72, 193, 223, .22); --prop: #7f98a1;
+    --fig: #e5f1f4; --fig-far: rgba(229, 241, 244, .34);
+    --skin: #c98d60; --skin-far: #8a5c3d; --cloth: #3d4e55; --cloth-far: #27363c; --hair: #170e09; --mat: rgba(72, 193, 223, .22); --prop: #7f98a1;
     --blob-a: #16748d; --blob-b: #b8600f; --blob-c: #163f4b; --shadow: 0 12px 32px rgba(0, 0, 0, .35);
     color-scheme: dark;
   }
@@ -54,7 +56,8 @@
   --line: rgba(255, 255, 255, .08); --line-strong: rgba(255, 255, 255, .2);
   --teal: #48c1df; --teal-soft: rgba(72, 193, 223, .16); --orange: #ff9d3e; --orange-soft: rgba(255, 157, 62, .17);
   --good: #4cc790; --bad: #ff6b5e; --pill-bg: #e5f1f4; --pill-ink: #09161b;
-  --fig: #e5f1f4; --fig-far: rgba(229, 241, 244, .34); --mat: rgba(72, 193, 223, .22); --prop: #7f98a1;
+  --fig: #e5f1f4; --fig-far: rgba(229, 241, 244, .34);
+    --skin: #c98d60; --skin-far: #8a5c3d; --cloth: #3d4e55; --cloth-far: #27363c; --hair: #170e09; --mat: rgba(72, 193, 223, .22); --prop: #7f98a1;
   --blob-a: #16748d; --blob-b: #b8600f; --blob-c: #163f4b; --shadow: 0 12px 32px rgba(0, 0, 0, .35);
   color-scheme: dark;
 }
@@ -133,19 +136,9 @@ h1, h2, h3, p, ol, ul { margin: 0; }
   padding: 10px 8px 12px; border-radius: 20px; background: var(--glass-strong); border: 1px solid var(--line);
   font-weight: 600; transition: transform 140ms var(--ease-out);
 }
-.who-btn svg { width: 100%; max-width: 130px; height: auto; }
+.who-btn img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: 50% 14%; border-radius: 14px; display: block; margin-bottom: 4px; }
 .who-btn:active { transform: scale(.97); }
 
-/* Heute-Karte */
-.today { padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; background: var(--glass-strong); }
-.today .meta { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 500; }
-.today .big { font-size: 42px; font-weight: 400; letter-spacing: -.02em; line-height: 1.1; margin-top: 14px; }
-.today .big small { font-size: 18px; color: var(--muted); font-weight: 500; }
-.today .status { color: var(--teal); font-weight: 600; font-size: 15px; }
-.today .fig { grid-row: 1 / span 3; grid-column: 2; width: 132px; align-self: center; }
-.today .fig svg { width: 100%; height: auto; display: block; }
-.today-name { font-size: 15px; font-weight: 600; }
-.today-sub { font-size: 13px; color: var(--muted); }
 
 .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px 6px 4px; }
 .action { display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; }
@@ -381,11 +374,42 @@ h1, h2, h3, p, ol, ul { margin: 0; }
 
 /* Figuren */
 .fig-limb { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.fig-near { stroke: var(--fig); }
-.fig-far { stroke: var(--fig-far); }
-.fig-head { fill: var(--fig); }
-.fig-hair { stroke: var(--fig); fill: none; stroke-linecap: round; }
-.fig-tie { fill: var(--orange); }
+.c-skin { stroke: var(--skin); }
+.c-skin-far { stroke: var(--skin-far); }
+.c-cloth { stroke: var(--cloth); }
+.c-cloth-far { stroke: var(--cloth-far); }
+.c-hair { stroke: var(--hair); }
+.f-skin { fill: var(--skin); }
+.f-cloth { fill: var(--cloth); }
+
+/* Trainer-Fotos */
+.coach { position: relative; overflow: hidden; padding: 0; height: clamp(440px, 128vw, 580px); }
+.coach-photo { position: absolute; inset: 0; }
+.coach-photo img {
+  width: 100%; height: 100%; display: block; object-fit: cover; object-position: 50% 16%;
+  transform-origin: 50% 30%; animation: coach-drift 14s var(--ease-in-out) infinite alternate;
+}
+@keyframes coach-drift { from { transform: scale(1.02); } to { transform: scale(1.08) translateY(-1.6%); } }
+.coach-photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(5, 20, 26, .45)); }
+.coach-role { position: absolute; left: 14px; top: 14px; padding: 6px 12px; border-radius: 14px; background: var(--glass-strong); font-size: 13px; font-weight: 600; }
+.coach-panel {
+  position: absolute; left: 10px; right: 10px; bottom: 10px;
+  display: grid; grid-template-columns: minmax(0, 1fr) 118px; gap: 2px 10px; align-items: center;
+  padding: 16px; border-radius: 22px; background: var(--glass-strong); box-shadow: var(--shadow);
+}
+.coach-panel .big { font-size: 36px; font-weight: 400; letter-spacing: -.02em; line-height: 1.1; margin-top: 8px; }
+.coach-panel .big small { font-size: 17px; color: var(--muted); font-weight: 500; }
+.coach-panel .status { color: var(--teal); font-weight: 600; font-size: 14px; }
+.coach-panel .fig { grid-row: 1 / span 4; grid-column: 2; border-radius: 16px; background: var(--bg); }
+.coach-panel .fig svg { width: 100%; height: auto; display: block; }
+.today-name { font-size: 16px; font-weight: 600; }
+.today-sub { font-size: 13px; color: var(--muted); }
+.coach-chip {
+  position: absolute; right: 12px; top: 10px; display: flex; align-items: center; gap: 7px;
+  padding: 3px 11px 3px 3px; border-radius: 17px; background: var(--glass-strong); border: 1px solid var(--line);
+  font-size: 12px; font-weight: 600;
+}
+.coach-chip img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; display: block; }
 .p-mat { fill: var(--mat); }
 .p-line { stroke: var(--line-strong); stroke-width: 2; stroke-linecap: round; }
 .p-prop { stroke: var(--prop); fill: none; stroke-linecap: round; stroke-linejoin: round; }
@@ -400,6 +424,7 @@ h1, h2, h3, p, ol, ul { margin: 0; }
   .layer.open .sheet { opacity: 1; }
   .player, .player.open { transform: none; transition: opacity 200ms ease; }
   .tab-ind, .goalbar i, .zone .track i { transition: none; }
+  .coach-photo img { animation: none; }
 }
 @media (hover: hover) and (pointer: fine) {
   .ex-row:hover, .plan:hover { background: var(--glass-strong); }
@@ -428,21 +453,25 @@ h1, h2, h3, p, ol, ul { margin: 0; }
 
       <div class="stack">
         <div class="glass card who" id="who" hidden>
-          <h2>Für wen sollen die Figuren trainieren?</h2>
-          <p>Die Übungen sind für alle gleich. Du wählst nur, wie die Figur aussieht. Ändern kannst du das jederzeit im Profil.</p>
+          <h2>Mit wem trainierst du?</h2>
+          <p>Die Übungen sind für alle gleich. Die animierte Figur übernimmt den Look deiner Trainerin oder deines Trainers. Ändern kannst du das jederzeit im Profil.</p>
           <div class="who-grid">
-            <button class="who-btn" data-gender="frau"><svg data-fig-static="frau"></svg>Frau</button>
-            <button class="who-btn" data-gender="mann"><svg data-fig-static="mann"></svg>Mann</button>
+            <button class="who-btn" data-gender="frau"><img src="coach-frau.webp" alt="">Trainerin</button>
+            <button class="who-btn" data-gender="mann"><img src="coach-mann.webp" alt="">Trainer</button>
           </div>
         </div>
 
         <div>
-          <div class="glass today">
-            <div class="meta"><span class="today-name" id="today-name">Sixpack-Fokus</span></div>
-            <div class="today-sub" id="today-sub">6 Übungen · 2 Runden</div>
-            <div class="big num" id="today-time">14 <small>Min</small></div>
-            <div class="status" id="today-status">Heute dran</div>
-            <div class="fig" id="today-fig-wrap"><svg id="today-fig" aria-hidden="true"></svg></div>
+          <div class="glass coach">
+            <div class="coach-photo"><img id="coach-img" src="coach-frau.webp" alt=""></div>
+            <span class="coach-role" id="coach-role">Deine Trainerin</span>
+            <div class="coach-panel">
+              <div class="today-name" id="today-name">Sixpack-Fokus</div>
+              <div class="today-sub" id="today-sub">6 Übungen · 2 Runden</div>
+              <div class="big num" id="today-time">14 <small>Min</small></div>
+              <div class="status" id="today-status">Heute dran</div>
+              <div class="fig"><svg id="today-fig" aria-hidden="true"></svg></div>
+            </div>
           </div>
           <div class="actions">
             <button class="action primary" id="act-start"><span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l11-6.5a1 1 0 0 0 0-1.72l-11-6.5A1 1 0 0 0 8 5.5Z"/></svg></span><span>Starten</span></button>
@@ -553,7 +582,7 @@ h1, h2, h3, p, ol, ul { margin: 0; }
       <div class="row-btns"><button class="btn" id="pl-keep">Weiter trainieren</button><button class="btn ghost" id="pl-quit">Beenden</button></div>
     </div>
     <div id="pl-run" class="stack" style="flex:1">
-      <div class="stage pl-stage"><span class="next-label" id="pl-nextlabel" hidden>Als Nächstes</span><svg id="pl-fig" aria-hidden="true"></svg></div>
+      <div class="stage pl-stage"><span class="next-label" id="pl-nextlabel" hidden>Als Nächstes</span><span class="coach-chip" id="pl-coach"></span><svg id="pl-fig" aria-hidden="true"></svg></div>
       <div class="pl-name"><h2 id="pl-name"></h2><p id="pl-cue"></p></div>
       <div class="pl-count"><b class="num" id="pl-big" aria-live="off">0</b><span id="pl-unit"></span></div>
       <div class="bar" id="pl-bar"><i id="pl-barfill"></i></div>
@@ -953,6 +982,14 @@ function el(tag, attrs, parent) {
 const f1 = n => Math.round(n * 10) / 10;
 const pts = (...p) => 'M' + p.map(q => f1(q[0]) + ' ' + f1(q[1])).join('L');
 const ease = u => -(Math.cos(Math.PI * u) - 1) / 2;
+const arc = (c, r, a0, a1) => {
+  let d = '';
+  for (let i = 0; i <= 8; i++) { const p = add(c, dir(a0 + (a1 - a0) * i / 8, r)); d += (i ? 'L' : 'M') + f1(p[0]) + ' ' + f1(p[1]); }
+  return d;
+};
+const coachImg = () => gender === 'mann' ? 'coach-mann.webp' : 'coach-frau.webp';
+const coachFace = () => gender === 'mann' ? 'coach-mann-face.webp' : 'coach-frau-face.webp';
+const coachChip = () => `<img src="${coachFace()}" alt="">${gender === 'mann' ? 'Dein Trainer' : 'Deine Trainerin'}`;
 
 let gender = 'frau';
 const live = new Set();
@@ -995,19 +1032,24 @@ class Figure {
       if (p === 'band') { el('rect', { x: 3, y: 26, width: 5, height: 125, rx: 2, class: 'p-propfill' }, back); this.pr.band = el('path', { class: 'p-band' }, back); }
       if (p === 'ball') this.pr.ballBack = el('circle', { r: 7, class: 'p-ball' }, back);
     }
-    const near = this.g || gender;
-    const torsoW = near === 'mann' ? 9.5 : 8.5;
+    // Look der Trainer-Fotos: Haut, schwarzes Tanktop (bei ihr bauchfrei), schwarze Jogger, Uhr
+    const man = (this.g || gender) === 'mann';
+    this.man = man;
+    const W = man ? { arm: 7.5, leg: 9, torso: 15, neck: 7 } : { arm: 6.2, leg: 8, torso: 12.5, neck: 5.5 };
+    const part = (cls, w) => el('path', { class: 'fig-limb ' + cls, 'stroke-width': w }, svg);
     this.n = {
-      farLeg: el('path', { class: 'fig-limb fig-far', 'stroke-width': 7 }, svg),
-      farArm: el('path', { class: 'fig-limb fig-far', 'stroke-width': 6 }, svg),
-      torso: el('path', { class: 'fig-limb fig-near', 'stroke-width': torsoW }, svg),
-      neck: el('path', { class: 'fig-limb fig-near', 'stroke-width': 5.5 }, svg),
-      hair: near === 'frau' ? el('path', { class: 'fig-hair', 'stroke-width': 5 }, svg) : null,
-      head: el('circle', { r: L.R, class: 'fig-head' }, svg),
-      tie: near === 'frau' ? el('circle', { r: 2.2, class: 'fig-tie' }, svg) : null,
-      cap: near === 'mann' ? el('path', { class: 'fig-hair', 'stroke-width': 3.2 }, svg) : null,
-      nearLeg: el('path', { class: 'fig-limb fig-near', 'stroke-width': 7 }, svg),
-      nearArm: el('path', { class: 'fig-limb fig-near', 'stroke-width': 6 }, svg)
+      farLeg: part('c-cloth-far', W.leg),
+      farArm: part('c-skin-far', W.arm),
+      torsoLow: man ? null : part('c-skin', W.torso - 1),
+      torso: part('c-cloth', W.torso),
+      neck: part('c-skin', W.neck),
+      tail: man ? null : part('c-hair', 5),
+      head: el('circle', { r: 9.5, class: 'f-skin' }, svg),
+      hair: part('c-hair', man ? 4.6 : 4.2),
+      beard: man ? part('c-hair', 4.4) : null,
+      nearLeg: part('c-cloth', W.leg),
+      nearArm: part('c-skin', W.arm),
+      watch: el('circle', { r: man ? 3 : 2.6, class: 'f-cloth' }, svg)
     };
     const front = el('g', {}, svg);
     for (const p of a.props) {
@@ -1037,22 +1079,25 @@ class Figure {
     const j = joints(k), n = this.n;
     n.farLeg.setAttribute('d', pts(j.H, j.K2, j.P2));
     n.farArm.setAttribute('d', pts(j.S, j.E2, j.W2));
-    n.torso.setAttribute('d', pts(j.H, j.S));
+    if (n.torsoLow) {
+      const m = add(j.H, dir(k.t, L.T * .4));
+      n.torsoLow.setAttribute('d', pts(j.H, m));
+      n.torso.setAttribute('d', pts(m, j.S));
+    } else n.torso.setAttribute('d', pts(j.H, j.S));
     n.neck.setAttribute('d', pts(j.S, j.N));
     n.head.setAttribute('cx', f1(j.C[0])); n.head.setAttribute('cy', f1(j.C[1]));
     n.nearLeg.setAttribute('d', pts(j.H, j.K1, j.P1));
     n.nearArm.setAttribute('d', pts(j.S, j.E1, j.W1));
-    const back = k.ha - 90 * k.face;
-    if (n.hair) {
-      const root = add(add(j.C, dir(k.ha, 4)), dir(back, 7));
-      const mid = add(root, dir(back, 5));
-      const end = add(mid, [0, 8]);
-      n.hair.setAttribute('d', `M${f1(root[0])} ${f1(root[1])}Q${f1(mid[0])} ${f1(mid[1])} ${f1(end[0])} ${f1(end[1])}`);
-      n.tie.setAttribute('cx', f1(root[0])); n.tie.setAttribute('cy', f1(root[1]));
-    }
-    if (n.cap) {
-      const p0 = add(j.C, dir(k.ha + 70 * k.face, 9.6)), p1 = add(j.C, dir(back - 30 * k.face, 9.6));
-      n.cap.setAttribute('d', `M${f1(p0[0])} ${f1(p0[1])}A9.6 9.6 0 0 ${k.face > 0 ? 0 : 1} ${f1(p1[0])} ${f1(p1[1])}`);
+    const w = add(j.E1, [(j.W1[0] - j.E1[0]) * .8, (j.W1[1] - j.E1[1]) * .8]);
+    n.watch.setAttribute('cx', f1(w[0])); n.watch.setAttribute('cy', f1(w[1]));
+    const fa = k.face, back = k.ha - 90 * fa;
+    n.hair.setAttribute('d', arc(j.C, 8.4, k.ha - 115 * fa, k.ha + (this.man ? 55 : 40) * fa));
+    if (n.beard) n.beard.setAttribute('d', arc(j.C, 8, k.ha + 105 * fa, k.ha + 178 * fa));
+    if (n.tail) {
+      const root = add(add(j.C, dir(k.ha, 5)), dir(back, 7));
+      const mid = add(root, dir(back, 6));
+      const end = add(mid, [0, 9]);
+      n.tail.setAttribute('d', `M${f1(root[0])} ${f1(root[1])}Q${f1(mid[0])} ${f1(mid[1])} ${f1(end[0])} ${f1(end[1])}`);
     }
     const pr = this.pr;
     if (pr.wheel) pr.wheel.setAttribute('transform', `translate(${f1(j.W1[0])} ${F - 9})`);
@@ -1170,9 +1215,8 @@ function renderHome() {
   $('#hello-h').textContent = h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend';
   $('#hello-date').textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }) + ' · Level ' + LEVELS[state.level - 1];
   $('#who').hidden = !!state.gender;
-  for (const svg of document.querySelectorAll('[data-fig-static]')) {
-    new Figure(svg, { gender: svg.dataset.figStatic }).set(BY.pallof, 1);
-  }
+  $('#coach-img').src = coachImg();
+  $('#coach-role').textContent = gender === 'mann' ? 'Dein Trainer' : 'Deine Trainerin';
   const p = todayPlan();
   $('#today-name').textContent = 'Heute: ' + p.name;
   $('#today-sub').textContent = `${p.ex.length} Übungen · ${p.rounds} Runden`;
@@ -1299,7 +1343,7 @@ function seg(name, label, hint, opts, val, onChange) {
 let confirmReset = false;
 function renderMe() {
   const s = $('#settings'); s.textContent = '';
-  s.appendChild(seg('gender', 'Figur', 'So sehen die animierten Figuren aus.', [['frau', 'Frau'], ['mann', 'Mann']], gender, v => setGender(v)));
+  s.appendChild(seg('gender', 'Trainer', 'Die animierten Figuren übernehmen diesen Look.', [['frau', 'Trainerin'], ['mann', 'Trainer']], gender, v => setGender(v)));
   s.appendChild(seg('level', 'Level', 'Bestimmt Wiederholungen und Haltezeiten.', LEVELS.map((t, i) => [i + 1, t]), state.level, v => { save({ level: v }); refreshAll(); }));
   s.appendChild(seg('rest', 'Pause zwischen Übungen', '', [[15, '15 s'], [20, '20 s'], [30, '30 s'], [45, '45 s']], state.rest, v => { save({ rest: v }); refreshAll(); }));
   s.appendChild(seg('goal', 'Wochenziel', '', [[30, '30 Min'], [60, '60 Min'], [90, '90 Min']], state.goal, v => { save({ goal: v }); refreshAll(); }));
@@ -1384,7 +1428,7 @@ function openExercise(id) {
     const body = $('#sheet-body');
     body.scrollTop = 0;
     body.innerHTML = `
-      <div class="stage"><span class="stage-count num" id="d-count">Wiederholung 1</span><svg id="d-fig" role="img" aria-label="Animation: ${esc(ex.name)}"></svg>
+      <div class="stage"><span class="stage-count num" id="d-count">Wiederholung 1</span><span class="coach-chip">${coachChip()}</span><svg id="d-fig" role="img" aria-label="Animation: ${esc(ex.name)}"></svg>
         <div class="stage-ctrl"><button id="d-speed" aria-label="Geschwindigkeit">1×</button><button id="d-play" aria-label="Animation pausieren">${ICON.pause}</button></div></div>
       <div class="d-title"><h2 id="sheet-title">${esc(ex.name)}</h2><p>${esc(ex.alt)}</p></div>
       <div class="d-meta">${ex.z.map(z => `<span class="tag">${Z[z]}</span>`).join('')}<span class="tag o">${LEVELS[ex.lvl - 1]}</span><span class="tag n">${ex.equip ? esc(ex.equip) : 'Ohne Geräte'}</span></div>
@@ -1456,6 +1500,7 @@ function startPlan(p) {
   pl.i = 0; pl.elapsed = 0; pl.saved = false;
   pl.fig = pl.fig || new Figure($('#pl-fig'));
   $('#pl-plan').textContent = p.name;
+  $('#pl-coach').innerHTML = coachChip();
   $('#pl-segs').innerHTML = pl.steps.map(() => '<i></i>').join('');
   $('#pl-run').hidden = false; $('#pl-done').hidden = true; $('#pl-confirm').hidden = true;
   heroFig && heroFig.pause();
