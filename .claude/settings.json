@@ -5,10 +5,17 @@
         "source": "github",
         "repo": "DietrichGebert/ponytail"
       }
+    },
+    "omc": {
+      "source": {
+        "source": "github",
+        "repo": "Yeachan-Heo/oh-my-claudecode"
+      }
     }
   },
   "enabledPlugins": {
-    "ponytail@ponytail": true
+    "ponytail@ponytail": true,
+    "oh-my-claudecode@omc": true
   },
   "hooks": {
     "SessionStart": [
