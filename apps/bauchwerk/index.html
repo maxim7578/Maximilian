@@ -1,0 +1,1592 @@
+<title>Bauchwerk</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700&display=swap">
+<style>
+/* Layout: einspaltige Phone-App, Glas-Karten schweben über fließenden Teal/Orange-Formen, Pillen-Tabbar unten */
+:root {
+  --bg: #dde7eb;
+  --ink: #0e2a33;
+  --muted: #557079;
+  --faint: #8ba1a9;
+  --glass: rgba(255, 255, 255, .5);
+  --glass-strong: rgba(255, 255, 255, .82);
+  --glass-edge: rgba(255, 255, 255, .78);
+  --line: rgba(14, 42, 51, .09);
+  --line-strong: rgba(14, 42, 51, .22);
+  --teal: #138fb0;
+  --teal-soft: rgba(19, 143, 176, .14);
+  --orange: #e87b12;
+  --orange-soft: rgba(232, 123, 18, .16);
+  --good: #16845a;
+  --bad: #cf3f34;
+  --pill-bg: #ffffff;
+  --pill-ink: #0e2a33;
+  --fig: #0e2a33;
+  --fig-far: rgba(14, 42, 51, .34);
+  --mat: rgba(19, 143, 176, .24);
+  --prop: #7b9099;
+  --blob-a: #3db6d4;
+  --blob-b: #ff9b2f;
+  --blob-c: #a9dceb;
+  --shadow: 0 12px 32px rgba(14, 42, 51, .10);
+  --font: "Urbanist", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #09161b; --ink: #e5f1f4; --muted: #94adb5; --faint: #5f7b84;
+    --glass: rgba(16, 36, 44, .56); --glass-strong: rgba(19, 41, 50, .9); --glass-edge: rgba(255, 255, 255, .09);
+    --line: rgba(255, 255, 255, .08); --line-strong: rgba(255, 255, 255, .2);
+    --teal: #48c1df; --teal-soft: rgba(72, 193, 223, .16); --orange: #ff9d3e; --orange-soft: rgba(255, 157, 62, .17);
+    --good: #4cc790; --bad: #ff6b5e; --pill-bg: #e5f1f4; --pill-ink: #09161b;
+    --fig: #e5f1f4; --fig-far: rgba(229, 241, 244, .34); --mat: rgba(72, 193, 223, .22); --prop: #7f98a1;
+    --blob-a: #16748d; --blob-b: #b8600f; --blob-c: #163f4b; --shadow: 0 12px 32px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #09161b; --ink: #e5f1f4; --muted: #94adb5; --faint: #5f7b84;
+  --glass: rgba(16, 36, 44, .56); --glass-strong: rgba(19, 41, 50, .9); --glass-edge: rgba(255, 255, 255, .09);
+  --line: rgba(255, 255, 255, .08); --line-strong: rgba(255, 255, 255, .2);
+  --teal: #48c1df; --teal-soft: rgba(72, 193, 223, .16); --orange: #ff9d3e; --orange-soft: rgba(255, 157, 62, .17);
+  --good: #4cc790; --bad: #ff6b5e; --pill-bg: #e5f1f4; --pill-ink: #09161b;
+  --fig: #e5f1f4; --fig-far: rgba(229, 241, 244, .34); --mat: rgba(72, 193, 223, .22); --prop: #7f98a1;
+  --blob-a: #16748d; --blob-b: #b8600f; --blob-c: #163f4b; --shadow: 0 12px 32px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, input:focus-visible, a:focus-visible, label:focus-within { outline: 2px solid var(--teal); outline-offset: 2px; }
+h1, h2, h3, p, ol, ul { margin: 0; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+/* Hintergrund-Formen (statisch, damit die Glas-Unschärfe nicht jeden Frame neu rechnet) */
+.bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.bg i { position: absolute; border-radius: 50%; filter: blur(46px); }
+.bg .b1 { width: 92vmax; height: 70vmax; left: -38vmax; top: -30vmax; background: radial-gradient(closest-side, var(--blob-a), transparent); opacity: .85; }
+.bg .b2 { width: 60vmax; height: 52vmax; right: -26vmax; top: 18vh; background: radial-gradient(closest-side, var(--blob-b), transparent); opacity: .7; }
+.bg .b3 { width: 70vmax; height: 50vmax; left: -10vmax; bottom: -30vmax; background: radial-gradient(closest-side, var(--blob-c), transparent); opacity: .9; }
+
+.app {
+  position: relative; z-index: 1;
+  max-width: 480px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px calc(112px + env(safe-area-inset-bottom, 0px));
+}
+
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--glass-edge);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+.card { padding: 18px; }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+
+/* Kopfzeile */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 4px 18px; }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 19px; letter-spacing: -.01em; }
+.brand svg { width: 26px; height: 26px; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--glass); border: 1px solid var(--glass-edge);
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  transition: transform 140ms var(--ease-out);
+}
+.icon-btn svg { width: 20px; height: 20px; }
+.icon-btn:active { transform: scale(.94); }
+
+.hello h1 { font-size: clamp(34px, 9vw, 44px); font-weight: 300; letter-spacing: -.025em; line-height: 1.05; text-wrap: balance; }
+.hello p { margin-top: 8px; font-size: 13px; color: var(--muted); letter-spacing: .01em; }
+.hello { padding-bottom: 22px; }
+
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 4px 2px; }
+.section-title h2 { font-size: 20px; font-weight: 500; letter-spacing: -.01em; }
+
+/* Onboarding: Geschlecht */
+.who h2 { font-size: 18px; font-weight: 600; }
+.who p { font-size: 14px; color: var(--muted); margin-top: 4px; }
+.who-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.who-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 8px 12px; border-radius: 20px; background: var(--glass-strong); border: 1px solid var(--line);
+  font-weight: 600; transition: transform 140ms var(--ease-out);
+}
+.who-btn svg { width: 100%; max-width: 130px; height: auto; }
+.who-btn:active { transform: scale(.97); }
+
+/* Heute-Karte */
+.today { padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; background: var(--glass-strong); }
+.today .meta { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 500; }
+.today .big { font-size: 42px; font-weight: 400; letter-spacing: -.02em; line-height: 1.1; margin-top: 14px; }
+.today .big small { font-size: 18px; color: var(--muted); font-weight: 500; }
+.today .status { color: var(--teal); font-weight: 600; font-size: 15px; }
+.today .fig { grid-row: 1 / span 3; grid-column: 2; width: 132px; align-self: center; }
+.today .fig svg { width: 100%; height: auto; display: block; }
+.today-name { font-size: 15px; font-weight: 600; }
+.today-sub { font-size: 13px; color: var(--muted); }
+
+.actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 16px 6px 4px; }
+.action { display: flex; flex-direction: column; align-items: center; gap: 7px; font-size: 13px; font-weight: 500; }
+.action span:first-child {
+  width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--glass-strong); border: 1px solid var(--glass-edge); box-shadow: var(--shadow);
+  transition: transform 140ms var(--ease-out);
+}
+.action.primary span:first-child { background: var(--orange); color: #fff; border-color: transparent; }
+.action svg { width: 20px; height: 20px; }
+.action:active span:first-child { transform: scale(.93); }
+
+/* Woche */
+.week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 12px; text-align: center; }
+.week .d { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.week .n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; color: var(--ink); font-weight: 500; }
+.week .d.is-today .n { background: var(--orange); color: #fff; }
+.week .dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+.week .d.done .dot { background: var(--teal); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.stat b { display: block; font-size: 24px; font-weight: 500; letter-spacing: -.01em; }
+.stat span { font-size: 12px; color: var(--muted); }
+.goalbar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 14px; overflow: hidden; }
+.goalbar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--teal), var(--orange)); transform-origin: left; transition: transform 500ms var(--ease-out); }
+
+/* Zonen */
+.zones { display: grid; gap: 12px; margin-top: 12px; }
+.zone { display: grid; grid-template-columns: 116px minmax(0, 1fr) 26px; align-items: center; gap: 10px; font-size: 14px; }
+.zone .track { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.zone .track i { display: block; height: 100%; width: 100%; border-radius: 4px; background: var(--teal); transform-origin: left; transition: transform 500ms var(--ease-out); }
+.zone b { font-weight: 600; text-align: right; }
+.empty-note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+/* Bibliothek */
+.lib-head h1 { font-size: 34px; font-weight: 300; letter-spacing: -.02em; }
+.lib-head p { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.search { display: flex; align-items: center; gap: 10px; padding: 0 16px; height: 48px; border-radius: 24px; margin-top: 16px; }
+.search svg { width: 18px; height: 18px; color: var(--muted); flex: none; }
+.search input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; font: inherit; font-size: 16px; color: var(--ink); }
+.search input:focus { outline: none; }
+.search:focus-within { outline: 2px solid var(--teal); outline-offset: 2px; }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 2px 4px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; height: 36px; padding: 0 14px; border-radius: 18px; font-size: 14px; font-weight: 500;
+  background: var(--glass); border: 1px solid var(--glass-edge); color: var(--ink);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+.chip[aria-pressed="true"] { background: var(--pill-bg); color: var(--pill-ink); box-shadow: var(--shadow); }
+.letters {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 3;
+  display: flex; gap: 2px; overflow-x: auto; padding: 8px 6px; margin: 8px -4px 4px; border-radius: 18px; scrollbar-width: none;
+}
+.letters::-webkit-scrollbar { display: none; }
+.letters button { flex: none; width: 30px; height: 30px; border-radius: 50%; font-weight: 600; font-size: 14px; }
+.letters button:disabled { color: var(--faint); opacity: .5; cursor: default; }
+.letters button:not(:disabled):active { background: var(--teal-soft); }
+.group-letter { font-size: 28px; font-weight: 300; color: var(--teal); padding: 14px 6px 6px; scroll-margin-top: calc(64px + env(safe-area-inset-top, 0px)); }
+.ex-list { display: flex; flex-direction: column; gap: 8px; }
+.ex-row {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  width: 100%; text-align: left; padding: 8px 14px 8px 8px; border-radius: 22px;
+  transition: transform 140ms var(--ease-out);
+}
+.ex-row:active { transform: scale(.985); }
+.ex-row .thumb { width: 76px; height: 64px; border-radius: 16px; background: var(--glass-strong); display: grid; place-items: center; overflow: hidden; }
+.ex-row .thumb svg { width: 100%; height: 100%; }
+.ex-row h3 { font-size: 16px; font-weight: 600; letter-spacing: -.005em; }
+.ex-row .alt { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.tag { font-size: 11px; font-weight: 600; letter-spacing: .02em; padding: 2px 8px; border-radius: 10px; background: var(--teal-soft); color: var(--teal); }
+.tag.o { background: var(--orange-soft); color: var(--orange); }
+.lvl { display: flex; gap: 3px; }
+.lvl i { width: 6px; height: 14px; border-radius: 3px; background: var(--line-strong); }
+.lvl i.on { background: var(--orange); }
+.lvl i:nth-child(2) { height: 18px; } .lvl i:nth-child(3) { height: 22px; }
+.lvl { align-items: flex-end; }
+.no-results { padding: 30px 10px; text-align: center; color: var(--muted); }
+.foot-note { font-size: 12px; color: var(--muted); padding: 22px 6px 0; max-width: 60ch; }
+
+/* Pläne */
+.plan { padding: 16px; display: flex; flex-direction: column; gap: 12px; width: 100%; text-align: left; transition: transform 140ms var(--ease-out); }
+.plan:active { transform: scale(.985); }
+.plan-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.plan h3 { font-size: 19px; font-weight: 600; letter-spacing: -.01em; }
+.plan p { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.plan-strip { display: flex; gap: 6px; }
+.plan-strip span { flex: 1; min-width: 0; aspect-ratio: 220 / 184; max-width: 72px; border-radius: 12px; background: var(--glass-strong); }
+.plan-strip svg { width: 100%; height: 100%; display: block; }
+.plan-meta { display: flex; gap: 14px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.plan-meta b { color: var(--ink); font-weight: 600; }
+.badge { flex: none; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: var(--glass-strong); border: 1px solid var(--line); }
+.badge.today { background: var(--orange); color: #fff; border-color: transparent; }
+
+/* Profil */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 16px; background: var(--line); margin-top: 8px; }
+.seg label { position: relative; display: grid; place-items: center; min-height: 40px; border-radius: 12px; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; padding: 0 4px; transition: background-color 160ms ease; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg label:has(input:checked) { background: var(--pill-bg); color: var(--pill-ink); box-shadow: 0 2px 8px rgba(0, 0, 0, .08); }
+.setting + .setting { margin-top: 18px; }
+.setting .label { font-size: 14px; font-weight: 600; }
+.setting .hint { font-size: 13px; color: var(--muted); }
+.hist { display: flex; flex-direction: column; margin-top: 8px; }
+.hist div { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.hist div:last-child { border-bottom: 0; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 50px; padding: 0 22px; border-radius: 25px; font-weight: 600; font-size: 16px;
+  background: var(--pill-bg); color: var(--pill-ink); box-shadow: var(--shadow);
+  transition: transform 140ms var(--ease-out);
+}
+.btn svg { width: 18px; height: 18px; }
+.btn:active { transform: scale(.97); }
+.btn.accent { background: var(--orange); color: #fff; }
+.btn.ghost { background: transparent; box-shadow: none; border: 1px solid var(--line-strong); color: var(--ink); }
+.btn.danger { background: var(--bad); color: #fff; }
+.btn.block { width: 100%; }
+.row-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Tabbar */
+.tabbar {
+  position: fixed; z-index: 20; left: 50%; bottom: 0;
+  width: min(100%, 480px); transform: translateX(-50%);
+  padding: 0 max(16px, env(safe-area-inset-left, 0px)) calc(14px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-right, 0px));
+}
+.tabbar-inner { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px; border-radius: 34px; }
+.tab-ind {
+  position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 4);
+  border-radius: 28px; background: var(--pill-bg); box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
+  transition: transform 280ms var(--ease-in-out);
+}
+.tab { position: relative; z-index: 1; height: 52px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; font-weight: 600; color: var(--ink); transition: color 200ms ease; }
+.tab svg { width: 19px; height: 19px; flex: none; }
+.tab span { display: none; }
+.tab[aria-selected="true"] { color: var(--pill-ink); }
+.tab[aria-selected="true"] span { display: inline; }
+@media (max-width: 360px) { .tab[aria-selected="true"] span { display: none; } }
+
+/* Views */
+.view { transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out); }
+.view.pre { opacity: 0; transform: translateY(8px); }
+
+/* Sheet */
+.layer { position: fixed; inset: 0; z-index: 40; }
+.scrim { position: absolute; inset: 0; background: rgba(5, 20, 26, .38); opacity: 0; transition: opacity 320ms ease; }
+.layer.open .scrim { opacity: 1; }
+.sheet {
+  position: absolute; left: 50%; bottom: 0; width: min(100%, 520px); max-height: calc(100% - 28px - env(safe-area-inset-top, 0px));
+  display: flex; flex-direction: column;
+  background: var(--bg); border-radius: 30px 30px 0 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, .2);
+  transform: translate(-50%, 100%); transition: transform 360ms var(--ease-drawer);
+  overflow: hidden;
+}
+.sheet::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 60% at 0% 0%, var(--teal-soft), transparent 60%), radial-gradient(80% 50% at 100% 30%, var(--orange-soft), transparent 70%); pointer-events: none; }
+.layer.open .sheet { transform: translate(-50%, 0); }
+.sheet-head { position: relative; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 0; }
+.grab { position: absolute; left: 50%; top: 8px; width: 40px; height: 5px; margin-left: -20px; border-radius: 3px; background: var(--line-strong); }
+.sheet-body {
+  position: relative; overflow-y: auto; overscroll-behavior: contain;
+  padding: 6px max(18px, env(safe-area-inset-left, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-right, 0px));
+}
+.stage { position: relative; border-radius: 26px; overflow: hidden; background: var(--glass-strong); border: 1px solid var(--glass-edge); }
+.stage svg { display: block; width: 100%; height: auto; }
+.stage-ctrl { position: absolute; right: 10px; bottom: 10px; display: flex; gap: 6px; }
+.stage-ctrl button { height: 36px; min-width: 36px; padding: 0 10px; border-radius: 18px; background: var(--glass-strong); border: 1px solid var(--line); font-size: 13px; font-weight: 600; display: grid; place-items: center; }
+.stage-ctrl svg { width: 16px; height: 16px; }
+.stage-count { position: absolute; left: 14px; top: 12px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.d-title { margin-top: 18px; }
+.d-title h2 { font-size: 30px; font-weight: 400; letter-spacing: -.02em; line-height: 1.1; text-wrap: balance; }
+.d-title p { color: var(--muted); margin-top: 3px; }
+.d-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.d-meta .tag { font-size: 12px; padding: 4px 10px; }
+.tag.n { background: var(--glass-strong); color: var(--ink); border: 1px solid var(--line); }
+.goal { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 16px; margin-top: 16px; border-radius: 20px; }
+.goal b { font-size: 22px; font-weight: 500; }
+.goal span { font-size: 13px; color: var(--muted); }
+.steps { counter-reset: s; list-style: none; padding: 0; margin-top: 18px; display: flex; flex-direction: column; gap: 12px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; font-size: 15px; max-width: 62ch; }
+.steps li::before { content: counter(s); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--teal-soft); color: var(--teal); font-weight: 700; font-size: 13px; }
+.notes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 18px; }
+.note { padding: 14px; border-radius: 20px; font-size: 14px; }
+.note b { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 4px; }
+.note.ok b { color: var(--good); }
+.note.no b { color: var(--bad); }
+@media (max-width: 380px) { .notes { grid-template-columns: 1fr; } }
+.sheet-cta { margin-top: 20px; }
+.plan-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+
+/* Player */
+.player {
+  position: fixed; inset: 0; z-index: 60; background: var(--bg); overflow-y: auto;
+  opacity: 0; transform: scale(.98); transition: opacity 260ms var(--ease-out), transform 260ms var(--ease-out);
+}
+.player.open { opacity: 1; transform: none; }
+.player .bg { position: absolute; }
+.pl-inner {
+  position: relative; z-index: 1; max-width: 480px; margin: 0 auto; min-height: 100%;
+  display: flex; flex-direction: column; gap: 14px;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.pl-top { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.pl-title { min-width: 0; }
+.pl-title b { display: block; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-title span { font-size: 13px; color: var(--muted); }
+.phase { font-size: 13px; font-weight: 700; padding: 6px 12px; border-radius: 14px; background: var(--teal-soft); color: var(--teal); transition: background-color 200ms ease, color 200ms ease; }
+.phase.rest { background: var(--orange-soft); color: var(--orange); }
+.segs { display: flex; gap: 3px; }
+.segs i { flex: 1; height: 4px; border-radius: 2px; background: var(--line-strong); transition: background-color 200ms ease; }
+.segs i.done { background: var(--teal); }
+.segs i.now { background: var(--orange); }
+.confirm { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; font-size: 14px; }
+.confirm .row-btns { margin-top: 0; }
+.confirm .btn { min-height: 42px; font-size: 14px; padding: 0 16px; }
+.pl-stage { position: relative; }
+.pl-stage .next-label { position: absolute; left: 14px; top: 12px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--orange); }
+.pl-name h2 { font-size: 28px; font-weight: 400; letter-spacing: -.02em; line-height: 1.1; }
+.pl-name p { color: var(--muted); font-size: 14px; margin-top: 4px; max-width: 52ch; }
+.pl-count { display: flex; align-items: baseline; gap: 8px; }
+.pl-count b { font-size: 64px; font-weight: 300; letter-spacing: -.03em; line-height: 1; }
+.pl-count span { font-size: 18px; color: var(--muted); font-weight: 500; }
+.bar { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; background: var(--teal); transform-origin: left; transform: scaleX(0); }
+.bar.rest i { background: var(--orange); }
+.pl-ctrl { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: auto; padding-top: 6px; }
+.pl-ctrl .icon-btn { width: 56px; height: 56px; }
+.pl-ctrl .play { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: var(--orange); color: #fff; box-shadow: var(--shadow); transition: transform 140ms var(--ease-out); }
+.pl-ctrl .play:active { transform: scale(.95); }
+.pl-ctrl .play svg { width: 28px; height: 28px; }
+.pl-add { align-self: center; }
+.done-card { padding: 24px 20px; text-align: center; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.done-card h2 { font-size: 34px; font-weight: 300; letter-spacing: -.02em; }
+.done-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; margin-top: 14px; }
+
+/* Figuren */
+.fig-limb { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fig-near { stroke: var(--fig); }
+.fig-far { stroke: var(--fig-far); }
+.fig-head { fill: var(--fig); }
+.fig-hair { stroke: var(--fig); fill: none; stroke-linecap: round; }
+.fig-tie { fill: var(--orange); }
+.p-mat { fill: var(--mat); }
+.p-line { stroke: var(--line-strong); stroke-width: 2; stroke-linecap: round; }
+.p-prop { stroke: var(--prop); fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.p-propfill { fill: var(--prop); }
+.p-ball { fill: var(--orange); }
+.p-swiss { fill: var(--orange-soft); stroke: var(--orange); stroke-width: 2; }
+.p-band { stroke: var(--orange); stroke-width: 2; fill: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .view, .view.pre { transform: none; transition: opacity 160ms ease; }
+  .sheet { transition: opacity 200ms ease; transform: translate(-50%, 0); opacity: 0; }
+  .layer.open .sheet { opacity: 1; }
+  .player, .player.open { transform: none; transition: opacity 200ms ease; }
+  .tab-ind, .goalbar i, .zone .track i { transition: none; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .ex-row:hover, .plan:hover { background: var(--glass-strong); }
+}
+</style>
+
+<div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+
+<div class="app">
+  <main>
+    <!-- HEUTE -->
+    <section class="view" id="view-home" aria-labelledby="hello-h">
+      <header class="top">
+        <div class="brand">
+          <svg viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="8" fill="var(--teal)"/><path d="M9 7v12M17 7v12M9 10.5h8M9 15.5h8" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Bauchwerk
+        </div>
+        <button class="icon-btn" data-go="me" aria-label="Profil und Einstellungen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 8h14M5 12h14M5 16h14"/></svg>
+        </button>
+      </header>
+      <div class="hello">
+        <h1 id="hello-h">Guten Tag</h1>
+        <p id="hello-date" class="num"></p>
+      </div>
+
+      <div class="stack">
+        <div class="glass card who" id="who" hidden>
+          <h2>Für wen sollen die Figuren trainieren?</h2>
+          <p>Die Übungen sind für alle gleich. Du wählst nur, wie die Figur aussieht. Ändern kannst du das jederzeit im Profil.</p>
+          <div class="who-grid">
+            <button class="who-btn" data-gender="frau"><svg data-fig-static="frau"></svg>Frau</button>
+            <button class="who-btn" data-gender="mann"><svg data-fig-static="mann"></svg>Mann</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="glass today">
+            <div class="meta"><span class="today-name" id="today-name">Sixpack-Fokus</span></div>
+            <div class="today-sub" id="today-sub">6 Übungen · 2 Runden</div>
+            <div class="big num" id="today-time">14 <small>Min</small></div>
+            <div class="status" id="today-status">Heute dran</div>
+            <div class="fig" id="today-fig-wrap"><svg id="today-fig" aria-hidden="true"></svg></div>
+          </div>
+          <div class="actions">
+            <button class="action primary" id="act-start"><span><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l11-6.5a1 1 0 0 0 0-1.72l-11-6.5A1 1 0 0 0 8 5.5Z"/></svg></span><span>Starten</span></button>
+            <button class="action" data-go="lib"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h3M10 6h10M4 12h3M10 12h10M4 18h3M10 18h10"/></svg></span><span>Übungen A–Z</span></button>
+            <button class="action" id="act-random"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></span><span>Zufallsmix</span></button>
+          </div>
+        </div>
+
+        <div class="glass card">
+          <div class="section-title" style="padding:0"><h2>Diese Woche</h2><span class="eyebrow num" id="kw"></span></div>
+          <div class="week" id="week"></div>
+          <div class="goalbar" aria-hidden="true"><i id="goal-fill" style="transform:scaleX(0)"></i></div>
+          <div class="stats">
+            <div class="stat"><b class="num" id="st-min">0</b><span id="st-min-l">von 60 Min</span></div>
+            <div class="stat"><b class="num" id="st-streak">0</b><span>Tage am Stück</span></div>
+            <div class="stat"><b class="num" id="st-total">0</b><span>Einheiten gesamt</span></div>
+          </div>
+        </div>
+
+        <div class="glass card">
+          <h2 style="font-size:20px;font-weight:500">Bauchzonen diese Woche</h2>
+          <div class="zones" id="zones"></div>
+          <p class="empty-note" id="zones-empty">Noch kein Training diese Woche. Nach deiner ersten Einheit siehst du hier, welche Zonen du trainiert hast.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ÜBUNGEN -->
+    <section class="view" id="view-lib" hidden aria-labelledby="lib-h">
+      <div class="lib-head" style="padding-top:8px">
+        <h1 id="lib-h">Übungen A–Z</h1>
+        <p id="lib-count"></p>
+      </div>
+      <label class="search glass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Übung suchen, z. B. Plank" autocomplete="off" aria-label="Übung suchen">
+      </label>
+      <div class="chips" id="zone-chips" role="group" aria-label="Nach Zone filtern"></div>
+      <div class="chips" id="extra-chips" role="group" aria-label="Weitere Filter" style="padding-top:2px"></div>
+      <nav class="letters glass" id="letters" aria-label="Buchstaben"></nav>
+      <div id="lib-list"></div>
+      <p class="foot-note">Bei Rückenbeschwerden, in der Schwangerschaft oder in den ersten Monaten nach einer Geburt die Übungsauswahl vorher ärztlich oder physiotherapeutisch abklären.</p>
+    </section>
+
+    <!-- PLÄNE -->
+    <section class="view" id="view-plans" hidden aria-labelledby="plans-h">
+      <div class="lib-head" style="padding:8px 0 16px">
+        <h1 id="plans-h">Trainingspläne</h1>
+        <p>Jeder Plan läuft in Runden mit automatischen Pausen. Wiederholungen zählt die Figur mit.</p>
+      </div>
+      <div class="stack" id="plan-list"></div>
+    </section>
+
+    <!-- PROFIL -->
+    <section class="view" id="view-me" hidden aria-labelledby="me-h">
+      <div class="lib-head" style="padding:8px 0 16px">
+        <h1 id="me-h">Profil</h1>
+        <p>Einstellungen bleiben nur in diesem Browser gespeichert.</p>
+      </div>
+      <div class="stack">
+        <div class="glass card" id="settings"></div>
+        <div class="glass card">
+          <h2 style="font-size:20px;font-weight:500">Verlauf</h2>
+          <div class="hist num" id="hist"></div>
+          <div id="reset-area"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<nav class="tabbar" aria-label="Hauptnavigation">
+  <div class="tabbar-inner glass" role="tablist">
+    <i class="tab-ind" id="tab-ind" aria-hidden="true"></i>
+    <button class="tab" role="tab" data-tab="home" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="4" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.6"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.6"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.6"/></svg><span>Heute</span></button>
+    <button class="tab" role="tab" data-tab="lib" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h3M10 6h10M4 12h3M10 12h10M4 18h3M10 18h10"/></svg><span>Übungen</span></button>
+    <button class="tab" role="tab" data-tab="plans" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4" stroke-linecap="round"/></svg><span>Pläne</span></button>
+    <button class="tab" role="tab" data-tab="me" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.3-3.6 4.2-5.4 7.5-5.4s6.2 1.8 7.5 5.4"/></svg><span>Profil</span></button>
+  </div>
+</nav>
+
+<!-- Sheet für Übung / Plan -->
+<div class="layer" id="sheet" hidden>
+  <div class="scrim" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-head">
+      <span class="grab" aria-hidden="true"></span>
+      <button class="icon-btn" id="sheet-back" aria-label="Zurück" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span></span>
+      <button class="icon-btn" data-close aria-label="Schließen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="sheet-body" id="sheet-body"></div>
+  </div>
+</div>
+
+<!-- Trainings-Player -->
+<div class="player" id="player" hidden role="dialog" aria-modal="true" aria-labelledby="pl-plan">
+  <div class="bg" aria-hidden="true"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+  <div class="pl-inner">
+    <div class="pl-top">
+      <button class="icon-btn" id="pl-close" aria-label="Training beenden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <div class="pl-title"><b id="pl-plan">Training</b><span id="pl-step" class="num"></span></div>
+      <span class="phase" id="pl-phase">Bereit</span>
+    </div>
+    <div class="segs" id="pl-segs" aria-hidden="true"></div>
+    <div class="glass confirm" id="pl-confirm" hidden>
+      <span>Training beenden? Diese Einheit wird nicht gespeichert.</span>
+      <div class="row-btns"><button class="btn" id="pl-keep">Weiter trainieren</button><button class="btn ghost" id="pl-quit">Beenden</button></div>
+    </div>
+    <div id="pl-run" class="stack" style="flex:1">
+      <div class="stage pl-stage"><span class="next-label" id="pl-nextlabel" hidden>Als Nächstes</span><svg id="pl-fig" aria-hidden="true"></svg></div>
+      <div class="pl-name"><h2 id="pl-name"></h2><p id="pl-cue"></p></div>
+      <div class="pl-count"><b class="num" id="pl-big" aria-live="off">0</b><span id="pl-unit"></span></div>
+      <div class="bar" id="pl-bar"><i id="pl-barfill"></i></div>
+      <button class="btn ghost pl-add" id="pl-add" hidden>+10 Sekunden Pause</button>
+      <div class="pl-ctrl">
+        <button class="icon-btn" id="pl-prev" aria-label="Vorherige Übung"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 6.2v11.6a1 1 0 0 1-1.54.84L10 13.1a1.3 1.3 0 0 1 0-2.2l8.46-5.54A1 1 0 0 1 20 6.2Z"/></svg></button>
+        <button class="play" id="pl-play" aria-label="Pause"></button>
+        <button class="icon-btn" id="pl-next" aria-label="Nächster Schritt"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 6.2v11.6a1 1 0 0 0 1.54.84L14 13.1a1.3 1.3 0 0 0 0-2.2L5.54 5.36A1 1 0 0 0 4 6.2Z"/></svg></button>
+      </div>
+    </div>
+    <div id="pl-done" hidden>
+      <div class="glass done-card">
+        <span class="eyebrow">Einheit gespeichert</span>
+        <h2>Geschafft</h2>
+        <p class="muted" id="done-plan"></p>
+        <div class="done-stats">
+          <div class="stat"><b class="num" id="done-min">0</b><span>Minuten</span></div>
+          <div class="stat"><b class="num" id="done-ex">0</b><span>Sätze</span></div>
+          <div class="stat"><b class="num" id="done-streak">0</b><span>Tage am Stück</span></div>
+        </div>
+      </div>
+      <button class="btn accent block" id="pl-finish" style="margin-top:16px">Fertig</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ───────────── Figuren-Rig ───────────── */
+const F = 150;                                   // Bodenhöhe im viewBox
+const L = { T: 50, N: 7, R: 9, UA: 24, FA: 22, TH: 28, SH: 28 };
+const VB = '0 -14 220 184';
+const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
+const dir = (a, l = 1) => [Math.cos(rad(a)) * l, Math.sin(rad(a)) * l];
+const add = (p, v) => [p[0] + v[0], p[1] + v[1]];
+const ang = (a, b) => deg(Math.atan2(b[1] - a[1], b[0] - a[0]));
+
+function ik(o, x, l1, l2, bend) {
+  let d = Math.hypot(x[0] - o[0], x[1] - o[1]);
+  d = Math.min(Math.max(d, Math.abs(l1 - l2) + .5), l1 + l2 - .01);
+  const b = ang(o, x);
+  const al = deg(Math.acos((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)));
+  const a1 = b + bend * al;
+  return [a1, ang(add(o, dir(a1, l1)), x)];
+}
+
+// Pose-Beschreibung → Gelenkwinkel
+function P(s) {
+  const t = s.t ?? 180, face = s.face ?? 1;
+  const H = s.hip ?? add(s.sh, dir(t, -L.T));
+  const S = add(H, dir(t, L.T));
+  const ha = s.ha ?? t + (s.hd ?? 0) * face;
+  const C = add(S, dir(ha, L.N + L.R));
+  const j = { H, S, C, t, ha, face };
+  const at = v => typeof v === 'function' ? v(j) : v;
+  const limb = (spec, o, l1, l2) => {
+    if (spec.a) return spec.a;
+    if (spec.via) return [ang(o, at(spec.via)), spec.a2];
+    return ik(o, at(spec.to), l1, l2, spec.bend ?? 1);
+  };
+  const leg1 = limb(s.leg1 ?? s.legs, H, L.TH, L.SH);
+  const leg2 = limb(s.leg2 ?? s.legs ?? s.leg1, H, L.TH, L.SH);
+  j.P1 = add(add(H, dir(leg1[0], L.TH)), dir(leg1[1], L.SH));
+  j.P2 = add(add(H, dir(leg2[0], L.TH)), dir(leg2[1], L.SH));
+  const arm1 = limb(s.arm1 ?? s.arms, S, L.UA, L.FA);
+  const arm2 = limb(s.arm2 ?? s.arms ?? s.arm1, S, L.UA, L.FA);
+  return {
+    hx: H[0], hy: H[1], t, ha, face,
+    a1: arm1[0], f1: arm1[1], a2: arm2[0], f2: arm2[1],
+    l1: leg1[0], s1: leg1[1], l2: leg2[0], s2: leg2[1],
+    ls: s.ls ?? 1, dp: s.depth ?? 0, bf: s.bf ?? 0
+  };
+}
+
+const ANGLES = ['t', 'ha', 'a1', 'f1', 'a2', 'f2', 'l1', 's1', 'l2', 's2'];
+const NUMS = ['hx', 'hy', 'ls', 'dp', 'bf'];
+const lerpAng = (a, b, u) => a + ((((b - a) % 360) + 540) % 360 - 180) * u;
+function mix(A, B, u) {
+  const o = { face: u < .5 ? A.face : B.face };
+  for (const k of ANGLES) o[k] = lerpAng(A[k], B[k], u);
+  for (const k of NUMS) o[k] = A[k] + (B[k] - A[k]) * u;
+  return o;
+}
+function joints(k) {
+  const H = [k.hx, k.hy], S = add(H, dir(k.t, L.T));
+  const E1 = add(S, dir(k.a1, L.UA)), W1 = add(E1, dir(k.f1, L.FA));
+  const E2 = add(S, dir(k.a2, L.UA)), W2 = add(E2, dir(k.f2, L.FA));
+  const K1 = add(H, dir(k.l1, L.TH * k.ls)), P1 = add(K1, dir(k.s1, L.SH * k.ls));
+  const K2 = add(H, dir(k.l2, L.TH * k.ls)), P2 = add(K2, dir(k.s2, L.SH * k.ls));
+  const N = add(S, dir(k.ha, L.N)), C = add(S, dir(k.ha, L.N + L.R));
+  return { H, S, E1, W1, E2, W2, K1, P1, K2, P2, N, C };
+}
+
+/* Grundhaltungen */
+const SUP = { hip: [125, 142], t: 180 };
+const KNEES = { to: [163, 147], bend: -1 };
+const SIDE = { a: [3, 3] };
+const HH = { to: j => add(j.C, dir(j.ha - 90 * j.face, 3)), bend: 1 };
+const CHEST = { to: j => add(add(j.H, dir(j.t, 32)), dir(j.t + 90 * j.face, 8)), bend: -1 };
+const FOOT1 = { to: j => j.P1, bend: 1 };
+const FOOT2 = { to: j => j.P2, bend: 1 };
+const PLANK = { sh: [75, 123], t: 193, face: -1, arms: { a: [90, 180] }, legs: { a: [13, 13] } };
+const HIGH = { sh: [75, 101], t: 205.7, face: -1, arms: { a: [90, 90] }, legs: { a: [25.7, 25.7] } };
+const QUAD = { sh: [75, 101], t: 199.8, face: -1, arms: { a: [90, 90] }, legs: { a: [90, 0] } };
+const BEAR = { sh: [75, 101], t: 180, face: -1, arms: { a: [90, 90] }, legs: { a: [90, 38] } };
+const BAR = { sh: [110, 52], t: 270, arms: { a: [270, 270] } };
+const SIDEP = { sh: [75, 123], t: 193, arm1: { a: [268, 268] }, arm2: { a: [90, 180] }, legs: { a: [13, 13] } };
+const SEAT = { hip: [122, 144], t: 240, hd: 6, legs: { a: [305, 40] } };
+const TWIST_C = { to: j => add(add(j.H, dir(j.t, 30)), dir(j.t + 90, 24)), bend: -1 };
+const JK0 = { sh: [70, 101], t: 187.6, face: -1, arms: { a: [90, 90] }, legs: { a: [7.6, 7.6] } };
+
+const A = {
+  rollout: { keys: [
+    { hip: [138, 124], t: 222, face: -1, arms: { to: [96, 139], bend: 1 }, legs: { via: [150, 147], a2: 0 } },
+    { hip: [127, 129], t: 190, face: -1, arms: { to: [36, 139], bend: 1 }, legs: { via: [150, 147], a2: 0 } }],
+    dur: [1300, 1000], hold: [200, 250], props: ['wheel'] },
+  bear: { keys: [BEAR, { ...BEAR, t: 181.5 }], dur: [1500, 1500], thumb: 0 },
+  legraise: { keys: [{ ...SUP, arms: SIDE, legs: { a: [356, 356] } }, { ...SUP, arms: SIDE, legs: { a: [270, 270] } }], dur: [1100, 1400], hold: [100, 150] },
+  climber: { keys: [
+    { ...HIGH, leg1: { to: j => [j.H[0] - 18, F - 6], bend: 1 }, leg2: { a: [25.7, 25.7] } },
+    { ...HIGH, leg2: { to: j => [j.H[0] - 18, F - 6], bend: 1 }, leg1: { a: [25.7, 25.7] } }],
+    dur: [340, 340], rpc: 2, thumb: 0 },
+  crunch: { keys: [{ ...SUP, arms: HH, legs: KNEES }, { ...SUP, t: 210, hd: 14, arms: HH, legs: KNEES }], dur: [850, 950], hold: [250, 200] },
+  deadbug: { keys: [
+    { ...SUP, arms: { a: [268, 268] }, legs: { a: [270, 0] } },
+    { ...SUP, arm1: { a: [186, 186] }, arm2: { a: [268, 268] }, leg1: { a: [270, 0] }, leg2: { a: [356, 356] } },
+    { ...SUP, arm1: { a: [268, 268] }, arm2: { a: [186, 186] }, leg1: { a: [356, 356] }, leg2: { a: [270, 0] } }],
+    seq: [0, 1, 0, 2], dur: [800, 800, 800, 800], hold: [100, 250, 100, 250], rpc: 2 },
+  dragon: { keys: [
+    { sh: [60, 127], t: 118, ha: 180, arms: { to: [30, 129], bend: 1 }, legs: { a: [298, 298] } },
+    { sh: [60, 127], t: 163, ha: 180, arms: { to: [30, 129], bend: 1 }, legs: { a: [343, 343] } }],
+    dur: [2200, 1100], hold: [200, 250], props: ['bench'], floor: 'line' },
+  elbowknee: { keys: [
+    { ...SUP, arms: HH, legs: KNEES },
+    { ...SUP, t: 214, hd: 12, arms: HH, leg1: { a: [258, 12] }, leg2: KNEES },
+    { ...SUP, t: 214, hd: 12, arms: HH, leg2: { a: [258, 12] }, leg1: KNEES }],
+    seq: [0, 1, 0, 2], dur: [700, 700, 700, 700], hold: [100, 250, 100, 250], rpc: 2 },
+  bicycle: { keys: [
+    { ...SUP, t: 206, hd: 12, arms: HH, leg1: { a: [250, 20] }, leg2: { a: [347, 347] } },
+    { ...SUP, t: 206, hd: 12, arms: HH, leg1: { a: [347, 347] }, leg2: { a: [250, 20] } }],
+    dur: [600, 600], rpc: 2, thumb: 0 },
+  heeltouch: { keys: [
+    { ...SUP, t: 198, hd: 8, arm1: { a: [14, 14] }, arm2: { a: [4, 4] }, legs: { to: [160, 147], bend: -1 } },
+    { ...SUP, t: 202, hd: 8, arm1: { a: [4, 4] }, arm2: { a: [14, 14] }, legs: { to: [160, 147], bend: -1 } }],
+    dur: [550, 550], hold: [150, 150], rpc: 2, thumb: 0 },
+  flutter: { keys: [
+    { ...SUP, t: 192, hd: 10, arms: { a: [7, 7] }, leg1: { a: [343, 343] }, leg2: { a: [357, 357] } },
+    { ...SUP, t: 192, hd: 10, arms: { a: [7, 7] }, leg1: { a: [357, 357] }, leg2: { a: [343, 343] } }],
+    dur: [380, 380], rpc: 2, thumb: 0 },
+  ballcrunch: { keys: [
+    { hip: [125, 108], t: 170, arms: HH, legs: { to: [163, 147], bend: -1 } },
+    { hip: [125, 108], t: 212, hd: 12, arms: HH, legs: { to: [163, 147], bend: -1 } }],
+    dur: [900, 1000], hold: [250, 200], props: ['swiss'], floor: 'line' },
+  hangleg: { keys: [{ ...BAR, legs: { a: [90, 90] } }, { ...BAR, t: 258, legs: { a: [2, 2] } }], dur: [1000, 1200], hold: [150, 250], props: ['bar'], floor: null },
+  hangknee: { keys: [{ ...BAR, legs: { a: [90, 90] } }, { ...BAR, t: 263, legs: { a: [352, 88] } }], dur: [800, 1000], hold: [150, 250], props: ['bar'], floor: null },
+  hollow: { keys: [
+    { ...SUP, t: 195, hd: 8, arms: { a: [197, 197] }, legs: { a: [346, 346] } },
+    { ...SUP, t: 197, hd: 8, arms: { a: [199, 199] }, legs: { a: [344, 344] } }], dur: [1500, 1500], thumb: 0 },
+  woodchop: { keys: [
+    { hip: [116, 93], t: 268, arms: { a: [244, 244] }, legs: { to: [118, 147], bend: -1 } },
+    { hip: [112, 101], t: 292, hd: 6, arms: { a: [58, 58] }, legs: { to: [118, 147], bend: -1 } }],
+    dur: [600, 900], hold: [150, 200], props: ['ball'], floor: 'line' },
+  hipraise: { keys: [
+    { sh: [75, 142], t: 180, arms: SIDE, legs: { a: [271, 271] } },
+    { sh: [75, 142], t: 165, arms: SIDE, legs: { a: [266, 266] } }], dur: [700, 1000], hold: [150, 250] },
+  inchworm: { keys: [
+    { hip: [165, 91], t: 270, face: -1, arms: { a: [92, 92] }, legs: { a: [90, 90] } },
+    { hip: [163, 92], t: 125, face: -1, arms: { to: [112, 147], bend: -1 }, legs: { to: [165, 147], bend: 1 } },
+    { sh: [62, 101], t: 203.5, face: -1, arms: { a: [90, 90] }, legs: { to: [165, 147], bend: 1 } }],
+    seq: [0, 1, 2, 1], dur: [900, 1200, 1200, 900], hold: [300, 150, 400, 150], floor: 'line', thumb: 1 },
+  jackknife: { keys: [JK0, { sh: [70, 101], t: 160, face: -1, arms: { a: [90, 90] }, legs: { to: [140, 116], bend: 1 } }],
+    dur: [800, 900], hold: [150, 250], props: ['swissfoot'], floor: 'line' },
+  kneetuck: { keys: [
+    { hip: [120, 144], t: 226, arms: { to: [94, 147], bend: 1 }, legs: { a: [352, 352] } },
+    { hip: [120, 144], t: 248, hd: 8, arms: { to: [94, 147], bend: 1 }, legs: { a: [300, 55] } }], dur: [650, 650], hold: [100, 150] },
+  lsit: { keys: [
+    { sh: [92, 87], t: 270, arms: { a: [90, 90] }, legs: { a: [0, 0] } },
+    { sh: [92, 86], t: 271, arms: { a: [90, 90] }, legs: { a: [358, 358] } }], dur: [1400, 1400], props: ['parallettes'], floor: 'line', thumb: 0 },
+  slam: { keys: [
+    { hip: [118, 91], t: 274, ha: 268, arms: { a: [245, 285] } },
+    { hip: [110, 106], t: 305, hd: 8, arms: { to: [150, 140], bend: 1 }, legs: { to: [118, 147], bend: -1 }, bf: 1 }]
+    .map((k, i) => i === 0 ? { ...k, legs: { a: [90, 90] } } : k),
+    dur: [320, 900], hold: [300, 200], props: ['ball'], floor: 'line' },
+  negsitup: { keys: [{ ...SUP, t: 282, hd: 8, arms: CHEST, legs: KNEES }, { ...SUP, t: 186, arms: CHEST, legs: KNEES }], dur: [2800, 900], hold: [200, 300], thumb: 0 },
+  oblique: { keys: [
+    { ...SUP, arm1: HH, arm2: { a: [12, 12] }, legs: { to: [165, 146], bend: -1 } },
+    { ...SUP, t: 203, hd: 10, arm1: HH, arm2: { a: [18, 18] }, legs: { to: [165, 146], bend: -1 } }], dur: [700, 800], hold: [150, 250] },
+  pallof: { keys: [
+    { hip: [112, 91], t: 270, arms: { to: j => add(j.S, [12, 14]), bend: 1 }, legs: { a: [90, 90] } },
+    { hip: [112, 91], t: 270, arms: { a: [2, 2] }, legs: { a: [90, 90] } }], dur: [600, 600], hold: [300, 900], props: ['band'], floor: 'line' },
+  plank: { keys: [PLANK, { ...PLANK, t: 192.4 }], dur: [1600, 1600], thumb: 0 },
+  shouldertap: { keys: [HIGH,
+    { ...HIGH, arm1: { to: j => add(j.S, [2, 5]), bend: 1 }, arm2: { a: [90, 90] } },
+    { ...HIGH, arm2: { to: j => add(j.S, [2, 5]), bend: 1 }, arm1: { a: [90, 90] } }],
+    seq: [0, 1, 0, 2], dur: [380, 380, 380, 380], hold: [60, 150, 60, 150], rpc: 2 },
+  reverse: { keys: [
+    { sh: [75, 142], t: 180, arms: SIDE, legs: { a: [270, 0] } },
+    { sh: [75, 142], t: 166, arms: SIDE, legs: { a: [228, 302] } }], dur: [800, 1000], hold: [150, 200] },
+  twist: { keys: [
+    { ...SEAT, arms: TWIST_C, depth: 0 },
+    { ...SEAT, t: 236, arms: { to: j => [j.H[0] + 12, F - 9], bend: -1 }, depth: 1 },
+    { ...SEAT, t: 244, arms: { to: j => [j.H[0] + 4, F - 13], bend: -1 }, depth: -1 }],
+    seq: [0, 1, 0, 2], dur: [420, 420, 420, 420], hold: [0, 120, 0, 120], rpc: 2, props: ['ball'] },
+  scissor: { keys: [
+    { ...SUP, t: 192, hd: 10, arms: { a: [7, 7] }, leg1: { a: [318, 318] }, leg2: { a: [354, 354] } },
+    { ...SUP, t: 192, hd: 10, arms: { a: [7, 7] }, leg1: { a: [354, 354] }, leg2: { a: [318, 318] } }],
+    dur: [650, 650], hold: [80, 80], rpc: 2, thumb: 0 },
+  sideplank: { keys: [SIDEP, { ...SIDEP, t: 192.3, arm1: { a: [266, 266] } }], dur: [1500, 1500], thumb: 0 },
+  sidedip: { keys: [SIDEP, { ...SIDEP, t: 200, legs: { to: [178.3, 146.8], bend: 1 } }], dur: [800, 800], hold: [200, 150] },
+  situp: { keys: [{ ...SUP, t: 182, arms: CHEST, legs: KNEES }, { ...SUP, t: 282, hd: 8, arms: CHEST, legs: KNEES }], dur: [1000, 1100], hold: [200, 150] },
+  superman: { keys: [
+    { hip: [125, 143], t: 180, face: -1, arms: { a: [180, 180] }, legs: { a: [0, 0] } },
+    { hip: [125, 143], t: 191, face: -1, hd: -4, arms: { a: [197, 197] }, legs: { a: [351, 351] } }], dur: [800, 800], hold: [300, 700] },
+  toes2bar: { keys: [{ ...BAR, legs: { a: [90, 90] } }, { ...BAR, t: 244, legs: { a: [272, 272] } }], dur: [900, 1100], hold: [150, 250], props: ['bar'], floor: null },
+  updown: { keys: [PLANK, HIGH], dur: [900, 900], hold: [250, 250] },
+  vup: { keys: [{ ...SUP, t: 183, arms: { a: [183, 183] }, legs: { a: [357, 357] } }, { ...SUP, t: 236, hd: 10, arms: FOOT1, legs: { a: [300, 300] } }], dur: [750, 900], hold: [200, 150] },
+  birddog: { keys: [QUAD,
+    { ...QUAD, arm1: { a: [184, 184] }, arm2: { a: [90, 90] }, leg1: { a: [90, 0] }, leg2: { a: [4, 4] } },
+    { ...QUAD, arm2: { a: [184, 184] }, arm1: { a: [90, 90] }, leg2: { a: [90, 0] }, leg1: { a: [4, 4] } }],
+    seq: [0, 1, 0, 2], dur: [850, 850, 850, 850], hold: [100, 500, 100, 500], rpc: 2 },
+  wipers: { keys: [
+    { ...SUP, arms: SIDE, legs: { a: [271, 271] } },
+    { ...SUP, arms: SIDE, legs: { a: [292, 292] }, ls: .62 },
+    { ...SUP, arms: SIDE, legs: { a: [250, 250] }, ls: .62 }],
+    seq: [0, 1, 0, 2], dur: [800, 800, 800, 800], hold: [100, 250, 100, 250], rpc: 2 },
+  xcrunch: { keys: [
+    { ...SUP, arms: { a: [184, 184] }, legs: { a: [1, 1] } },
+    { ...SUP, t: 232, hd: 10, arm1: FOOT2, arm2: { a: [192, 192] }, leg1: { a: [1, 1] }, leg2: { a: [302, 302] } },
+    { ...SUP, t: 232, hd: 10, arm2: FOOT1, arm1: { a: [192, 192] }, leg2: { a: [1, 1] }, leg1: { a: [302, 302] } }],
+    seq: [0, 1, 0, 2], dur: [750, 750, 750, 750], hold: [100, 200, 100, 200], rpc: 2 },
+  boat: { keys: [
+    { hip: [125, 144], t: 242, hd: 6, arms: { a: [2, 2] }, legs: { a: [312, 312] } },
+    { hip: [125, 144], t: 240, hd: 6, arms: { a: [0, 0] }, legs: { a: [314, 314] } }], dur: [1600, 1600], thumb: 0 },
+  toetouch: { keys: [{ ...SUP, arms: { a: [272, 272] }, legs: { a: [272, 272] } }, { ...SUP, t: 214, hd: 12, arms: FOOT1, legs: { a: [272, 272] } }], dur: [700, 800], hold: [150, 200] },
+  kneehover: { keys: [QUAD, { ...QUAD, t: 187, legs: { a: [88, 32] } }], dur: [600, 600], hold: [500, 1800] }
+};
+
+/* ───────────── Übungen ───────────── */
+const Z = { oben: 'Oberer Bauch', unten: 'Unterer Bauch', seite: 'Seitlich', tief: 'Tiefe Muskeln' };
+const EX = [
+  { id: 'rollout', name: 'Ab-Roller', alt: 'Ab Wheel Rollout', z: ['oben', 'tief'], lvl: 3, equip: 'Bauchroller', kind: 'reps',
+    steps: ['Knie hüftbreit auf die Matte, Hände greifen den Roller unter den Schultern.', 'Bauch fest, Becken leicht einrollen und den Roller langsam nach vorn schieben.', 'So weit rollen, wie der Rücken gerade bleibt, dann mit Bauchkraft zurückziehen.'],
+    tip: 'Gesäß angespannt lassen, dann bleibt das Hohlkreuz weg.', err: 'Zu weit rollen und im unteren Rücken durchhängen.' },
+  { id: 'bear', name: 'Bärenstand', alt: 'Bear Plank Hold', z: ['tief'], lvl: 1, equip: '', kind: 'time',
+    steps: ['Vierfüßlerstand: Hände unter den Schultern, Knie unter der Hüfte.', 'Zehen aufstellen und die Knie zwei Fingerbreit vom Boden heben.', 'Rücken flach wie ein Tisch halten und ruhig weiteratmen.'],
+    tip: 'Stell dir vor, auf deinem Rücken steht ein Glas Wasser.', err: 'Die Hüfte schiebt nach oben und der Bauch wird locker.' },
+  { id: 'legraise', name: 'Beinheben liegend', alt: 'Lying Leg Raises', z: ['unten'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Arme neben dem Körper, Beine gestreckt.', 'Beine gestreckt bis senkrecht anheben.', 'Langsam absenken, ohne dass die Fersen den Boden berühren.'],
+    tip: 'Der untere Rücken bleibt am Boden. Klappt das nicht, Knie leicht beugen.', err: 'Beine fallen lassen statt kontrolliert senken.' },
+  { id: 'climber', name: 'Bergsteiger', alt: 'Mountain Climbers', z: ['unten', 'tief'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Hoher Stütz: Hände unter den Schultern, Körper gerade.', 'Ein Knie zügig Richtung Brust ziehen.', 'Bein zurückstellen und sofort die Seite wechseln.'],
+    tip: 'Schultern bleiben über den Händen, die Hüfte bleibt tief.', err: 'Die Hüfte wippt bei jedem Schritt hoch und runter.' },
+  { id: 'crunch', name: 'Crunch', alt: 'Klassischer Crunch', z: ['oben'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Füße aufgestellt, Hände locker hinter dem Kopf.', 'Ausatmen und die Schulterblätter vom Boden rollen.', 'Kurz oben halten, dann langsam ablegen.'],
+    tip: 'Zwischen Kinn und Brust passt eine Faust.', err: 'Am Kopf ziehen, statt aus dem Bauch zu heben.' },
+  { id: 'deadbug', name: 'Dead Bug', alt: 'Toter Käfer', z: ['tief', 'unten'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Arme senkrecht nach oben, Beine im 90-Grad-Winkel.', 'Einen Arm nach hinten und das gegenüberliegende Bein nach vorn strecken.', 'Zurück zur Mitte und Seite wechseln.'],
+    tip: 'Den unteren Rücken aktiv in die Matte drücken.', err: 'Zu schnell werden und ins Hohlkreuz kippen.' },
+  { id: 'dragon', name: 'Dragon Flag', alt: 'Drachenfahne', z: ['oben', 'unten', 'tief'], lvl: 3, equip: 'Bank', kind: 'reps',
+    steps: ['Auf eine Bank legen und hinter dem Kopf festhalten.', 'Körper gestreckt bis über die Schultern hochheben.', 'Als gerade Linie langsam absenken, ohne in der Hüfte abzuknicken.'],
+    tip: 'Nur so weit senken, wie du die gerade Linie halten kannst.', err: 'Die Hüfte knickt ein und die Beine ziehen den Körper.' },
+  { id: 'elbowknee', name: 'Ellbogen-zu-Knie', alt: 'Cross Crunch', z: ['oben', 'seite'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Hände hinter dem Kopf, Füße aufgestellt.', 'Rechtes Knie anziehen und den linken Ellbogen diagonal hinführen.', 'Ablegen und Seite wechseln.'],
+    tip: 'Die Schulter dreht zum Knie, nicht nur der Ellbogen.', err: 'Den Nacken nach vorn ziehen.' },
+  { id: 'bicycle', name: 'Fahrrad-Crunch', alt: 'Bicycle Crunch', z: ['oben', 'seite'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Schultern leicht abheben, Hände hinter dem Kopf.', 'Ein Knie zur Brust ziehen, das andere Bein lang strecken.', 'Im Wechsel radeln und dabei den Oberkörper zum Knie drehen.'],
+    tip: 'Langsam radeln bringt mehr als schnelles Strampeln.', err: 'Das gestreckte Bein zu hoch halten, dann arbeitet der Bauch weniger.' },
+  { id: 'heeltouch', name: 'Fersen-Tipper', alt: 'Heel Touches', z: ['seite'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Füße weit aufgestellt, Schultern leicht anheben.', 'Seitlich mit der Hand zur rechten Ferse greifen.', 'Über die Mitte zur linken Ferse.'],
+    tip: 'Die Schultern bleiben während des ganzen Satzes oben.', err: 'Den Kopf zwischen den Wiederholungen ablegen.' },
+  { id: 'flutter', name: 'Flatterkicks', alt: 'Flutter Kicks', z: ['unten'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Schultern leicht anheben, Beine gestreckt knapp über dem Boden.', 'Beine im schnellen Wechsel auf und ab bewegen.', 'Kleine Bewegungen in gleichmäßigem Takt.'],
+    tip: 'Hände unter das Gesäß legen, wenn der Rücken abhebt.', err: 'Hohlkreuz, weil die Beine zu tief sind.' },
+  { id: 'ballcrunch', name: 'Gymnastikball-Crunch', alt: 'Swiss Ball Crunch', z: ['oben'], lvl: 2, equip: 'Gymnastikball', kind: 'reps',
+    steps: ['Mit dem unteren Rücken auf den Ball legen, Füße fest am Boden.', 'Oberkörper über den Ball nach hinten dehnen.', 'Ausatmen und nach oben einrollen.'],
+    tip: 'Je weiter der Ball Richtung Gesäß liegt, desto schwerer wird es.', err: 'Mit Schwung hochwippen.' },
+  { id: 'hangleg', name: 'Hängendes Beinheben', alt: 'Hanging Leg Raises', z: ['unten'], lvl: 3, equip: 'Klimmzugstange', kind: 'reps',
+    steps: ['An die Stange hängen, Schultern aktiv nach unten ziehen.', 'Gestreckte Beine bis auf Hüfthöhe anheben.', 'Kontrolliert senken, ohne zu schwingen.'],
+    tip: 'Das Becken am oberen Punkt leicht nach vorn einrollen.', err: 'Schwung aus dem ganzen Körper holen.' },
+  { id: 'hangknee', name: 'Hängendes Knieheben', alt: 'Hanging Knee Raises', z: ['unten'], lvl: 2, equip: 'Klimmzugstange', kind: 'reps',
+    steps: ['An die Stange hängen, Körper ruhig.', 'Knie bis über die Hüfte Richtung Brust ziehen.', 'Langsam absenken.'],
+    tip: 'Beim Hochziehen ausatmen.', err: 'Nur die Beine heben, ohne das Becken einzurollen.' },
+  { id: 'hollow', name: 'Hollow Hold', alt: 'Hohlkörperhalte', z: ['oben', 'unten', 'tief'], lvl: 2, equip: '', kind: 'time',
+    steps: ['Rückenlage, den unteren Rücken fest in den Boden drücken.', 'Schultern und gestreckte Beine anheben, Arme lang nach hinten.', 'Die Banane halten und ruhig atmen.'],
+    tip: 'Zu schwer? Knie beugen oder Arme neben den Körper legen.', err: 'Der Rücken löst sich vom Boden.' },
+  { id: 'woodchop', name: 'Holzhacker', alt: 'Woodchopper', z: ['seite', 'tief'], lvl: 2, equip: 'Medizinball oder Kabel', kind: 'reps',
+    steps: ['Schulterbreit stehen, Ball mit beiden Händen über der Schulter.', 'Diagonal nach unten zur gegenüberliegenden Hüfte ziehen.', 'Kontrolliert zurück nach oben, nach dem Satz Seite wechseln.'],
+    tip: 'Die Kraft kommt aus der Rumpfdrehung, nicht aus den Armen.', err: 'Runder Rücken am unteren Punkt.' },
+  { id: 'hipraise', name: 'Hüftheben', alt: 'Vertical Hip Raise', z: ['unten'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Beine senkrecht nach oben, Arme neben dem Körper.', 'Becken einrollen und die Hüfte ein paar Zentimeter nach oben schieben.', 'Langsam ablegen.'],
+    tip: 'Die Fersen zeigen gerade zur Decke.', err: 'Mit Schwung aus den Beinen arbeiten.' },
+  { id: 'inchworm', name: 'Inchworm', alt: 'Raupe', z: ['tief', 'oben'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Aufrecht stehen, nach vorn beugen und die Hände zum Boden bringen.', 'Mit den Händen in den hohen Stütz laufen.', 'Zurücklaufen und aufrichten.'],
+    tip: 'Beine so gestreckt wie möglich, die Knie aber nicht durchdrücken.', err: 'Die Hüfte hängt im Stütz durch.' },
+  { id: 'jackknife', name: 'Jackknife am Ball', alt: 'Swiss Ball Jackknife', z: ['unten', 'tief'], lvl: 2, equip: 'Gymnastikball', kind: 'reps',
+    steps: ['Hoher Stütz, Schienbeine liegen auf dem Gymnastikball.', 'Knie zur Brust ziehen, der Ball rollt mit.', 'Beine wieder strecken, bis der Körper eine Linie bildet.'],
+    tip: 'Die Schultern bleiben genau über den Händen.', err: 'Die Hüfte hängt beim Strecken durch.' },
+  { id: 'kneetuck', name: 'Knie-Tuck sitzend', alt: 'Seated Knee Tucks', z: ['unten'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Sitzen, Hände hinter dem Gesäß, Oberkörper leicht zurücklehnen.', 'Beine lang strecken, knapp über dem Boden.', 'Knie zur Brust ziehen und wieder strecken.'],
+    tip: 'Die Brust bewegt sich den Knien entgegen.', err: 'Rundrücken und hängende Schultern.' },
+  { id: 'lsit', name: 'L-Sitz', alt: 'L-Sit', z: ['unten', 'tief'], lvl: 3, equip: 'Parallettes oder zwei Stühle', kind: 'time',
+    steps: ['Zwischen zwei Griffen sitzen, Hände fest aufsetzen.', 'Arme strecken und das Gesäß abheben.', 'Beine waagerecht halten, Schultern nach unten.'],
+    tip: 'Zum Einstieg ein Bein beugen.', err: 'Die Schultern rutschen zu den Ohren.' },
+  { id: 'slam', name: 'Medizinball-Slam', alt: 'Med Ball Slam', z: ['oben', 'tief'], lvl: 2, equip: 'Medizinball', kind: 'reps',
+    steps: ['Hüftbreit stehen, Ball über den Kopf heben.', 'Mit dem ganzen Rumpf kraftvoll vor die Füße werfen.', 'Ball aufnehmen und aus den Beinen hochkommen.'],
+    tip: 'Beim Wurf ausatmen, der Bauch zieht nach unten.', err: 'Nur aus den Armen werfen.' },
+  { id: 'negsitup', name: 'Negativer Sit-up', alt: 'Eccentric Sit-up', z: ['oben'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Aufrecht sitzen, Füße aufgestellt, Arme vor der Brust.', 'In 3 bis 4 Sekunden Wirbel für Wirbel nach hinten rollen.', 'Zügig wieder aufsetzen, notfalls mit den Händen helfen.'],
+    tip: 'Die langsame Phase ist die eigentliche Übung.', err: 'Sich am Ende einfach fallen lassen.' },
+  { id: 'oblique', name: 'Oblique Crunch', alt: 'Seitlicher Crunch', z: ['seite'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Auf die Seite legen, Knie leicht gebeugt, obere Hand am Kopf.', 'Oberkörper seitlich Richtung Hüfte heben.', 'Langsam ablegen, nach dem Satz Seite wechseln.'],
+    tip: 'Die Bewegung ist klein, das ist richtig so.', err: 'Nach vorn drehen statt zur Seite heben.' },
+  { id: 'pallof', name: 'Pallof Press', alt: 'Anti-Rotations-Drücken', z: ['seite', 'tief'], lvl: 1, equip: 'Band oder Kabel', kind: 'reps',
+    steps: ['Seitlich zum Band stehen, Griff an der Brust.', 'Arme gerade nach vorn drücken, ohne dass dich das Band dreht.', 'Zwei Sekunden halten, zurück zur Brust.'],
+    tip: 'Außer den Armen bewegt sich nichts.', err: 'Die Hüfte dreht mit zum Band.' },
+  { id: 'plank', name: 'Plank', alt: 'Unterarmstütz', z: ['tief', 'oben'], lvl: 1, equip: '', kind: 'time',
+    steps: ['Unterarme unter den Schultern, Beine lang nach hinten.', 'Körper von Kopf bis Ferse in eine Linie bringen.', 'Bauch und Gesäß fest, ruhig atmen.'],
+    tip: 'Die Ellbogen gedanklich zu den Füßen ziehen.', err: 'Die Hüfte hängt durch oder steht zu hoch.' },
+  { id: 'shouldertap', name: 'Plank-Schultertipper', alt: 'Plank Shoulder Taps', z: ['tief', 'seite'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Hoher Stütz, Füße etwas breiter als hüftbreit.', 'Eine Hand tippt die gegenüberliegende Schulter.', 'Hand zurücksetzen und Seite wechseln.'],
+    tip: 'Die Hüfte bleibt ruhig wie ein Tisch.', err: 'Das Becken schaukelt von links nach rechts.' },
+  { id: 'reverse', name: 'Reverse Crunch', alt: 'Umgekehrter Crunch', z: ['unten'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Knie im 90-Grad-Winkel über der Hüfte.', 'Becken einrollen und vom Boden heben, Knie Richtung Brust.', 'Langsam Wirbel für Wirbel ablegen.'],
+    tip: 'Die Arme drücken leicht in den Boden.', err: 'Die Beine schwingen, statt das Becken zu rollen.' },
+  { id: 'twist', name: 'Russian Twist', alt: 'Russischer Twist', z: ['seite'], lvl: 2, equip: 'Ball optional', kind: 'reps',
+    steps: ['Sitzen, Oberkörper zurücklehnen, Füße leicht anheben.', 'Hände vor der Brust, Oberkörper nach rechts drehen.', 'Über die Mitte nach links drehen.'],
+    tip: 'Die Schultern drehen mit, nicht nur die Arme.', err: 'Rundrücken und zusammengesackte Haltung.' },
+  { id: 'scissor', name: 'Scherenschlag', alt: 'Scissor Kicks', z: ['unten'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Hände unter das Gesäß, Schultern leicht abheben.', 'Ein Bein hoch, das andere tief.', 'Gestreckte Beine kontrolliert im Wechsel kreuzen.'],
+    tip: 'Je tiefer die Beine, desto schwerer.', err: 'Knie beugen und die Füße schwingen lassen.' },
+  { id: 'sideplank', name: 'Seitstütz', alt: 'Side Plank', z: ['seite', 'tief'], lvl: 1, equip: '', kind: 'time',
+    steps: ['Seitlich auf den Unterarm stützen, Ellbogen unter der Schulter.', 'Hüfte anheben, bis der Körper eine gerade Linie bildet.', 'Halten und nach der Zeit Seite wechseln.'],
+    tip: 'Den oberen Arm zur Decke strecken.', err: 'Die Hüfte sinkt zum Boden.' },
+  { id: 'sidedip', name: 'Seitstütz-Hüftsenken', alt: 'Side Plank Hip Dips', z: ['seite'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Seitstütz auf dem Unterarm.', 'Hüfte kontrolliert Richtung Boden senken.', 'Kraftvoll zurück in die Linie heben, nach dem Satz Seite wechseln.'],
+    tip: 'Kurz vor dem Boden umkehren, nicht ablegen.', err: 'Die Schulter sackt ein.' },
+  { id: 'situp', name: 'Sit-up', alt: 'Aufrichter', z: ['oben'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Füße aufgestellt, Arme vor der Brust gekreuzt.', 'Oberkörper ganz aufrichten.', 'Langsam zurückrollen.'],
+    tip: 'Füße unter einem Sofa fixieren, wenn sie abheben.', err: 'Mit Schwung aus den Armen hochreißen.' },
+  { id: 'superman', name: 'Superman', alt: 'Rückenstrecker', z: ['tief'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Bauchlage, Arme lang nach vorn.', 'Arme, Brust und Beine gleichzeitig leicht anheben.', 'Zwei Sekunden halten, ablegen.'],
+    tip: 'Blick zum Boden, der Nacken bleibt lang.', err: 'Den Kopf in den Nacken werfen.' },
+  { id: 'toes2bar', name: 'Toes-to-Bar', alt: 'Füße zur Stange', z: ['unten', 'oben'], lvl: 3, equip: 'Klimmzugstange', kind: 'reps',
+    steps: ['An die Stange hängen, Arme gestreckt.', 'Gestreckte Beine bis zur Stange hochziehen.', 'Kontrolliert senken und den Schwung abfangen.'],
+    tip: 'Die Stange gedanklich nach unten drücken.', err: 'Wildes Schwingen zwischen den Wiederholungen.' },
+  { id: 'updown', name: 'Up-Down-Plank', alt: 'Plank Up-Downs', z: ['tief', 'oben'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Unterarmstütz.', 'Erst eine, dann die andere Hand aufsetzen und in den hohen Stütz drücken.', 'Ebenso zurück auf die Unterarme, Startarm wechseln.'],
+    tip: 'Füße breiter stellen, dann schaukelt die Hüfte weniger.', err: 'Die Hüfte schwingt bei jedem Wechsel.' },
+  { id: 'vup', name: 'V-Up', alt: 'Klappmesser', z: ['oben', 'unten'], lvl: 3, equip: '', kind: 'reps',
+    steps: ['Gestreckt auf dem Rücken liegen, Arme über dem Kopf.', 'Oberkörper und gestreckte Beine gleichzeitig zu einem V heben.', 'Hände Richtung Füße, dann kontrolliert lang ablegen.'],
+    tip: 'Lieber ein kleineres V, dafür sauber.', err: 'Die Beine knicken ein.' },
+  { id: 'birddog', name: 'Vierfüßler-Diagonal', alt: 'Bird Dog', z: ['tief'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Vierfüßlerstand, Rücken flach.', 'Rechten Arm nach vorn und linkes Bein nach hinten strecken.', 'Zurück unter den Körper, Seite wechseln.'],
+    tip: 'Zwei Sekunden strecken, eine Sekunde halten.', err: 'Bein zu hoch, dadurch Hohlkreuz.' },
+  { id: 'wipers', name: 'Windscheibenwischer', alt: 'Windshield Wipers', z: ['seite', 'unten'], lvl: 3, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Arme seitlich ausbreiten, Beine senkrecht.', 'Beine geschlossen zu einer Seite sinken lassen.', 'Über die Mitte zur anderen Seite, die Schultern bleiben am Boden.'],
+    tip: 'Mit gebeugten Knien ist es deutlich leichter.', err: 'Die gegenüberliegende Schulter hebt ab.' },
+  { id: 'xcrunch', name: 'X-Crunch', alt: 'Cross-Body Crunch', z: ['oben', 'seite'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Lang auf dem Rücken liegen, Arme und Beine als X gespreizt.', 'Rechte Hand und linken Fuß über dem Körper zusammenführen.', 'Ablegen und Seite wechseln.'],
+    tip: 'Arm und Bein kommen sich aus dem Bauch heraus entgegen.', err: 'Nur den Arm schwingen.' },
+  { id: 'boat', name: 'Yoga-Boot', alt: 'Navasana', z: ['oben', 'unten', 'tief'], lvl: 2, equip: '', kind: 'time',
+    steps: ['Sitzen, Oberkörper zurücklehnen, Rücken gerade.', 'Beine anheben, bis sie schräg nach oben zeigen.', 'Arme parallel zum Boden, halten und atmen.'],
+    tip: 'Das Brustbein bleibt oben.', err: 'Runder Rücken.' },
+  { id: 'toetouch', name: 'Zehentipper', alt: 'Toe Touches', z: ['oben'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Beine senkrecht nach oben.', 'Arme gestreckt Richtung Zehen heben, die Schultern rollen ab.', 'Langsam ablegen.'],
+    tip: 'Die Beine bleiben senkrecht und kippen nicht zum Gesicht.', err: 'Das Kinn schiebt nach vorn.' },
+  { id: 'kneehover', name: 'Quadruped-Knieheber', alt: 'Quadruped Knee Hover', z: ['tief'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Vierfüßlerstand, Zehen aufgestellt.', 'Knie zwei Fingerbreit anheben und drei Sekunden halten.', 'Knie absetzen, kurz lösen, wiederholen.'],
+    tip: 'Die Bewegung ist winzig, die Spannung groß.', err: 'Die Hüfte schiebt nach oben.' }
+].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+const BY = {};
+for (const e of EX) {
+  const a = A[e.id];
+  a.keys = a.keys.map(P);
+  a.seq = a.seq ?? a.keys.map((_, i) => i);
+  a.hold = a.hold ?? a.seq.map(() => 0);
+  a.rpc = a.rpc ?? 1;
+  a.floor = 'floor' in a ? a.floor : 'mat';
+  a.props = a.props ?? [];
+  a.thumb = a.thumb ?? 1;
+  a.total = a.seq.reduce((s, _, i) => s + a.hold[i] + a.dur[i], 0);
+  e.anim = a;
+  BY[e.id] = e;
+}
+
+/* ───────────── Zeichnen ───────────── */
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+const f1 = n => Math.round(n * 10) / 10;
+const pts = (...p) => 'M' + p.map(q => f1(q[0]) + ' ' + f1(q[1])).join('L');
+const ease = u => -(Math.cos(Math.PI * u) - 1) / 2;
+
+let gender = 'frau';
+const live = new Set();
+let raf = 0, last = 0;
+function loop(now) {
+  const dt = last ? Math.min(now - last, 64) : 0;
+  last = now;
+  for (const o of [...live]) o.tick(dt);
+  if (live.size) raf = requestAnimationFrame(loop);
+  else { raf = 0; last = 0; }
+}
+function wake() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } }
+
+class Figure {
+  constructor(svg, opts = {}) {
+    this.svg = svg; this.g = opts.gender || null;
+    svg.setAttribute('viewBox', VB);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    this.speed = 1; this.acc = 0; this.cycles = 0; this.onCycle = null;
+  }
+  set(ex, keyIndex) {
+    this.ex = ex; this.acc = 0; this.cycles = 0;
+    const svg = this.svg, a = ex.anim;
+    svg.textContent = '';
+    const back = el('g', {}, svg);
+    if (a.floor === 'mat') el('rect', { x: 14, y: 150.5, width: 192, height: 5, rx: 2.5, class: 'p-mat' }, back);
+    if (a.floor === 'line') el('line', { x1: 10, y1: 151, x2: 210, y2: 151, class: 'p-line' }, back);
+    this.pr = {};
+    const k0 = joints(a.keys[0]);
+    for (const p of a.props) {
+      if (p === 'bar') el('line', { x1: 62, y1: 4, x2: 158, y2: 4, class: 'p-prop', 'stroke-width': 5 }, back);
+      if (p === 'bench') {
+        el('rect', { x: 14, y: 132, width: 138, height: 6, rx: 3, class: 'p-propfill' }, back);
+        el('rect', { x: 26, y: 138, width: 5, height: 12, class: 'p-propfill' }, back);
+        el('rect', { x: 134, y: 138, width: 5, height: 12, class: 'p-propfill' }, back);
+      }
+      if (p === 'swiss') el('circle', { cx: 112, cy: 129, r: 19, class: 'p-swiss' }, back);
+      if (p === 'swissfoot') this.pr.swiss = el('circle', { cx: 0, cy: F - 17, r: 17, class: 'p-swiss' }, back);
+      if (p === 'parallettes') { const x = k0.W1[0]; el('path', { d: `M${x - 12} 151L${x - 8} 135L${x + 8} 135L${x + 12} 151`, class: 'p-prop', 'stroke-width': 3 }, back); }
+      if (p === 'band') { el('rect', { x: 3, y: 26, width: 5, height: 125, rx: 2, class: 'p-propfill' }, back); this.pr.band = el('path', { class: 'p-band' }, back); }
+      if (p === 'ball') this.pr.ballBack = el('circle', { r: 7, class: 'p-ball' }, back);
+    }
+    const near = this.g || gender;
+    const torsoW = near === 'mann' ? 9.5 : 8.5;
+    this.n = {
+      farLeg: el('path', { class: 'fig-limb fig-far', 'stroke-width': 7 }, svg),
+      farArm: el('path', { class: 'fig-limb fig-far', 'stroke-width': 6 }, svg),
+      torso: el('path', { class: 'fig-limb fig-near', 'stroke-width': torsoW }, svg),
+      neck: el('path', { class: 'fig-limb fig-near', 'stroke-width': 5.5 }, svg),
+      hair: near === 'frau' ? el('path', { class: 'fig-hair', 'stroke-width': 5 }, svg) : null,
+      head: el('circle', { r: L.R, class: 'fig-head' }, svg),
+      tie: near === 'frau' ? el('circle', { r: 2.2, class: 'fig-tie' }, svg) : null,
+      cap: near === 'mann' ? el('path', { class: 'fig-hair', 'stroke-width': 3.2 }, svg) : null,
+      nearLeg: el('path', { class: 'fig-limb fig-near', 'stroke-width': 7 }, svg),
+      nearArm: el('path', { class: 'fig-limb fig-near', 'stroke-width': 6 }, svg)
+    };
+    const front = el('g', {}, svg);
+    for (const p of a.props) {
+      if (p === 'wheel') {
+        this.pr.wheel = el('g', {}, front);
+        el('circle', { r: 9, cx: 0, cy: 0, class: 'p-prop', 'stroke-width': 3.2 }, this.pr.wheel);
+        el('circle', { r: 2.4, cx: 0, cy: 0, class: 'p-propfill' }, this.pr.wheel);
+      }
+      if (p === 'ball') this.pr.ball = el('circle', { r: 7, class: 'p-ball' }, front);
+    }
+    this.draw(a.keys[keyIndex ?? a.seq[0]]);
+    return this;
+  }
+  poseAt(ms) {
+    const a = this.ex.anim;
+    let m = ms % a.total;
+    for (let i = 0; i < a.seq.length; i++) {
+      const from = a.keys[a.seq[i]];
+      if (m < a.hold[i]) return from;
+      m -= a.hold[i];
+      if (m < a.dur[i]) return mix(from, a.keys[a.seq[(i + 1) % a.seq.length]], ease(m / a.dur[i]));
+      m -= a.dur[i];
+    }
+    return a.keys[a.seq[0]];
+  }
+  draw(k) {
+    const j = joints(k), n = this.n;
+    n.farLeg.setAttribute('d', pts(j.H, j.K2, j.P2));
+    n.farArm.setAttribute('d', pts(j.S, j.E2, j.W2));
+    n.torso.setAttribute('d', pts(j.H, j.S));
+    n.neck.setAttribute('d', pts(j.S, j.N));
+    n.head.setAttribute('cx', f1(j.C[0])); n.head.setAttribute('cy', f1(j.C[1]));
+    n.nearLeg.setAttribute('d', pts(j.H, j.K1, j.P1));
+    n.nearArm.setAttribute('d', pts(j.S, j.E1, j.W1));
+    const back = k.ha - 90 * k.face;
+    if (n.hair) {
+      const root = add(add(j.C, dir(k.ha, 4)), dir(back, 7));
+      const mid = add(root, dir(back, 5));
+      const end = add(mid, [0, 8]);
+      n.hair.setAttribute('d', `M${f1(root[0])} ${f1(root[1])}Q${f1(mid[0])} ${f1(mid[1])} ${f1(end[0])} ${f1(end[1])}`);
+      n.tie.setAttribute('cx', f1(root[0])); n.tie.setAttribute('cy', f1(root[1]));
+    }
+    if (n.cap) {
+      const p0 = add(j.C, dir(k.ha + 70 * k.face, 9.6)), p1 = add(j.C, dir(back - 30 * k.face, 9.6));
+      n.cap.setAttribute('d', `M${f1(p0[0])} ${f1(p0[1])}A9.6 9.6 0 0 ${k.face > 0 ? 0 : 1} ${f1(p1[0])} ${f1(p1[1])}`);
+    }
+    const pr = this.pr;
+    if (pr.wheel) pr.wheel.setAttribute('transform', `translate(${f1(j.W1[0])} ${F - 9})`);
+    if (pr.swiss) pr.swiss.setAttribute('cx', f1(j.P1[0] + 4));
+    if (pr.band) pr.band.setAttribute('d', `M8 56L${f1(j.W1[0])} ${f1(j.W1[1])}`);
+    if (pr.ball) {
+      let b = [(j.W1[0] + j.W2[0]) / 2, (j.W1[1] + j.W2[1]) / 2 - 3];
+      b = [b[0], b[1] + (F - 8 - b[1]) * k.bf];
+      const r = f1(7.5 * (1 + .22 * k.dp));
+      const behind = k.dp < -.2;
+      for (const [node, show] of [[pr.ball, !behind], [pr.ballBack, behind]]) {
+        node.setAttribute('cx', f1(b[0])); node.setAttribute('cy', f1(b[1])); node.setAttribute('r', r);
+        node.style.display = show ? '' : 'none';
+      }
+    }
+  }
+  tick(dt) {
+    this.acc += dt * this.speed;
+    const c = Math.floor(this.acc / this.ex.anim.total);
+    if (c > this.cycles) { const d = c - this.cycles; this.cycles = c; this.onCycle && this.onCycle(d); }
+    if (this.ex) this.draw(this.poseAt(this.acc));
+  }
+  play() { live.add(this); wake(); }
+  pause() { live.delete(this); }
+  get playing() { return live.has(this); }
+  reset() { this.acc = 0; this.cycles = 0; this.draw(this.ex.anim.keys[this.ex.anim.seq[0]]); }
+}
+function staticFig(ex, g, key) {
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('aria-hidden', 'true');
+  new Figure(svg, { gender: g }).set(ex, key ?? ex.anim.thumb);
+  return svg;
+}
+
+/* ───────────── Speicher ───────────── */
+const KEY = 'bauchwerk:v1';
+let state = { gender: null, level: 2, rest: 20, goal: 60, history: [] };
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) state = { ...state, ...s }; } catch (e) { /* ohne Speicher weiter */ }
+const save = patch => { state = { ...state, ...patch }; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignorieren */ } };
+gender = state.gender || 'frau';
+
+/* ───────────── Dosierung & Pläne ───────────── */
+const LEVELS = ['Einsteiger', 'Fortgeschritten', 'Profi'];
+function target(ex, lvl = state.level) {
+  const hard = ex.lvl === 3 ? .7 : 1;
+  if (ex.kind === 'time') return Math.round([20, 30, 45][lvl - 1] * hard / 5) * 5;
+  let n = [10, 14, 18][lvl - 1] * hard;
+  if (ex.anim.rpc === 2) n = Math.round(n * 1.4 / 2) * 2;
+  return Math.max(4, Math.round(n));
+}
+const workSec = (ex, lvl) => ex.kind === 'time' ? target(ex, lvl) : target(ex, lvl) * ex.anim.total / ex.anim.rpc / 1000;
+const doseText = (ex, lvl) => ex.kind === 'time' ? `${target(ex, lvl)} Sek.` : `${target(ex, lvl)} Wdh.${ex.anim.rpc === 2 ? ' gesamt' : ''}`;
+
+const PLANS = [
+  { id: 'start', name: 'Einsteiger-Start', desc: 'Grundmuster lernen. Der Rücken bleibt fast immer am Boden.', ex: ['crunch', 'deadbug', 'reverse', 'plank', 'heeltouch', 'birddog'], rounds: 2 },
+  { id: 'sixpack', name: 'Sixpack-Fokus', desc: 'Der gerade Bauchmuskel von oben bis unten.', ex: ['crunch', 'vup', 'bicycle', 'legraise', 'toetouch', 'hollow'], rounds: 2 },
+  { id: 'taille', name: 'Taille & Seiten', desc: 'Schräge Bauchmuskeln mit Drehung und Seitstütz.', ex: ['twist', 'sideplank', 'heeltouch', 'oblique', 'sidedip', 'bicycle', 'xcrunch'], rounds: 2 },
+  { id: 'unten', name: 'Unterer Bauch', desc: 'Beine bewegen, Becken einrollen.', ex: ['reverse', 'legraise', 'flutter', 'scissor', 'hipraise', 'kneetuck'], rounds: 2 },
+  { id: 'core', name: 'Core-Stabilität', desc: 'Halten statt zappeln: tiefe Muskeln und Rumpfspannung.', ex: ['plank', 'bear', 'deadbug', 'birddog', 'kneehover', 'superman', 'updown'], rounds: 2 },
+  { id: 'zuhause', name: 'Ganz ohne Geräte', desc: 'Komplettes Bauchtraining nur mit Matte.', ex: ['crunch', 'climber', 'twist', 'legraise', 'sideplank', 'xcrunch', 'boat', 'plank'], rounds: 2 },
+  { id: 'geraete', name: 'Mit Kleingeräten', desc: 'Bauchroller, Gymnastikball, Medizinball und Band.', ex: ['rollout', 'ballcrunch', 'jackknife', 'slam', 'woodchop', 'pallof'], rounds: 2 },
+  { id: 'stange', name: 'Stange & Bank', desc: 'Für Profis mit Klimmzugstange, Parallettes und Bank.', ex: ['hangknee', 'hangleg', 'toes2bar', 'lsit', 'dragon', 'hollow'], rounds: 2 }
+];
+const PLAN = Object.fromEntries(PLANS.map(p => [p.id, p]));
+function planSec(p, lvl = state.level) {
+  const n = p.ex.length * p.rounds;
+  return p.rounds * p.ex.reduce((s, id) => s + workSec(BY[id], lvl), 0) + (n - 1) * state.rest + 5;
+}
+const mins = s => Math.max(1, Math.round(s / 60));
+function todayPlan() {
+  const map = ['start', 'sixpack', 'core', 'taille', 'unten', 'zuhause', 'sixpack'];
+  return PLAN[map[new Date().getDay()]];
+}
+function randomPlan() {
+  const pool = EX.filter(e => !e.equip && e.lvl <= Math.min(3, state.level + 1));
+  const pick = [];
+  for (const zk of Object.keys(Z)) {
+    const c = pool.filter(e => e.z.includes(zk) && !pick.includes(e));
+    if (c.length) pick.push(c[Math.floor(Math.random() * c.length)]);
+  }
+  const rest = pool.filter(e => !pick.includes(e)).sort(() => Math.random() - .5);
+  while (pick.length < 6 && rest.length) pick.push(rest.pop());
+  return { id: 'mix', name: 'Zufallsmix', ex: pick.sort(() => Math.random() - .5).map(e => e.id), rounds: 2 };
+}
+
+/* ───────────── Datum ───────────── */
+const dayKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+  return Math.ceil(((t - y0) / 864e5 + 1) / 7);
+}
+function weekDays() {
+  const now = new Date(), wd = (now.getDay() + 6) % 7;
+  return [...Array(7)].map((_, i) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - wd + i));
+}
+function streak() {
+  const days = new Set(state.history.map(h => h.day));
+  const d = new Date();
+  if (!days.has(dayKey(d))) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while (days.has(dayKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+/* ───────────── UI: Heute ───────────── */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let heroFig = null;
+
+function renderHome() {
+  const now = new Date(), h = now.getHours();
+  $('#hello-h').textContent = h < 11 ? 'Guten Morgen' : h < 18 ? 'Guten Tag' : 'Guten Abend';
+  $('#hello-date').textContent = now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }) + ' · Level ' + LEVELS[state.level - 1];
+  $('#who').hidden = !!state.gender;
+  for (const svg of document.querySelectorAll('[data-fig-static]')) {
+    new Figure(svg, { gender: svg.dataset.figStatic }).set(BY.pallof, 1);
+  }
+  const p = todayPlan();
+  $('#today-name').textContent = 'Heute: ' + p.name;
+  $('#today-sub').textContent = `${p.ex.length} Übungen · ${p.rounds} Runden`;
+  $('#today-time').innerHTML = `${mins(planSec(p))} <small>Min</small>`;
+  const doneToday = state.history.some(x => x.day === dayKey(now));
+  $('#today-status').textContent = doneToday ? 'Heute schon trainiert' : 'Bereit zum Start';
+  heroFig = heroFig || new Figure($('#today-fig'));
+  heroFig.set(BY[p.ex[0]]);
+  if (current === 'home') heroFig.play();
+
+  // Woche
+  const days = weekDays(), names = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  const doneDays = new Set(state.history.map(x => x.day));
+  $('#kw').textContent = 'KW ' + isoWeek(now);
+  $('#week').innerHTML = days.map((d, i) => {
+    const k = dayKey(d);
+    const cls = ['d', k === dayKey(now) ? 'is-today' : '', doneDays.has(k) ? 'done' : ''].join(' ');
+    return `<div class="${cls}" aria-label="${names[i]} ${d.getDate()}.${doneDays.has(k) ? ', trainiert' : ''}"><span>${names[i]}</span><span class="n num">${d.getDate()}</span><i class="dot"></i></div>`;
+  }).join('');
+  const weekKeys = new Set(days.map(dayKey));
+  const wk = state.history.filter(x => weekKeys.has(x.day));
+  const wMin = wk.reduce((s, x) => s + x.min, 0);
+  $('#st-min').textContent = wMin;
+  $('#st-min-l').textContent = `von ${state.goal} Min`;
+  $('#st-streak').textContent = streak();
+  $('#st-total').textContent = state.history.length;
+  $('#goal-fill').style.transform = `scaleX(${Math.min(1, wMin / state.goal)})`;
+
+  // Zonen
+  const cnt = { oben: 0, unten: 0, seite: 0, tief: 0 };
+  for (const s of wk) for (const id of s.ex) for (const zk of (BY[id]?.z || [])) cnt[zk]++;
+  const max = Math.max(1, ...Object.values(cnt));
+  $('#zones').innerHTML = Object.entries(Z).map(([k, label]) =>
+    `<div class="zone"><span>${label}</span><span class="track"><i style="transform:scaleX(${cnt[k] / max})"></i></span><b class="num">${cnt[k]}</b></div>`).join('');
+  $('#zones-empty').hidden = wk.length > 0;
+}
+
+/* ───────────── UI: Bibliothek ───────────── */
+const filt = { q: '', zone: 'all', noEquip: false, lvl1: false };
+function chipRow(host, items, isOn, onTap) {
+  host.innerHTML = '';
+  for (const [key, label] of items) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = label;
+    b.setAttribute('aria-pressed', String(isOn(key)));
+    b.addEventListener('click', () => { onTap(key); renderLib(); });
+    host.appendChild(b);
+  }
+}
+function exRow(ex) {
+  const b = document.createElement('button');
+  b.className = 'ex-row glass';
+  b.innerHTML = `<span class="thumb"></span>
+    <span style="min-width:0"><h3>${esc(ex.name)}</h3><span class="alt" style="display:block">${esc(ex.alt)}${ex.equip ? ' · ' + esc(ex.equip) : ''}</span>
+    <span class="tags">${ex.z.map(z => `<span class="tag">${Z[z]}</span>`).join('')}</span></span>
+    <span class="lvl" aria-label="Schwierigkeit ${ex.lvl} von 3">${[1, 2, 3].map(i => `<i class="${i <= ex.lvl ? 'on' : ''}"></i>`).join('')}</span>`;
+  b.querySelector('.thumb').appendChild(staticFig(ex, gender));
+  b.addEventListener('click', () => openExercise(ex.id));
+  return b;
+}
+function renderLib() {
+  chipRow($('#zone-chips'), [['all', 'Alle'], ...Object.entries(Z)], k => filt.zone === k, k => { filt.zone = k; });
+  chipRow($('#extra-chips'), [['noEquip', 'Ohne Geräte'], ['lvl1', 'Nur leichte']], k => filt[k], k => { filt[k] = !filt[k]; });
+  const q = filt.q.trim().toLowerCase();
+  const list = EX.filter(e =>
+    (filt.zone === 'all' || e.z.includes(filt.zone)) &&
+    (!filt.noEquip || !e.equip || e.equip === 'Ball optional') &&
+    (!filt.lvl1 || e.lvl === 1) &&
+    (!q || (e.name + ' ' + e.alt + ' ' + e.equip).toLowerCase().includes(q)));
+  $('#lib-count').textContent = `${list.length} von ${EX.length} Übungen · tippe für Animation und Anleitung`;
+  const groups = {};
+  for (const e of list) { const l = e.name[0].toUpperCase(); (groups[l] = groups[l] || []).push(e); }
+  const host = $('#lib-list');
+  host.textContent = '';
+  if (!list.length) host.innerHTML = '<p class="no-results">Keine Übung passt zu diesen Filtern. Entferne einen Filter oder ändere die Suche.</p>';
+  for (const l of Object.keys(groups)) {
+    const h = document.createElement('h2'); h.className = 'group-letter'; h.id = 'L-' + l; h.textContent = l;
+    host.appendChild(h);
+    const ul = document.createElement('div'); ul.className = 'ex-list';
+    groups[l].forEach(e => ul.appendChild(exRow(e)));
+    host.appendChild(ul);
+  }
+  const nav = $('#letters'); nav.textContent = '';
+  for (const l of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+    const b = document.createElement('button'); b.textContent = l;
+    b.disabled = !groups[l];
+    b.setAttribute('aria-label', 'Zu ' + l + ' springen');
+    b.addEventListener('click', () => document.getElementById('L-' + l)?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' }));
+    nav.appendChild(b);
+  }
+}
+$('#q').addEventListener('input', e => { filt.q = e.target.value; renderLib(); });
+
+/* ───────────── UI: Pläne ───────────── */
+function renderPlans() {
+  const host = $('#plan-list'); host.textContent = '';
+  const tp = todayPlan();
+  for (const p of PLANS) {
+    const b = document.createElement('button');
+    b.className = 'plan glass';
+    b.innerHTML = `<span class="plan-top"><span><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p></span>${p.id === tp.id ? '<span class="badge today">Heute</span>' : ''}</span>
+      <span class="plan-strip"></span>
+      <span class="plan-meta num"><span><b>${mins(planSec(p))}</b> Min</span><span><b>${p.ex.length}</b> Übungen</span><span><b>${p.rounds}</b> Runden</span></span>`;
+    const strip = b.querySelector('.plan-strip');
+    p.ex.slice(0, 5).forEach(id => { const s = document.createElement('span'); s.appendChild(staticFig(BY[id], gender)); strip.appendChild(s); });
+    b.addEventListener('click', () => openPlan(p));
+    host.appendChild(b);
+  }
+}
+
+/* ───────────── UI: Profil ───────────── */
+function seg(name, label, hint, opts, val, onChange) {
+  const wrap = document.createElement('div'); wrap.className = 'setting';
+  wrap.innerHTML = `<div class="label" id="lbl-${name}">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}<div class="seg" role="radiogroup" aria-labelledby="lbl-${name}"></div>`;
+  const g = wrap.querySelector('.seg');
+  for (const [v, t] of opts) {
+    const l = document.createElement('label');
+    l.innerHTML = `<input type="radio" name="${name}" id="${name}-${v}" value="${v}" ${String(v) === String(val) ? 'checked' : ''}>${t}`;
+    l.querySelector('input').addEventListener('change', () => onChange(v));
+    g.appendChild(l);
+  }
+  return wrap;
+}
+let confirmReset = false;
+function renderMe() {
+  const s = $('#settings'); s.textContent = '';
+  s.appendChild(seg('gender', 'Figur', 'So sehen die animierten Figuren aus.', [['frau', 'Frau'], ['mann', 'Mann']], gender, v => setGender(v)));
+  s.appendChild(seg('level', 'Level', 'Bestimmt Wiederholungen und Haltezeiten.', LEVELS.map((t, i) => [i + 1, t]), state.level, v => { save({ level: v }); refreshAll(); }));
+  s.appendChild(seg('rest', 'Pause zwischen Übungen', '', [[15, '15 s'], [20, '20 s'], [30, '30 s'], [45, '45 s']], state.rest, v => { save({ rest: v }); refreshAll(); }));
+  s.appendChild(seg('goal', 'Wochenziel', '', [[30, '30 Min'], [60, '60 Min'], [90, '90 Min']], state.goal, v => { save({ goal: v }); refreshAll(); }));
+
+  const h = $('#hist');
+  const items = state.history.slice(-12).reverse();
+  h.innerHTML = items.length ? items.map(x => {
+    const d = new Date(x.ts);
+    return `<div><span>${d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })} · ${esc(x.name)}</span><span class="muted">${x.min} Min</span></div>`;
+  }).join('') : '<p class="empty-note">Noch keine Einheit gespeichert. Starte heute mit dem Plan auf der Startseite.</p>';
+  const r = $('#reset-area');
+  r.innerHTML = !state.history.length ? '' : confirmReset
+    ? '<p class="empty-note">Alle gespeicherten Einheiten löschen? Das lässt sich nicht rückgängig machen.</p><div class="row-btns"><button class="btn ghost" id="rs-no">Abbrechen</button><button class="btn danger" id="rs-yes">Verlauf löschen</button></div>'
+    : '<div class="row-btns"><button class="btn ghost" id="rs-ask">Verlauf löschen</button></div>';
+  r.querySelector('#rs-ask')?.addEventListener('click', () => { confirmReset = true; renderMe(); });
+  r.querySelector('#rs-no')?.addEventListener('click', () => { confirmReset = false; renderMe(); });
+  r.querySelector('#rs-yes')?.addEventListener('click', () => { confirmReset = false; save({ history: [] }); refreshAll(); });
+}
+function setGender(g) { save({ gender: g }); gender = g; refreshAll(); }
+document.querySelectorAll('[data-gender]').forEach(b => b.addEventListener('click', () => setGender(b.dataset.gender)));
+function refreshAll() { renderHome(); renderLib(); renderPlans(); renderMe(); }
+
+/* ───────────── Navigation ───────────── */
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TABS = ['home', 'lib', 'plans', 'me'];
+let current = 'home';
+function go(tab) {
+  if (tab === current) return;
+  const prev = $('#view-' + current), next = $('#view-' + tab);
+  prev.hidden = true;
+  next.classList.add('pre'); next.hidden = false;
+  void next.offsetHeight;
+  next.classList.remove('pre');
+  current = tab;
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === tab)));
+  $('#tab-ind').style.transform = `translateX(${TABS.indexOf(tab) * 100}%)`;
+  if (heroFig) tab === 'home' ? heroFig.play() : heroFig.pause();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => go(t.dataset.tab)));
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+$('#act-start').addEventListener('click', () => startPlan(todayPlan()));
+$('#act-random').addEventListener('click', () => openPlan(randomPlan()));
+
+/* ───────────── Sheet ───────────── */
+const sheet = $('#sheet');
+let sheetFig = null, sheetStack = [], lastFocus = null;
+function showSheet() {
+  if (!sheet.hidden) return;
+  lastFocus = document.activeElement;
+  sheet.hidden = false;
+  void sheet.offsetHeight;
+  sheet.classList.add('open');
+  sheet.querySelector('[data-close].icon-btn').focus({ preventScroll: true });
+}
+function closeSheet() {
+  if (sheet.hidden) return;
+  sheet.classList.remove('open');
+  sheetFig && sheetFig.pause();
+  sheetStack = [];
+  const done = () => { sheet.hidden = true; $('#sheet-body').textContent = ''; };
+  setTimeout(done, reduceMotion() ? 220 : 380);
+  lastFocus && lastFocus.focus && lastFocus.focus({ preventScroll: true });
+}
+sheet.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeSheet));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!$('#player').hidden) { askQuit(); return; }
+  closeSheet();
+});
+$('#sheet-back').addEventListener('click', () => {
+  sheetStack.pop();
+  const prev = sheetStack.pop();
+  prev && prev();
+});
+
+function openExercise(id) {
+  const ex = BY[id];
+  const render = () => {
+    sheetStack.push(render);
+    $('#sheet-back').hidden = sheetStack.length < 2;
+    const body = $('#sheet-body');
+    body.scrollTop = 0;
+    body.innerHTML = `
+      <div class="stage"><span class="stage-count num" id="d-count">Wiederholung 1</span><svg id="d-fig" role="img" aria-label="Animation: ${esc(ex.name)}"></svg>
+        <div class="stage-ctrl"><button id="d-speed" aria-label="Geschwindigkeit">1×</button><button id="d-play" aria-label="Animation pausieren">${ICON.pause}</button></div></div>
+      <div class="d-title"><h2 id="sheet-title">${esc(ex.name)}</h2><p>${esc(ex.alt)}</p></div>
+      <div class="d-meta">${ex.z.map(z => `<span class="tag">${Z[z]}</span>`).join('')}<span class="tag o">${LEVELS[ex.lvl - 1]}</span><span class="tag n">${ex.equip ? esc(ex.equip) : 'Ohne Geräte'}</span></div>
+      <div class="goal glass"><span><span>Dein Ziel als ${LEVELS[state.level - 1]}</span><br><b class="num">3 × ${doseText(ex)}</b></span><span class="num">≈ ${mins(3 * workSec(ex) + 2 * state.rest)} Min</span></div>
+      <ol class="steps">${ex.steps.map(s => `<li><span>${esc(s)}</span></li>`).join('')}</ol>
+      <div class="notes"><div class="note glass ok"><b>Darauf achten</b>${esc(ex.tip)}</div><div class="note glass no"><b>Häufiger Fehler</b>${esc(ex.err)}</div></div>
+      <button class="btn accent block sheet-cta" id="d-train">${ICON.play} Diese Übung trainieren</button>`;
+    sheetFig && sheetFig.pause();
+    sheetFig = new Figure($('#d-fig')).set(ex);
+    let reps = 0;
+    sheetFig.onCycle = n => { reps += n * ex.anim.rpc; const c = $('#d-count'); if (c) c.textContent = (ex.kind === 'time' ? 'Durchgang ' : 'Wiederholung ') + (reps + 1); };
+    sheetFig.play();
+    const playBtn = $('#d-play');
+    playBtn.addEventListener('click', () => {
+      if (sheetFig.playing) { sheetFig.pause(); playBtn.innerHTML = ICON.play; playBtn.setAttribute('aria-label', 'Animation abspielen'); }
+      else { sheetFig.play(); playBtn.innerHTML = ICON.pause; playBtn.setAttribute('aria-label', 'Animation pausieren'); }
+    });
+    const sp = $('#d-speed');
+    sp.addEventListener('click', () => { sheetFig.speed = sheetFig.speed === 1 ? .5 : 1; sp.textContent = sheetFig.speed === 1 ? '1×' : '0,5×'; });
+    $('#d-train').addEventListener('click', () => {
+      closeSheet();
+      startPlan({ id: 'single', name: ex.name, ex: [ex.id], rounds: 3, single: true });
+    });
+  };
+  render();
+  showSheet();
+}
+
+function openPlan(p) {
+  const render = () => {
+    sheetStack.push(render);
+    $('#sheet-back').hidden = sheetStack.length < 2;
+    sheetFig && sheetFig.pause();
+    const body = $('#sheet-body');
+    body.scrollTop = 0;
+    body.innerHTML = `
+      <div class="d-title" style="margin-top:6px"><span class="eyebrow">Plan</span><h2 id="sheet-title">${esc(p.name)}</h2><p>${esc(p.desc || 'Sechs zufällige Übungen ohne Geräte, alle vier Zonen sind dabei.')}</p></div>
+      <div class="goal glass num"><span><span>Ablauf</span><br><b>${p.rounds} Runden · ${p.ex.length} Übungen</b></span><span>≈ ${mins(planSec(p))} Min</span></div>
+      <div class="plan-list" id="pl-list"></div>
+      <button class="btn accent block sheet-cta" id="p-start">${ICON.play} Plan starten</button>
+      ${p.id === 'mix' ? '<button class="btn ghost block" id="p-reroll" style="margin-top:10px">Neu mischen</button>' : ''}`;
+    const list = $('#pl-list');
+    p.ex.forEach(id => {
+      const row = exRow(BY[id]);
+      row.querySelector('.lvl').outerHTML = `<span class="muted num" style="font-size:13px;font-weight:600;white-space:nowrap">${doseText(BY[id])}</span>`;
+      list.appendChild(row);
+    });
+    $('#p-start').addEventListener('click', () => { closeSheet(); startPlan(p); });
+    $('#p-reroll')?.addEventListener('click', () => { sheetStack = []; openPlan(randomPlan()); });
+  };
+  render();
+  showSheet();
+}
+
+const ICON = {
+  play: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l11-6.5a1 1 0 0 0 0-1.72l-11-6.5A1 1 0 0 0 8 5.5Z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>'
+};
+
+/* ───────────── Player ───────────── */
+const player = $('#player');
+const pl = { steps: [], i: 0, phase: 'ready', t: 0, reps: 0, running: false, plan: null, elapsed: 0, restLen: 0, fig: null, lock: null, saved: false };
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+function startPlan(p) {
+  pl.plan = p;
+  pl.steps = [];
+  for (let r = 0; r < p.rounds; r++) for (const id of p.ex) pl.steps.push({ ex: BY[id], round: r + 1 });
+  pl.i = 0; pl.elapsed = 0; pl.saved = false;
+  pl.fig = pl.fig || new Figure($('#pl-fig'));
+  $('#pl-plan').textContent = p.name;
+  $('#pl-segs').innerHTML = pl.steps.map(() => '<i></i>').join('');
+  $('#pl-run').hidden = false; $('#pl-done').hidden = true; $('#pl-confirm').hidden = true;
+  heroFig && heroFig.pause();
+  player.hidden = false;
+  void player.offsetHeight;
+  player.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  try { navigator.wakeLock?.request('screen').then(l => { pl.lock = l; }).catch(() => {}); } catch (e) { /* optional */ }
+  enter('ready');
+  pl.running = true; live.add(pl); wake();
+  pl.fig.play();
+  syncPlay();
+  $('#pl-play').focus({ preventScroll: true });
+}
+function enter(phase) {
+  pl.phase = phase; pl.t = 0; pl.reps = 0;
+  const step = pl.steps[pl.i];
+  const showEx = step.ex;
+  pl.fig.set(showEx);
+  pl.fig.speed = 1;
+  pl.fig.onCycle = phase === 'work' && showEx.kind === 'reps' ? n => { pl.reps += n * showEx.anim.rpc; if (pl.reps >= target(showEx)) advance(); } : null;
+  if (phase === 'rest') pl.restLen = state.rest;
+  const rest = phase !== 'work';
+  $('#pl-phase').textContent = phase === 'ready' ? 'Gleich geht’s los' : phase === 'rest' ? 'Pause' : (showEx.kind === 'time' ? 'Halten' : 'Los');
+  $('#pl-phase').classList.toggle('rest', rest);
+  $('#pl-bar').classList.toggle('rest', rest);
+  $('#pl-nextlabel').hidden = !rest;
+  $('#pl-add').hidden = phase !== 'rest';
+  $('#pl-name').textContent = showEx.name;
+  $('#pl-cue').textContent = rest ? `${doseText(showEx)} · ${showEx.steps[0]}` : showEx.steps[1];
+  const sets = pl.plan.single;
+  $('#pl-step').textContent = sets ? `Satz ${pl.i + 1} von ${pl.steps.length}` : `Übung ${pl.i + 1} von ${pl.steps.length} · Runde ${step.round}`;
+  [...$('#pl-segs').children].forEach((s, k) => { s.className = k < pl.i ? 'done' : k === pl.i ? 'now' : ''; });
+  if (!pl.running) pl.fig.pause(); else pl.fig.play();
+  ui();
+}
+function ui() {
+  const step = pl.steps[pl.i], ex = step.ex;
+  let big, unit, prog;
+  if (pl.phase === 'work' && ex.kind === 'reps') {
+    const tg = target(ex);
+    big = String(Math.min(pl.reps, tg)); unit = `von ${tg} Wdh.`;
+    prog = (pl.reps + (pl.fig.acc % ex.anim.total) / ex.anim.total * ex.anim.rpc) / tg;
+  } else {
+    const len = pl.phase === 'work' ? target(ex) : pl.phase === 'rest' ? pl.restLen : 5;
+    const left = Math.max(0, len - pl.t / 1000);
+    big = pl.phase === 'work' ? fmt(Math.ceil(left)) : String(Math.ceil(left));
+    unit = pl.phase === 'work' ? 'übrig' : 'Sekunden';
+    prog = pl.t / 1000 / len;
+  }
+  const b = $('#pl-big');
+  if (b.textContent !== big) b.textContent = big;
+  const u = $('#pl-unit');
+  if (u.textContent !== unit) u.textContent = unit;
+  $('#pl-barfill').style.transform = `scaleX(${Math.min(1, prog).toFixed(4)})`;
+}
+pl.tick = dt => {
+  if (!pl.running) return;
+  pl.t += dt; pl.elapsed += dt;
+  const ex = pl.steps[pl.i].ex;
+  if (pl.phase === 'ready' && pl.t >= 5000) { enter('work'); return; }
+  if (pl.phase === 'rest' && pl.t >= pl.restLen * 1000) { enter('work'); return; }
+  if (pl.phase === 'work' && ex.kind === 'time' && pl.t >= target(ex) * 1000) { advance(); return; }
+  ui();
+};
+function advance() {
+  if (pl.phase !== 'work') { enter('work'); return; }
+  $('#pl-segs').children[pl.i].className = 'done';
+  if (pl.i >= pl.steps.length - 1) { finish(); return; }
+  pl.i++;
+  enter('rest');
+}
+function back() {
+  if (pl.phase === 'work' && pl.t > 2500) { enter('work'); return; }
+  if (pl.i > 0) pl.i--;
+  enter('work');
+}
+function syncPlay() {
+  const b = $('#pl-play');
+  b.innerHTML = pl.running ? ICON.pause.replace(/18/g, '28') : ICON.play.replace(/18/g, '28');
+  b.setAttribute('aria-label', pl.running ? 'Pause' : 'Weiter');
+}
+$('#pl-play').addEventListener('click', () => {
+  pl.running = !pl.running;
+  pl.running ? pl.fig.play() : pl.fig.pause();
+  syncPlay();
+});
+$('#pl-next').addEventListener('click', advance);
+$('#pl-prev').addEventListener('click', back);
+$('#pl-add').addEventListener('click', () => { pl.restLen += 10; ui(); });
+function askQuit() {
+  if (!$('#pl-done').hidden) { closePlayer(); return; }
+  if (pl.i === 0 && pl.phase === 'ready') { closePlayer(); return; }
+  pl.running = false; pl.fig.pause(); syncPlay();
+  $('#pl-confirm').hidden = false;
+  $('#pl-keep').focus();
+}
+$('#pl-close').addEventListener('click', askQuit);
+$('#pl-keep').addEventListener('click', () => { $('#pl-confirm').hidden = true; pl.running = true; pl.fig.play(); syncPlay(); });
+$('#pl-quit').addEventListener('click', closePlayer);
+function finish() {
+  pl.running = false; pl.fig.pause(); live.delete(pl);
+  const min = mins(pl.elapsed / 1000);
+  if (!pl.saved) {
+    pl.saved = true;
+    const now = new Date();
+    save({ history: [...state.history, { ts: now.getTime(), day: dayKey(now), name: pl.plan.name, min, ex: pl.steps.map(s => s.ex.id) }].slice(-400) });
+  }
+  $('#pl-run').hidden = true; $('#pl-done').hidden = false;
+  $('#done-plan').textContent = pl.plan.name;
+  $('#done-min').textContent = min;
+  $('#done-ex').textContent = pl.steps.length;
+  $('#done-streak').textContent = streak();
+  $('#pl-phase').textContent = 'Fertig';
+  $('#pl-phase').classList.remove('rest');
+  $('#pl-finish').focus();
+}
+$('#pl-finish').addEventListener('click', closePlayer);
+function closePlayer() {
+  pl.running = false; pl.fig && pl.fig.pause(); live.delete(pl);
+  try { pl.lock && pl.lock.release(); } catch (e) { /* egal */ }
+  pl.lock = null;
+  player.classList.remove('open');
+  document.body.style.overflow = '';
+  setTimeout(() => { player.hidden = true; }, reduceMotion() ? 200 : 280);
+  refreshAll();
+  if (current === 'home') heroFig && heroFig.play();
+}
+
+/* ───────────── Start ───────────── */
+refreshAll();
+window.__bw = { EX, Figure, staticFig, BY };
+})();
+</script>
