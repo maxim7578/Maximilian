@@ -87,6 +87,8 @@ remotion-composer/projects/
 remotion-composer/public/*
 # But keep demo props (shipped with the project for zero-key demos)
 !remotion-composer/public/demo-props/
+# Lokale Schriften (Fontsource, SIL OFL 1.1), damit Renders keine Google Fonts laden
+!remotion-composer/public/fonts/
 # Ignore test/scratch compositions in demo-props (keep only curated demos)
 remotion-composer/public/demo-props/test-*
 remotion-composer/public/demo-props/talking-head-*
