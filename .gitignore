@@ -106,5 +106,5 @@ venv/
 .venv-wan/
 
 # oh-my-claudecode Laufzeitzustand (projekteigene Skills bleiben commitbar)
-.omc/*
-!.omc/skills/
+**/.omc/*
+!**/.omc/skills/
