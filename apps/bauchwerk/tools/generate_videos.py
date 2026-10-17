@@ -7,8 +7,10 @@ Ablauf pro Übung und Person:
   2. Video: Veo animiert das Startbild zur Übungsbewegung (statische Kamera).
   3. Das MP4 wird nach apps/bauchwerk/videos/ geladen und in videos.json eingetragen.
 
-Voraussetzung: Umgebungsvariable GEMINI_API_KEY (oder GOOGLE_API_KEY) mit
-aktivierter Abrechnung im Google-Projekt (Veo ist nicht im Gratis-Kontingent).
+Voraussetzung: Gemini-API-Schlüssel mit aktivierter Abrechnung im Google-Projekt
+(Veo ist nicht im Gratis-Kontingent), entweder als Network secret der
+Cloud-Umgebung (Host generativelanguage.googleapis.com, Header x-goog-api-key,
+ohne Prefix) oder als Umgebungsvariable GEMINI_API_KEY.
 
 Aufruf:
   python3 apps/bauchwerk/tools/generate_videos.py --dry-run          # nur Plan zeigen
@@ -56,21 +58,25 @@ EXERCISES = {
 }
 
 
-def key():
+def headers():
+    # Ohne Umgebungsvariable hängt der Proxy der Cloud-Umgebung den Schlüssel an (Network secret).
     k = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not k:
-        sys.exit("GEMINI_API_KEY fehlt. Bitte in den Umgebungseinstellungen hinterlegen und eine neue Session starten.")
-    return k
+    h = {"Content-Type": "application/json"}
+    if k:
+        h["x-goog-api-key"] = k
+    return h
 
 
 def call(method, url, body=None, raw=False, timeout=120):
-    req = urllib.request.Request(url, method=method, headers={"x-goog-api-key": key(), "Content-Type": "application/json"},
+    req = urllib.request.Request(url, method=method, headers=headers(),
                                  data=json.dumps(body).encode() if body is not None else None)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             data = r.read()
     except urllib.error.HTTPError as e:
-        sys.exit(f"API-Fehler {e.code} bei {url.split('?')[0]}: {e.read().decode(errors='replace')[:600]}")
+        hint = (" Kein Schlüssel angekommen: Network secret für generativelanguage.googleapis.com mit Header "
+                "x-goog-api-key anlegen oder GEMINI_API_KEY setzen.") if e.code in (401, 403) else ""
+        sys.exit(f"API-Fehler {e.code} bei {url.split('?')[0]}: {e.read().decode(errors='replace')[:600]}{hint}")
     return data if raw else json.loads(data)
 
 
