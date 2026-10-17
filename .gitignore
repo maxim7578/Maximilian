@@ -105,5 +105,6 @@ venv/
 # Local Wan / diffusers GPU environment
 .venv-wan/
 
-# oh-my-claudecode Laufzeitzustand
-.omc/
+# oh-my-claudecode Laufzeitzustand (projekteigene Skills bleiben commitbar)
+.omc/*
+!.omc/skills/
