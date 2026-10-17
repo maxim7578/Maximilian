@@ -326,6 +326,29 @@ h1, h2, h3, p, ol, ul { margin: 0; }
 @media (max-width: 380px) { .notes { grid-template-columns: 1fr; } }
 .sheet-cta { margin-top: 20px; }
 .plan-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.study { margin-top: 16px; padding: 14px 16px; border-radius: 20px; font-size: 14px; }
+.study b { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--teal); margin-bottom: 4px; }
+.study.warn b { color: var(--bad); }
+.study .src { margin-top: 6px; font-size: 12px; }
+.study a, .facts a { color: var(--teal); font-weight: 600; }
+.vars { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.var-btn { padding: 12px 14px; border-radius: 18px; text-align: left; display: flex; flex-direction: column; gap: 2px; transition: transform 140ms var(--ease-out); }
+.var-btn:active { transform: scale(.97); }
+.var-btn span { font-size: 12px; color: var(--muted); font-weight: 600; }
+.var-btn b { font-size: 14px; }
+.tag.bad { background: rgba(207, 63, 52, .12); color: var(--bad); }
+.facts ol { padding-left: 20px; margin: 10px 0 0; display: grid; gap: 8px; font-size: 14px; max-width: 62ch; }
+.facts .src { font-size: 12px; color: var(--muted); }
+.ch-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; margin-top: 12px; }
+.ch-grid i { aspect-ratio: 1; border-radius: 8px; display: grid; place-items: center; font-style: normal; font-size: 11px; font-weight: 600; background: var(--line); color: var(--muted); }
+.ch-grid i.done { background: var(--teal); color: #fff; }
+.ch-grid i.rest { background: transparent; border: 1px dashed var(--line-strong); }
+.ch-grid i.rest.done { background: var(--teal-soft); color: var(--teal); border-style: solid; border-color: transparent; }
+.ch-grid i.next { outline: 2px solid var(--orange); outline-offset: 1px; color: var(--ink); }
+.waist-row { display: flex; gap: 8px; margin-top: 10px; }
+.waist-row input { flex: 1; min-width: 0; height: 46px; border-radius: 14px; border: 1px solid var(--line-strong); background: var(--glass-strong); color: var(--ink); font: inherit; font-size: 16px; padding: 0 14px; }
+.waist-row .btn { min-height: 46px; }
+.spark { width: 100%; height: 56px; margin-top: 10px; display: block; }
 
 /* Player */
 .player {
@@ -486,7 +509,7 @@ h1, h2, h3, p, ol, ul { margin: 0; }
           <div class="goalbar" aria-hidden="true"><i id="goal-fill" style="transform:scaleX(0)"></i></div>
           <div class="stats">
             <div class="stat"><b class="num" id="st-min">0</b><span id="st-min-l">von 60 Min</span></div>
-            <div class="stat"><b class="num" id="st-streak">0</b><span>Tage am Stück</span></div>
+            <div class="stat"><b class="num" id="st-streak">0</b><span>Serie, 1 Pausetag pro Woche frei</span></div>
             <div class="stat"><b class="num" id="st-total">0</b><span>Einheiten gesamt</span></div>
           </div>
         </div>
@@ -522,7 +545,21 @@ h1, h2, h3, p, ol, ul { margin: 0; }
         <h1 id="plans-h">Trainingspläne</h1>
         <p>Jeder Plan läuft in Runden mit automatischen Pausen. Wiederholungen zählt die Figur mit.</p>
       </div>
-      <div class="stack" id="plan-list"></div>
+      <div class="stack">
+        <div class="glass card" id="challenge"></div>
+        <div class="stack" id="plan-list"></div>
+        <div class="glass card facts">
+          <h2 style="font-size:20px;font-weight:500">Was die Studien sagen</h2>
+          <ol>
+            <li>Rollout und Pike auf dem Gymnastikball aktivierten gerade und schräge Bauchmuskeln am stärksten, bei wenig Last auf dem unteren Rücken. <span class="src">(<a href="https://pubmed.ncbi.nlm.nih.gov/20436242/" target="_blank" rel="noopener">Escamilla et al. 2010</a>)</span></li>
+            <li>Curl-up und Seitstütz bringen viel Bauchspannung bei wenig Wirbelsäulenbelastung. Klassische Sit-ups belasten den Rücken stärker. <span class="src">(Axler &amp; McGill 1997)</span></li>
+            <li>Ein längerer Hebel macht es schwerer: Die Plank mit Ellbogen weiter vorn und gekipptem Becken aktiviert deutlich mehr als die normale Plank. <span class="src">(<a href="https://pubmed.ncbi.nlm.nih.gov/25325773/" target="_blank" rel="noopener">Schoenfeld et al. 2014</a>)</span></li>
+            <li>Bauchmuskeln reagieren auf Zusatzgewicht wie andere Muskeln. Steigere spürbar, nicht in Mini-Schritten. <span class="src">(<a href="https://pubmed.ncbi.nlm.nih.gov/19376473/" target="_blank" rel="noopener">Moraes et al. 2009</a>)</span></li>
+            <li>Bauchübungen verbrennen kein Bauchfett gezielt. Sechs Wochen Bauchtraining änderten das Bauchfett nicht. Ob man das Sixpack sieht, entscheidet das Körperfett. <span class="src">(Vispute et al. 2011)</span></li>
+          </ol>
+          <p class="empty-note">Bauchwerk ist kostenlos, ohne Werbung und ohne Konto. Deine Daten bleiben in diesem Browser.</p>
+        </div>
+      </div>
     </section>
 
     <!-- PROFIL -->
@@ -533,6 +570,15 @@ h1, h2, h3, p, ol, ul { margin: 0; }
       </div>
       <div class="stack">
         <div class="glass card" id="settings"></div>
+        <div class="glass card">
+          <h2 style="font-size:20px;font-weight:500">Taillenumfang</h2>
+          <p class="hint muted" style="font-size:13px">Fortschritt, der nicht vom Spiegel abhängt. Miss morgens auf Höhe des Bauchnabels.</p>
+          <form class="waist-row" id="waist-form">
+            <input id="waist-in" type="number" inputmode="decimal" min="40" max="200" step="0.1" placeholder="z. B. 84,5" aria-label="Taillenumfang in Zentimetern">
+            <button class="btn accent" type="submit">Eintragen</button>
+          </form>
+          <div id="waist-out"></div>
+        </div>
         <div class="glass card">
           <h2 style="font-size:20px;font-weight:500">Verlauf</h2>
           <div class="hist num" id="hist"></div>
@@ -695,6 +741,9 @@ const SIDEP = { sh: [75, 123], t: 193, arm1: { a: [268, 268] }, arm2: { a: [90, 
 const SEAT = { hip: [122, 144], t: 240, hd: 6, legs: { a: [305, 40] } };
 const TWIST_C = { to: j => add(add(j.H, dir(j.t, 30)), dir(j.t + 90, 24)), bend: -1 };
 const JK0 = { sh: [70, 101], t: 187.6, face: -1, arms: { a: [90, 90] }, legs: { a: [7.6, 7.6] } };
+const RKC = { sh: [75, 126], t: 191.4, face: -1, arms: { a: [120, 180] }, legs: { a: [11.4, 11.4] } };
+const BALLF = { sh: [90.1, 91.1], t: 211.9, face: -1, arms: { a: [95, 180] }, legs: { a: [31.9, 31.9] } };
+const CAP = { sh: [110, 40], t: 270, arms: { a: [90, 0] } };
 
 const A = {
   rollout: { keys: [
@@ -819,7 +868,47 @@ const A = {
     { hip: [125, 144], t: 242, hd: 6, arms: { a: [2, 2] }, legs: { a: [312, 312] } },
     { hip: [125, 144], t: 240, hd: 6, arms: { a: [0, 0] }, legs: { a: [314, 314] } }], dur: [1600, 1600], thumb: 0 },
   toetouch: { keys: [{ ...SUP, arms: { a: [272, 272] }, legs: { a: [272, 272] } }, { ...SUP, t: 214, hd: 12, arms: FOOT1, legs: { a: [272, 272] } }], dur: [700, 800], hold: [150, 200] },
-  kneehover: { keys: [QUAD, { ...QUAD, t: 187, legs: { a: [88, 32] } }], dur: [600, 600], hold: [500, 1800] }
+  kneehover: { keys: [QUAD, { ...QUAD, t: 187, legs: { a: [88, 32] } }], dur: [600, 600], hold: [500, 1800] },
+
+  // Studien-Übungen
+  bodysaw: { keys: [PLANK, { ...PLANK, sh: [89, 128], t: 190.5, arms: { a: [126, 180] }, legs: { a: [10.5, 10.5] } }], dur: [1100, 1100], hold: [250, 300], props: ['slider'] },
+  rkcplank: { keys: [RKC, { ...RKC, t: 190.6 }], dur: [1300, 1300], thumb: 0 },
+  ballpike: { keys: [JK0, { sh: [70, 101], t: 135, face: -1, arms: { a: [90, 90] }, legs: { a: [52, 52] } }], dur: [900, 1000], hold: [200, 300], props: ['swissfoot'], floor: 'line' },
+  ballrollout: { keys: [
+    { hip: [140, 119], t: 215, face: -1, arms: { a: [95, 180] }, legs: { via: [140, 147], a2: 0 } },
+    { hip: [118, 135], t: 192, face: -1, arms: { a: [195, 185] }, legs: { via: [140, 147], a2: 0 } }],
+    dur: [1200, 1000], hold: [200, 250], props: ['swisshand'] },
+  stirpot: { keys: [BALLF, { ...BALLF, arms: { a: [108, 180] } }, { ...BALLF, arms: { a: [84, 180] } }], seq: [1, 2], dur: [900, 900], props: ['swisshand'], floor: 'line', thumb: 0 },
+  ballplank: { keys: [BALLF, { ...BALLF, t: 211 }], dur: [1500, 1500], props: ['swisshand'], floor: 'line', thumb: 0 },
+  curlup: { keys: [
+    { ...SUP, arms: SIDE, leg1: KNEES, leg2: { a: [0, 0] } },
+    { ...SUP, t: 197, arms: SIDE, leg1: KNEES, leg2: { a: [0, 0] } }], dur: [700, 700], hold: [300, 1800] },
+  captain: { keys: [{ ...CAP, legs: { a: [90, 90] } }, { ...CAP, t: 272, legs: { a: [343, 80] } }], dur: [800, 1000], hold: [150, 250], props: ['pads'], floor: null },
+  increv: { keys: [
+    { sh: [76.7, 103], t: 210, arms: { to: [46, 90], bend: 1 }, legs: { a: [300, 30] } },
+    { sh: [76.7, 103], t: 198, arms: { to: [46, 90], bend: 1 }, legs: { a: [250, 330] } }],
+    dur: [800, 1100], hold: [150, 250], props: ['incbench'], floor: 'line' },
+  wcrunch: { keys: [{ ...SUP, arms: CHEST, legs: KNEES }, { ...SUP, t: 208, hd: 12, arms: CHEST, legs: KNEES }], dur: [900, 1000], hold: [250, 250], props: ['plate'] },
+  trxrollout: { keys: [
+    { hip: [122, 98.5], t: 240, face: -1, arms: { a: [110, 110] }, legs: { a: [60, 60] } },
+    { hip: [107.1, 111], t: 220, face: -1, arms: { a: [220, 220] }, legs: { a: [40, 40] } }],
+    dur: [1100, 1000], hold: [200, 300], props: ['strap'], floor: 'line' },
+
+  // Häufig in den beliebtesten Apps
+  glutebridge: { keys: [
+    { sh: [75, 142], t: 180, arms: SIDE, legs: { to: [160, 147], bend: -1 } },
+    { sh: [75, 142], t: 153, arms: SIDE, legs: { to: [160, 147], bend: -1 } }], dur: [800, 900], hold: [150, 600] },
+  doublecrunch: { keys: [
+    { ...SUP, arms: HH, legs: { a: [320, 10] } },
+    { ...SUP, t: 212, hd: 12, arms: HH, legs: { a: [255, 330] } }], dur: [750, 850], hold: [150, 250] },
+  legupcrunch: { keys: [
+    { ...SUP, arms: HH, legs: { a: [272, 272] } },
+    { ...SUP, t: 210, hd: 12, arms: HH, legs: { a: [272, 272] } }], dur: [750, 850], hold: [150, 250] },
+  planklift: { keys: [PLANK, { ...PLANK, leg1: { a: [357, 357] }, leg2: { a: [13, 13] } }, { ...PLANK, leg2: { a: [357, 357] }, leg1: { a: [13, 13] } }],
+    seq: [0, 1, 0, 2], dur: [600, 600, 600, 600], hold: [100, 400, 100, 400], rpc: 2 },
+  cobra: { keys: [
+    { hip: [125, 143], t: 180, face: -1, arms: { to: [95, 147], bend: -1 }, legs: { a: [0, 0] } },
+    { hip: [125, 143], t: 206, face: -1, hd: -6, arms: { to: [88, 147], bend: -1 }, legs: { a: [0, 0] } }], dur: [1500, 1500], hold: [400, 1500] }
 };
 
 /* ───────────── Übungen ───────────── */
@@ -953,8 +1042,112 @@ const EX = [
     tip: 'Die Beine bleiben senkrecht und kippen nicht zum Gesicht.', err: 'Das Kinn schiebt nach vorn.' },
   { id: 'kneehover', name: 'Quadruped-Knieheber', alt: 'Quadruped Knee Hover', z: ['tief'], lvl: 1, equip: '', kind: 'reps',
     steps: ['Vierfüßlerstand, Zehen aufgestellt.', 'Knie zwei Fingerbreit anheben und drei Sekunden halten.', 'Knie absetzen, kurz lösen, wiederholen.'],
-    tip: 'Die Bewegung ist winzig, die Spannung groß.', err: 'Die Hüfte schiebt nach oben.' }
+    tip: 'Die Bewegung ist winzig, die Spannung groß.', err: 'Die Hüfte schiebt nach oben.' },
+
+  // Neu: aus der Studienrecherche
+  { id: 'bodysaw', name: 'Körpersäge', alt: 'Body Saw', z: ['oben', 'unten', 'tief'], lvl: 3, equip: 'Gleitpads oder Handtuch', kind: 'reps', flag: 'top',
+    steps: ['Unterarmstütz, die Fußspitzen stehen auf Gleitpads oder einem Handtuch.', 'Schieb den Körper aus den Schultern langsam 10 bis 20 cm nach hinten.', 'Zieh dich kontrolliert wieder nach vorn bis über die Ellbogen.'],
+    tip: 'Gesäß und Bauch fest anspannen, bevor du nach hinten gleitest.', err: 'Zu weit nach hinten schieben, dann kommt das Hohlkreuz.',
+    ev: 'Im Vergleich mehrerer starker Bauchübungen forderte die Body Saw die Bauchmuskeln deutlich und belastete die Wirbelsäule dabei am wenigsten.',
+    src: [['McGill et al. 2015', 'https://pubmed.ncbi.nlm.nih.gov/25111163/']] },
+  { id: 'rkcplank', name: 'RKC-Plank', alt: 'Long-Lever Plank', z: ['oben', 'unten', 'tief'], lvl: 2, equip: '', kind: 'time', flag: 'top',
+    steps: ['Unterarmstütz, die Ellbogen liegen 10 bis 15 cm vor den Schultern.', 'Becken nach hinten kippen, Gesäß fest anspannen.', 'Spannung halten, als würdest du die Ellbogen zu den Zehen ziehen.'],
+    tip: 'Lieber 10 bis 20 Sekunden maximal anspannen als 2 Minuten locker halten.', err: 'Die Hüfte sinkt durch und das Becken kippt nach vorn.',
+    ev: 'Bei 19 Teilnehmenden aktivierte die Plank mit langem Hebel und gekipptem Becken oberen Bauch, unteren Bauch und äußere schräge Bauchmuskeln deutlich stärker als die normale Plank.',
+    src: [['Schoenfeld et al. 2014', 'https://pubmed.ncbi.nlm.nih.gov/25325773/']] },
+  { id: 'ballpike', name: 'Pike am Ball', alt: 'Swiss Ball Pike', z: ['unten', 'seite', 'tief'], lvl: 3, equip: 'Gymnastikball', kind: 'reps', flag: 'top',
+    steps: ['Liegestützposition, Schienbeine oder Fußrücken liegen auf dem Ball.', 'Hüfte mit gestreckten Beinen zum umgekehrten V heben, der Ball rollt zu den Zehen.', 'Hüfte kontrolliert senken, bis der Körper wieder eine Linie bildet.'],
+    tip: 'Die Schultern bleiben senkrecht über den Händen.', err: 'Die Knie beugen sich, dann wird es ein Jackknife.',
+    ev: 'Bei 18 Personen erreichte der Pike die höchsten Werte für die schrägen Bauchmuskeln aller 10 getesteten Übungen (84 % der Maximalkraft), der untere Rücken blieb unter 10 %.',
+    src: [['Escamilla et al. 2010', 'https://pubmed.ncbi.nlm.nih.gov/20436242/']] },
+  { id: 'ballrollout', name: 'Ball-Rollout', alt: 'Swiss Ball Roll-out', z: ['oben', 'unten', 'tief'], lvl: 2, equip: 'Gymnastikball', kind: 'reps', flag: 'top',
+    steps: ['Vor dem Ball knien, die Unterarme liegen darauf.', 'Ball nach vorn rollen, bis der Körper vom Knie bis zum Kopf gestreckt ist.', 'Ball mit Bauchkraft zurück unter die Brust ziehen.'],
+    tip: 'Nur so weit rollen, wie die Lende flach bleibt.', err: 'Die Hüfte bleibt hinten, statt mit nach vorn zu gehen.',
+    ev: 'Oberer Bauch 63 %, unterer 53 % der Maximalkraft, mehr als bei den meisten anderen Übungen; die Hüftbeuger arbeiteten kaum mit.',
+    src: [['Escamilla et al. 2010', 'https://pubmed.ncbi.nlm.nih.gov/20436242/']] },
+  { id: 'stirpot', name: 'Topfrühren am Ball', alt: 'Stir the Pot', z: ['oben', 'seite', 'tief'], lvl: 3, equip: 'Gymnastikball', kind: 'time', flag: 'top',
+    steps: ['Unterarmstütz mit den Ellbogen auf dem Ball, Füße schulterbreit.', 'Mit den Unterarmen kleine Kreise ziehen, als würdest du in einem Topf rühren.', 'Nach der halben Zeit die Richtung wechseln, das Becken bleibt ruhig.'],
+    tip: 'Klein anfangen und die Kreise erst größer machen, wenn die Hüfte stabil bleibt.', err: 'Die Hüfte schwankt mit oder hängt durch.',
+    ev: 'Bei 26 Erwachsenen aktivierte Stir the Pot den geraden und die schrägen Bauchmuskeln sehr hoch (über 61 % der Maximalkraft).',
+    src: [['Physiother Theory Pract 2018', 'https://pubmed.ncbi.nlm.nih.gov/28922049/']] },
+  { id: 'ballplank', name: 'Unterarmstütz auf Ball', alt: 'Swiss Ball Plank', z: ['oben', 'tief'], lvl: 2, equip: 'Gymnastikball', kind: 'time',
+    steps: ['Unterarme auf den Ball legen, Hände locker gefaltet.', 'Beine nach hinten strecken, bis der Körper eine gerade Linie bildet.', 'Position halten, ohne dass der Ball wegrollt.'],
+    tip: 'Breiterer Fußstand macht es leichter, engerer schwerer.', err: 'Der Po geht nach oben, um Spannung zu sparen.',
+    ev: 'Planks auf instabiler Unterlage aktivierten Bauch und schräge Bauchmuskeln stärker als am Boden. Der untere Rücken arbeitet aber auch mehr.',
+    src: [['Snarr & Esco 2014', 'https://www.bisp-surf.de/Record/PU201501000974']] },
+  { id: 'curlup', name: 'Curl-up nach McGill', alt: 'McGill Curl-up', z: ['oben', 'tief'], lvl: 1, equip: '', kind: 'reps', flag: 'top',
+    steps: ['Rückenlage, ein Bein gebeugt, das andere gestreckt, Hände unter der Lende.', 'Kopf und Schultern nur wenige Zentimeter anheben, der Nacken bleibt lang.', '8 bis 10 Sekunden halten, ablegen, wiederholen.'],
+    tip: 'Vorher den Bauch anspannen, als käme ein Stoß.', err: 'Das Kinn zur Brust ziehen, statt Kopf und Schultern gemeinsam zu heben.',
+    ev: 'Unter 12 Bauchübungen hatte der Curl-up das beste Verhältnis von Bauchaktivierung zu Wirbelsäulenbelastung. Die Hüftbeuger arbeiten deutlich weniger als beim Sit-up.',
+    src: [['Axler & McGill 1997', 'https://acnpsearch.tweb-dev.unibo.it/singlejournalindex/7588015']] },
+  { id: 'captain', name: 'Kapitänsstuhl-Knieheben', alt: 'Captain’s Chair Knee Raise', z: ['unten', 'seite'], lvl: 2, equip: 'Dip-Station', kind: 'reps', flag: 'top',
+    steps: ['Auf den Unterarmen abstützen, der Rücken liegt am Polster.', 'Knie zur Brust ziehen und das Becken dabei leicht einrollen.', 'Beine langsam senken, ohne zu schwingen.'],
+    tip: 'Denk ans Becken einrollen, nicht nur ans Knieheben.', err: 'Schwung holen und die Beine fallen lassen.',
+    ev: 'In der ACE-Studie erreichte der Kapitänsstuhl 212 % der Aktivierung eines normalen Crunches und lag für die schrägen Bauchmuskeln auf Platz 1 von 13.',
+    src: [['ACE/Anders 2001', 'https://www.acefitness.org/getfit/studies/BestWorstAbExercises.pdf']] },
+  { id: 'increv', name: 'Schrägbank-Reverse-Crunch', alt: 'Incline Reverse Crunch', z: ['unten', 'tief'], lvl: 2, equip: 'Schrägbank', kind: 'reps', flag: 'top',
+    steps: ['Kopf oben auf die Schrägbank legen, die Hände halten die Bank hinter dem Kopf.', 'Becken einrollen und das Gesäß von der Bank heben, Knie Richtung Kopf.', 'Langsam Wirbel für Wirbel zurückrollen.'],
+    tip: 'Die Bewegung kommt aus dem Becken, nicht aus den Beinen.', err: 'Die Beine mit Schwung über den Kopf werfen.',
+    ev: 'Bei 21 Erwachsenen gehörte der Reverse Crunch auf 30 Grad Schräge zu den Übungen mit der höchsten Aktivierung des geraden Bauchmuskels, der untere Rücken blieb wenig belastet.',
+    src: [['Escamilla et al. 2006', 'https://scholars.csus.edu/esploro/outputs/journalArticle/Electromyographic-Analysis-of-Traditional-and-Nontraditional/99257847129401671']] },
+  { id: 'wcrunch', name: 'Gewichts-Crunch', alt: 'Weighted Crunch', z: ['oben'], lvl: 2, equip: 'Hantelscheibe', kind: 'reps',
+    steps: ['Rückenlage, Füße aufgestellt, die Hantelscheibe liegt auf der Brust.', 'Oberkörper einrollen, bis die Schulterblätter abheben.', 'Kurz halten und langsam ablegen.'],
+    tip: 'Das Gewicht in deutlichen Schritten steigern, nicht in Mini-Sprüngen.', err: 'Das Gewicht mit den Armen nach vorn schwingen.',
+    ev: 'Mit mehr Zusatzgewicht stieg die Bauchaktivierung. Kleine Laststeigerungen machten kaum einen Unterschied, also lieber deutlich steigern.',
+    src: [['Moraes et al. 2009', 'https://pubmed.ncbi.nlm.nih.gov/19376473/']] },
+  { id: 'trxrollout', name: 'Schlingen-Rollout', alt: 'Suspension Roll-out', z: ['oben', 'unten', 'tief'], lvl: 2, equip: 'Schlingentrainer', kind: 'reps', flag: 'top',
+    steps: ['Vor dem Schlingentrainer stehen, Griffe mit gestreckten Armen halten.', 'Nach vorn lehnen und die Arme über den Kopf führen, der Körper bleibt gerade.', 'Arme mit Bauchspannung zurück vor die Hüfte ziehen.'],
+    tip: 'Je flacher der Körper steht, desto schwerer wird es.', err: 'Die Arme gehen zu weit nach vorn, dann kommt das Hohlkreuz.',
+    ev: 'Unter 8 Plank-Varianten brachte der Schlingen-Rollout die höchste Aktivität im unteren geraden Bauchmuskel.',
+    src: [['Calatayud et al. 2017', 'https://producciocientifica.uv.es/documentos/5ef10a17299952068d595a82']] },
+
+  // Neu: häufig in den beliebtesten Bauch-Apps
+  { id: 'glutebridge', name: 'Beckenheben', alt: 'Glute Bridge', z: ['tief'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Füße hüftbreit aufgestellt, Arme neben dem Körper.', 'Becken heben, bis Knie, Hüfte und Schultern eine Linie bilden.', 'Kurz halten und Wirbel für Wirbel ablegen.'],
+    tip: 'Bauch und Gesäß gleichzeitig anspannen.', err: 'Ins Hohlkreuz drücken, statt die Hüfte zu strecken.' },
+  { id: 'doublecrunch', name: 'Doppel-Crunch', alt: 'Double Crunch', z: ['oben', 'unten'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Hände hinter dem Kopf, Knie angewinkelt angehoben.', 'Schultern und Becken gleichzeitig einrollen, Knie und Ellbogen kommen sich entgegen.', 'Langsam lösen, ohne die Füße abzulegen.'],
+    tip: 'Ausatmen, wenn du dich zusammenrollst.', err: 'Mit den Armen am Kopf ziehen.' },
+  { id: 'legupcrunch', name: 'Crunch mit senkrechten Beinen', alt: 'Vertical Leg Crunch', z: ['oben'], lvl: 1, equip: '', kind: 'reps',
+    steps: ['Rückenlage, Beine senkrecht nach oben, Hände hinter dem Kopf.', 'Schulterblätter einrollen, Blick Richtung Füße.', 'Langsam ablegen, die Beine bleiben oben.'],
+    tip: 'Die Beine zeigen ruhig zur Decke.', err: 'Die Beine kippen Richtung Gesicht.' },
+  { id: 'planklift', name: 'Plank mit Beinheben', alt: 'Plank Leg Lift', z: ['tief', 'unten'], lvl: 2, equip: '', kind: 'reps',
+    steps: ['Unterarmstütz, Körper in einer Linie.', 'Ein gestrecktes Bein eine Handbreit anheben, die Hüfte bleibt ruhig.', 'Ablegen und Seite wechseln.'],
+    tip: 'Das Becken bleibt parallel zum Boden.', err: 'Das Bein zu hoch heben und ins Hohlkreuz fallen.' },
+  { id: 'cobra', name: 'Kobra-Dehnung', alt: 'Cobra Stretch', z: ['tief'], lvl: 1, equip: '', kind: 'time',
+    steps: ['Bauchlage, Hände neben der Brust.', 'Oberkörper mit den Armen sanft anheben, das Becken bleibt am Boden.', 'Ruhig atmen und die Dehnung im Bauch halten.'],
+    tip: 'Gut als Abschluss nach dem Bauchtraining.', err: 'Die Schultern zu den Ohren ziehen.' }
 ].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+
+// Studienlage zu bestehenden Übungen
+const EVID = {
+  rollout: { flag: 'top', ev: 'Der Rollout gehörte zu den Übungen mit der höchsten Aktivierung von geradem und schrägen Bauchmuskeln, der untere Rücken blieb wenig belastet. Je weiter die Arme nach vorn gehen, desto stärker die Aktivierung.', src: [['Escamilla et al. 2006', 'https://scholars.csus.edu/esploro/outputs/journalArticle/Electromyographic-Analysis-of-Traditional-and-Nontraditional/99257847129401671']] },
+  hangleg: { flag: 'vorsicht', ev: 'Sehr hohe Bauchaktivierung, aber auch die höchste Wirbelsäulenbelastung im Vergleich. Bei Rückenproblemen besser Kapitänsstuhl oder Body Saw wählen.', src: [['McGill et al. 2015', 'https://pubmed.ncbi.nlm.nih.gov/25111163/']] },
+  hangknee: { flag: 'top', ev: 'Hängendes Knieheben gehörte zu den stärksten Übungen für geraden und schrägen Bauchmuskel, die Hüftbeuger arbeiten allerdings stark mit.', src: [['Escamilla et al. 2006', 'https://scholars.csus.edu/esploro/outputs/journalArticle/Electromyographic-Analysis-of-Traditional-and-Nontraditional/99257847129401671']] },
+  bicycle: { flag: 'top', ev: 'In der ACE-Studie erreichte der Fahrrad-Crunch 248 % der Aktivierung eines normalen Crunches und Platz 2 für die schrägen Bauchmuskeln.', src: [['ACE/Anders 2001', 'https://www.acefitness.org/getfit/studies/BestWorstAbExercises.pdf']] },
+  ballcrunch: { ev: 'Der Crunch auf dem Ball erreichte 139 % der Aktivierung eines normalen Crunches; die Beine arbeiten kaum mit.', src: [['ACE/Anders 2001', 'https://www.acefitness.org/getfit/studies/BestWorstAbExercises.pdf']] },
+  crunch: { ev: 'Crunches haben ein gutes Verhältnis von Bauchaktivierung zu Wirbelsäulenbelastung. Mit Zusatzgewicht steigt die Aktivierung weiter.', src: [['Axler & McGill 1997', 'https://acnpsearch.tweb-dev.unibo.it/singlejournalindex/7588015']] },
+  situp: { flag: 'vorsicht', ev: 'Sit-ups belasten die Wirbelsäule stärker als Curl-ups und arbeiten viel über die Hüftbeuger. Rückenschonender ist der Curl-up nach McGill.', src: [['Axler & McGill 1997', 'https://acnpsearch.tweb-dev.unibo.it/singlejournalindex/7588015']] },
+  sideplank: { flag: 'top', ev: 'Der Seitstütz trainiert die Bauchwand bei sehr geringer Belastung der Hüftbeuger und gehört zu McGills „Big 3“ für einen gesunden Rücken.', src: [['McGill & Karpowicz 2009', 'https://www.backfitpro.com/medical-scientific-articles/2009/%5B90%5DMcGill,S.(2009)Exercises-for-spine-stabilization%5BArch.Phys.Med.and-Rehab.%5D.pdf']] },
+  birddog: { ev: 'Stabilisiert die Wirbelsäule bei geringer Belastung („Big 3“ nach McGill), trainiert aber vor allem den Rückenstrecker, kaum die Bauchmuskeln.', src: [['McGill & Karpowicz 2009', 'https://www.backfitpro.com/medical-scientific-articles/2009/%5B90%5DMcGill,S.(2009)Exercises-for-spine-stabilization%5BArch.Phys.Med.and-Rehab.%5D.pdf']] },
+  deadbug: { ev: 'Bei 30 Erwachsenen stieg die Bauchaktivierung, wenn Arme und Beine gemeinsam und zügiger bewegt wurden.', src: [['Yun et al. 2017', 'https://koreascience.or.kr/article/JAKO201718155358635.pdf']] },
+  plank: { ev: 'Die normale Plank aktiviert deutlich weniger als die RKC-Plank mit langem Hebel oder Planks auf dem Ball.', src: [['Schoenfeld et al. 2014', 'https://pubmed.ncbi.nlm.nih.gov/25325773/']] },
+  jackknife: { ev: 'Das Knieheben am Ball lag im Mittelfeld; Rollout und Pike am Ball aktivierten deutlich stärker.', src: [['Escamilla et al. 2010', 'https://pubmed.ncbi.nlm.nih.gov/20436242/']] },
+  superman: { flag: 'vorsicht', ev: 'Beim gleichzeitigen Überstrecken von Armen und Beinen wird die Lendenwirbelsäule stark zusammengedrückt. Rückenschonender ist der Vierfüßler-Diagonal.', src: [['McGill, laut Sekundärquelle', 'https://www.dentalproductsreport.com/view/one-exercise-dentists-should-never-do']] }
+};
+for (const e of EX) Object.assign(e, EVID[e.id] || {});
+
+// Leichtere und schwerere Variante
+const VAR = {
+  crunch: ['curlup', 'wcrunch'], curlup: [null, 'crunch'], wcrunch: ['crunch', null], situp: ['curlup', 'negsitup'],
+  plank: ['kneehover', 'rkcplank'], rkcplank: ['plank', 'bodysaw'], bodysaw: ['rkcplank', 'rollout'], ballplank: ['plank', 'stirpot'], stirpot: ['ballplank', null],
+  rollout: ['ballrollout', null], ballrollout: ['rkcplank', 'rollout'], trxrollout: ['ballrollout', 'rollout'],
+  jackknife: ['climber', 'ballpike'], ballpike: ['jackknife', null], climber: ['kneetuck', 'jackknife'],
+  reverse: ['kneetuck', 'increv'], increv: ['reverse', 'hangknee'], hangknee: ['captain', 'hangleg'], captain: ['increv', 'hangknee'], hangleg: ['hangknee', 'toes2bar'], toes2bar: ['hangleg', null],
+  legraise: ['reverse', 'hangleg'], vup: ['xcrunch', 'dragon'], hollow: ['deadbug', 'vup'], boat: ['kneetuck', 'hollow'],
+  sideplank: ['oblique', 'sidedip'], sidedip: ['sideplank', null], oblique: [null, 'sideplank'], bicycle: ['elbowknee', null], elbowknee: [null, 'bicycle'],
+  deadbug: [null, 'hollow'], birddog: [null, 'bear'], bear: ['birddog', 'kneehover'], doublecrunch: ['crunch', 'vup'], legupcrunch: ['crunch', 'toetouch'], planklift: ['plank', 'bodysaw']
+};
 
 const BY = {};
 for (const e of EX) {
@@ -1031,6 +1224,14 @@ class Figure {
       if (p === 'parallettes') { const x = k0.W1[0]; el('path', { d: `M${x - 12} 151L${x - 8} 135L${x + 8} 135L${x + 12} 151`, class: 'p-prop', 'stroke-width': 3 }, back); }
       if (p === 'band') { el('rect', { x: 3, y: 26, width: 5, height: 125, rx: 2, class: 'p-propfill' }, back); this.pr.band = el('path', { class: 'p-band' }, back); }
       if (p === 'ball') this.pr.ballBack = el('circle', { r: 7, class: 'p-ball' }, back);
+      if (p === 'slider') this.pr.slider = el('rect', { y: 149, width: 16, height: 4, rx: 2, class: 'p-propfill' }, back);
+      if (p === 'swisshand') this.pr.swissH = el('circle', { cy: F - 17, r: 17, class: 'p-swiss' }, back);
+      if (p === 'pads') {
+        const x = k0.S[0] - 9, y = k0.E1[1] + 5;
+        el('path', { d: `M${x} ${k0.S[1] - 6}L${x} 160M${x - 24} 160L${x + 30} 160M${x} ${y}L${k0.W1[0] + 6} ${y}`, class: 'p-prop', 'stroke-width': 5 }, back);
+      }
+      if (p === 'incbench') el('path', { d: 'M36 88L140 148M44 92L44 151', class: 'p-prop', 'stroke-width': 6 }, back);
+      if (p === 'strap') { el('rect', { x: 17, y: -14, width: 14, height: 4, rx: 2, class: 'p-propfill' }, back); this.pr.strap = el('path', { class: 'p-band' }, back); }
     }
     // Look der Trainer-Fotos: Haut, schwarzes Tanktop (bei ihr bauchfrei), schwarze Jogger, Uhr
     const man = (this.g || gender) === 'mann';
@@ -1059,6 +1260,7 @@ class Figure {
         el('circle', { r: 2.4, cx: 0, cy: 0, class: 'p-propfill' }, this.pr.wheel);
       }
       if (p === 'ball') this.pr.ball = el('circle', { r: 7, class: 'p-ball' }, front);
+      if (p === 'plate') this.pr.plate = el('circle', { r: 9, class: 'p-propfill' }, front);
     }
     this.draw(a.keys[keyIndex ?? a.seq[0]]);
     return this;
@@ -1103,6 +1305,10 @@ class Figure {
     if (pr.wheel) pr.wheel.setAttribute('transform', `translate(${f1(j.W1[0])} ${F - 9})`);
     if (pr.swiss) pr.swiss.setAttribute('cx', f1(j.P1[0] + 4));
     if (pr.band) pr.band.setAttribute('d', `M8 56L${f1(j.W1[0])} ${f1(j.W1[1])}`);
+    if (pr.slider) pr.slider.setAttribute('x', f1(j.P1[0] - 6));
+    if (pr.swissH) pr.swissH.setAttribute('cx', f1((j.E1[0] + j.W1[0]) / 2));
+    if (pr.strap) pr.strap.setAttribute('d', `M24 -10L${f1(j.W1[0])} ${f1(j.W1[1])}`);
+    if (pr.plate) { pr.plate.setAttribute('cx', f1((j.W1[0] + j.W2[0]) / 2)); pr.plate.setAttribute('cy', f1((j.W1[1] + j.W2[1]) / 2 - 4)); }
     if (pr.ball) {
       let b = [(j.W1[0] + j.W2[0]) / 2, (j.W1[1] + j.W2[1]) / 2 - 3];
       b = [b[0], b[1] + (F - 8 - b[1]) * k.bf];
@@ -1134,29 +1340,33 @@ function staticFig(ex, g, key) {
 
 /* ───────────── Speicher ───────────── */
 const KEY = 'bauchwerk:v1';
-let state = { gender: null, level: 2, rest: 20, goal: 60, history: [] };
+let state = { gender: null, level: 2, rest: 20, goal: 60, history: [], voice: true, waist: [], challenge: { done: [] } };
 try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) state = { ...state, ...s }; } catch (e) { /* ohne Speicher weiter */ }
 const save = patch => { state = { ...state, ...patch }; try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignorieren */ } };
 gender = state.gender || 'frau';
 
 /* ───────────── Dosierung & Pläne ───────────── */
 const LEVELS = ['Einsteiger', 'Fortgeschritten', 'Profi'];
-function target(ex, lvl = state.level) {
-  const hard = ex.lvl === 3 ? .7 : 1;
+function target(ex, lvl = state.level, mult = 1) {
+  const hard = (ex.lvl === 3 ? .7 : 1) * mult;
   if (ex.kind === 'time') return Math.round([20, 30, 45][lvl - 1] * hard / 5) * 5;
   let n = [10, 14, 18][lvl - 1] * hard;
   if (ex.anim.rpc === 2) n = Math.round(n * 1.4 / 2) * 2;
   return Math.max(4, Math.round(n));
 }
-const workSec = (ex, lvl) => ex.kind === 'time' ? target(ex, lvl) : target(ex, lvl) * ex.anim.total / ex.anim.rpc / 1000;
-const doseText = (ex, lvl) => ex.kind === 'time' ? `${target(ex, lvl)} Sek.` : `${target(ex, lvl)} Wdh.${ex.anim.rpc === 2 ? ' gesamt' : ''}`;
+const workSec = (ex, lvl, mult) => ex.kind === 'time' ? target(ex, lvl, mult) : target(ex, lvl, mult) * ex.anim.total / ex.anim.rpc / 1000;
+const doseText = (ex, lvl, mult) => ex.kind === 'time' ? `${target(ex, lvl, mult)} Sek.` : `${target(ex, lvl, mult)} Wdh.${ex.anim.rpc === 2 ? ' gesamt' : ''}`;
 
 const PLANS = [
+  { id: 'express', name: 'Express 6 Minuten', desc: 'Eine Runde, sechs Übungen, kaum Pausen. Für Tage mit wenig Zeit.', ex: ['curlup', 'bicycle', 'reverse', 'rkcplank', 'heeltouch', 'deadbug'], rounds: 1 },
+  { id: 'studien', name: 'Studien-Top ohne Geräte', desc: 'Die Übungen mit den stärksten Messwerten in Studien, die ohne Geräte gehen.', ex: ['rkcplank', 'bicycle', 'curlup', 'sideplank', 'reverse', 'deadbug'], rounds: 2 },
+  { id: 'ruecken', name: 'Rückenschonend nach McGill', desc: 'Viel Bauchspannung bei wenig Druck auf die Wirbelsäule.', ex: ['curlup', 'sideplank', 'birddog', 'deadbug', 'rkcplank', 'cobra'], rounds: 2 },
+  { id: 'ball', name: 'Gymnastikball-Power', desc: 'Rollout und Pike am Ball lagen in Studien ganz vorn.', ex: ['ballrollout', 'ballpike', 'stirpot', 'ballcrunch', 'ballplank'], rounds: 2 },
   { id: 'start', name: 'Einsteiger-Start', desc: 'Grundmuster lernen. Der Rücken bleibt fast immer am Boden.', ex: ['crunch', 'deadbug', 'reverse', 'plank', 'heeltouch', 'birddog'], rounds: 2 },
   { id: 'sixpack', name: 'Sixpack-Fokus', desc: 'Der gerade Bauchmuskel von oben bis unten.', ex: ['crunch', 'vup', 'bicycle', 'legraise', 'toetouch', 'hollow'], rounds: 2 },
   { id: 'taille', name: 'Taille & Seiten', desc: 'Schräge Bauchmuskeln mit Drehung und Seitstütz.', ex: ['twist', 'sideplank', 'heeltouch', 'oblique', 'sidedip', 'bicycle', 'xcrunch'], rounds: 2 },
   { id: 'unten', name: 'Unterer Bauch', desc: 'Beine bewegen, Becken einrollen.', ex: ['reverse', 'legraise', 'flutter', 'scissor', 'hipraise', 'kneetuck'], rounds: 2 },
-  { id: 'core', name: 'Core-Stabilität', desc: 'Halten statt zappeln: tiefe Muskeln und Rumpfspannung.', ex: ['plank', 'bear', 'deadbug', 'birddog', 'kneehover', 'superman', 'updown'], rounds: 2 },
+  { id: 'core', name: 'Core-Stabilität', desc: 'Halten statt zappeln: tiefe Muskeln und Rumpfspannung.', ex: ['plank', 'bear', 'deadbug', 'birddog', 'kneehover', 'rkcplank', 'updown'], rounds: 2 },
   { id: 'zuhause', name: 'Ganz ohne Geräte', desc: 'Komplettes Bauchtraining nur mit Matte.', ex: ['crunch', 'climber', 'twist', 'legraise', 'sideplank', 'xcrunch', 'boat', 'plank'], rounds: 2 },
   { id: 'geraete', name: 'Mit Kleingeräten', desc: 'Bauchroller, Gymnastikball, Medizinball und Band.', ex: ['rollout', 'ballcrunch', 'jackknife', 'slam', 'woodchop', 'pallof'], rounds: 2 },
   { id: 'stange', name: 'Stange & Bank', desc: 'Für Profis mit Klimmzugstange, Parallettes und Bank.', ex: ['hangknee', 'hangleg', 'toes2bar', 'lsit', 'dragon', 'hollow'], rounds: 2 }
@@ -1164,11 +1374,11 @@ const PLANS = [
 const PLAN = Object.fromEntries(PLANS.map(p => [p.id, p]));
 function planSec(p, lvl = state.level) {
   const n = p.ex.length * p.rounds;
-  return p.rounds * p.ex.reduce((s, id) => s + workSec(BY[id], lvl), 0) + (n - 1) * state.rest + 5;
+  return p.rounds * p.ex.reduce((s, id) => s + workSec(BY[id], lvl, p.mult), 0) + (n - 1) * state.rest + 5;
 }
 const mins = s => Math.max(1, Math.round(s / 60));
 function todayPlan() {
-  const map = ['start', 'sixpack', 'core', 'taille', 'unten', 'zuhause', 'sixpack'];
+  const map = ['start', 'sixpack', 'core', 'taille', 'unten', 'zuhause', 'studien'];
   return PLAN[map[new Date().getDay()]];
 }
 function randomPlan() {
@@ -1200,8 +1410,13 @@ function streak() {
   const days = new Set(state.history.map(h => h.day));
   const d = new Date();
   if (!days.has(dayKey(d))) d.setDate(d.getDate() - 1);
-  let n = 0;
-  while (days.has(dayKey(d))) { n++; d.setDate(d.getDate() - 1); }
+  let n = 0, sinceJoker = 7;
+  for (let i = 0; i < 800; i++) {
+    if (days.has(dayKey(d))) { n++; sinceJoker++; }
+    else if (n > 0 && sinceJoker >= 6) sinceJoker = 0;
+    else break;
+    d.setDate(d.getDate() - 1);
+  }
   return n;
 }
 
@@ -1255,7 +1470,7 @@ function renderHome() {
 }
 
 /* ───────────── UI: Bibliothek ───────────── */
-const filt = { q: '', zone: 'all', noEquip: false, lvl1: false };
+const filt = { q: '', zone: 'all', noEquip: false, lvl1: false, top: false };
 function chipRow(host, items, isOn, onTap) {
   host.innerHTML = '';
   for (const [key, label] of items) {
@@ -1271,7 +1486,7 @@ function exRow(ex) {
   b.className = 'ex-row glass';
   b.innerHTML = `<span class="thumb"></span>
     <span style="min-width:0"><h3>${esc(ex.name)}</h3><span class="alt" style="display:block">${esc(ex.alt)}${ex.equip ? ' · ' + esc(ex.equip) : ''}</span>
-    <span class="tags">${ex.z.map(z => `<span class="tag">${Z[z]}</span>`).join('')}</span></span>
+    <span class="tags">${ex.flag === 'top' ? '<span class="tag o">Studien-Top</span>' : ''}${ex.flag === 'vorsicht' ? '<span class="tag bad">Vorsicht</span>' : ''}${ex.z.map(z => `<span class="tag">${Z[z]}</span>`).join('')}</span></span>
     <span class="lvl" aria-label="Schwierigkeit ${ex.lvl} von 3">${[1, 2, 3].map(i => `<i class="${i <= ex.lvl ? 'on' : ''}"></i>`).join('')}</span>`;
   b.querySelector('.thumb').appendChild(staticFig(ex, gender));
   b.addEventListener('click', () => openExercise(ex.id));
@@ -1279,12 +1494,13 @@ function exRow(ex) {
 }
 function renderLib() {
   chipRow($('#zone-chips'), [['all', 'Alle'], ...Object.entries(Z)], k => filt.zone === k, k => { filt.zone = k; });
-  chipRow($('#extra-chips'), [['noEquip', 'Ohne Geräte'], ['lvl1', 'Nur leichte']], k => filt[k], k => { filt[k] = !filt[k]; });
+  chipRow($('#extra-chips'), [['top', 'Studien-Top'], ['noEquip', 'Ohne Geräte'], ['lvl1', 'Nur leichte']], k => filt[k], k => { filt[k] = !filt[k]; });
   const q = filt.q.trim().toLowerCase();
   const list = EX.filter(e =>
     (filt.zone === 'all' || e.z.includes(filt.zone)) &&
     (!filt.noEquip || !e.equip || e.equip === 'Ball optional') &&
     (!filt.lvl1 || e.lvl === 1) &&
+    (!filt.top || e.flag === 'top') &&
     (!q || (e.name + ' ' + e.alt + ' ' + e.equip).toLowerCase().includes(q)));
   $('#lib-count').textContent = `${list.length} von ${EX.length} Übungen · tippe für Animation und Anleitung`;
   const groups = {};
@@ -1312,6 +1528,7 @@ $('#q').addEventListener('input', e => { filt.q = e.target.value; renderLib(); }
 
 /* ───────────── UI: Pläne ───────────── */
 function renderPlans() {
+  renderChallenge();
   const host = $('#plan-list'); host.textContent = '';
   const tp = todayPlan();
   for (const p of PLANS) {
@@ -1319,13 +1536,81 @@ function renderPlans() {
     b.className = 'plan glass';
     b.innerHTML = `<span class="plan-top"><span><h3>${esc(p.name)}</h3><p>${esc(p.desc)}</p></span>${p.id === tp.id ? '<span class="badge today">Heute</span>' : ''}</span>
       <span class="plan-strip"></span>
-      <span class="plan-meta num"><span><b>${mins(planSec(p))}</b> Min</span><span><b>${p.ex.length}</b> Übungen</span><span><b>${p.rounds}</b> Runden</span></span>`;
+      <span class="plan-meta num"><span><b>${mins(planSec(p))}</b> Min</span><span><b>${p.ex.length}</b> Übungen</span><span><b>${p.rounds}</b> ${p.rounds === 1 ? 'Runde' : 'Runden'}</span></span>`;
     const strip = b.querySelector('.plan-strip');
     p.ex.slice(0, 5).forEach(id => { const s = document.createElement('span'); s.appendChild(staticFig(BY[id], gender)); strip.appendChild(s); });
     b.addEventListener('click', () => openPlan(p));
     host.appendChild(b);
   }
 }
+
+/* ───────────── 30-Tage-Challenge ───────────── */
+const CH_POOL = ['curlup', 'reverse', 'bicycle', 'rkcplank', 'legraise', 'heeltouch', 'crunch', 'flutter', 'sideplank', 'deadbug', 'climber', 'legupcrunch', 'doublecrunch', 'planklift', 'hollow', 'xcrunch', 'vup', 'glutebridge'];
+const chRest = n => n % 4 === 0;
+function chPlan(n) {
+  const ex = [0, 1, 2, 3, 4].map(i => CH_POOL[(n * 3 + i * 4) % CH_POOL.length]);
+  return { id: 'challenge', name: `30-Tage-Challenge, Tag ${n}`, desc: 'Fünf Übungen ohne Geräte. Wiederholungen und Haltezeiten steigen von Tag zu Tag.', ex, rounds: n <= 10 ? 2 : 3, mult: Math.round((0.7 + 0.6 * (n - 1) / 29) * 100) / 100, challengeDay: n };
+}
+function chMark(n) {
+  const d = new Set(state.challenge?.done || []);
+  d.add(n);
+  save({ challenge: { done: [...d] } });
+  renderChallenge();
+}
+function renderChallenge() {
+  const done = new Set(state.challenge?.done || []);
+  let next = 1;
+  while (done.has(next) && next <= 30) next++;
+  const tiles = [...Array(30)].map((_, i) => {
+    const n = i + 1, cls = [chRest(n) ? 'rest' : '', done.has(n) ? 'done' : '', n === next ? 'next' : ''].join(' ');
+    return `<i class="${cls}" aria-label="Tag ${n}${chRest(n) ? ', Ruhetag' : ''}${done.has(n) ? ', erledigt' : ''}">${chRest(n) ? 'R' : n}</i>`;
+  }).join('');
+  const action = next > 30
+    ? '<span style="color:var(--teal);font-weight:600;align-self:center">Challenge geschafft. Stark!</span><button class="btn ghost" id="ch-reset">Neu starten</button>'
+    : chRest(next) ? `<button class="btn" id="ch-rest">Ruhetag ${next} abhaken</button>`
+      : `<button class="btn accent" id="ch-start">${ICON.play} Tag ${next} starten</button><button class="btn ghost" id="ch-view">Übungen ansehen</button>`;
+  const host = $('#challenge');
+  host.innerHTML = `<div class="plan-top"><span><h3 style="font-size:19px;font-weight:600">30-Tage-Challenge</h3>
+    <p class="muted" style="font-size:14px;margin-top:2px">Jeden Trainingstag etwas mehr Wiederholungen und Haltezeit, jeder vierte Tag ist Ruhetag. Ein Sixpack in 30 Tagen verspricht dir hier niemand: Sichtbar wird er erst bei niedrigem Körperfett.</p></span>
+    <span class="badge num">${done.size}/30</span></div><div class="ch-grid">${tiles}</div><div class="row-btns">${action}</div>`;
+  host.querySelector('#ch-start')?.addEventListener('click', () => startPlan(chPlan(next)));
+  host.querySelector('#ch-view')?.addEventListener('click', () => openPlan(chPlan(next)));
+  host.querySelector('#ch-rest')?.addEventListener('click', () => chMark(next));
+  host.querySelector('#ch-reset')?.addEventListener('click', () => { save({ challenge: { done: [] } }); renderChallenge(); });
+}
+
+/* ───────────── Sprachansage ───────────── */
+function speak(text) {
+  if (!state.voice || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'de-DE'; u.rate = 1.05;
+    speechSynthesis.speak(u);
+  } catch (e) { /* ohne Ton weiter */ }
+}
+
+/* ───────────── Taillenumfang ───────────── */
+function renderWaist() {
+  const w = state.waist || [], out = $('#waist-out');
+  if (!w.length) { out.innerHTML = '<p class="empty-note">Noch kein Eintrag. Trag heute deinen ersten Wert ein.</p>'; return; }
+  const vals = w.map(x => x.cm), mn = Math.min(...vals) - 1, mx = Math.max(...vals) + 1;
+  const line = w.map((x, i) => `${w.length === 1 ? 150 : 2 + i / (w.length - 1) * 296},${f1(54 - (x.cm - mn) / (mx - mn) * 50)}`).join(' ');
+  const diff = Math.round((vals[vals.length - 1] - vals[0]) * 10) / 10;
+  const since = new Date(w[0].ts).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+  out.innerHTML = `<svg class="spark" viewBox="0 0 300 56" preserveAspectRatio="none" aria-hidden="true"><polyline points="${line}" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
+    <p class="empty-note num">Aktuell ${vals[vals.length - 1].toLocaleString('de-DE')} cm${w.length > 1 ? ` · ${diff > 0 ? '+' : diff < 0 ? '−' : '±'}${Math.abs(diff).toLocaleString('de-DE')} cm seit ${since}` : ''}</p>`;
+}
+$('#waist-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const inp = $('#waist-in'), cm = parseFloat(String(inp.value).replace(',', '.'));
+  if (!(cm >= 40 && cm <= 200)) { inp.setCustomValidity('Bitte einen Wert zwischen 40 und 200 cm eingeben.'); inp.reportValidity(); return; }
+  inp.setCustomValidity('');
+  save({ waist: [...(state.waist || []), { ts: Date.now(), cm: Math.round(cm * 10) / 10 }].slice(-200) });
+  inp.value = '';
+  renderWaist();
+});
+$('#waist-in').addEventListener('input', e => e.target.setCustomValidity(''));
 
 /* ───────────── UI: Profil ───────────── */
 function seg(name, label, hint, opts, val, onChange) {
@@ -1347,6 +1632,8 @@ function renderMe() {
   s.appendChild(seg('level', 'Level', 'Bestimmt Wiederholungen und Haltezeiten.', LEVELS.map((t, i) => [i + 1, t]), state.level, v => { save({ level: v }); refreshAll(); }));
   s.appendChild(seg('rest', 'Pause zwischen Übungen', '', [[15, '15 s'], [20, '20 s'], [30, '30 s'], [45, '45 s']], state.rest, v => { save({ rest: v }); refreshAll(); }));
   s.appendChild(seg('goal', 'Wochenziel', '', [[30, '30 Min'], [60, '60 Min'], [90, '90 Min']], state.goal, v => { save({ goal: v }); refreshAll(); }));
+  s.appendChild(seg('voice', 'Sprachansage', 'Sagt Übung, Wiederholungen und die letzten Sekunden an.', [['1', 'An'], ['0', 'Aus']], state.voice ? '1' : '0', v => save({ voice: v === '1' })));
+  renderWaist();
 
   const h = $('#hist');
   const items = state.history.slice(-12).reverse();
@@ -1420,6 +1707,12 @@ $('#sheet-back').addEventListener('click', () => {
   prev && prev();
 });
 
+function variantHtml(ex) {
+  const [easy, hard] = VAR[ex.id] || [];
+  const b = (id, label) => id && BY[id] ? `<button class="var-btn glass" data-var="${id}"><span>${label}</span><b>${esc(BY[id].name)}</b></button>` : '';
+  return easy || hard ? `<div class="vars">${b(easy, 'Leichter')}${b(hard, 'Schwerer')}</div>` : '';
+}
+
 function openExercise(id) {
   const ex = BY[id];
   const render = () => {
@@ -1435,6 +1728,8 @@ function openExercise(id) {
       <div class="goal glass"><span><span>Dein Ziel als ${LEVELS[state.level - 1]}</span><br><b class="num">3 × ${doseText(ex)}</b></span><span class="num">≈ ${mins(3 * workSec(ex) + 2 * state.rest)} Min</span></div>
       <ol class="steps">${ex.steps.map(s => `<li><span>${esc(s)}</span></li>`).join('')}</ol>
       <div class="notes"><div class="note glass ok"><b>Darauf achten</b>${esc(ex.tip)}</div><div class="note glass no"><b>Häufiger Fehler</b>${esc(ex.err)}</div></div>
+      ${ex.ev ? `<div class="study glass${ex.flag === 'vorsicht' ? ' warn' : ''}"><b>${ex.flag === 'vorsicht' ? 'Vorsicht laut Studien' : 'Was Studien zeigen'}</b><p>${esc(ex.ev)}</p><p class="src">${ex.src.map(([t, u]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(t)}</a>`).join(' · ')}</p></div>` : ''}
+      ${variantHtml(ex)}
       <button class="btn accent block sheet-cta" id="d-train">${ICON.play} Diese Übung trainieren</button>`;
     sheetFig && sheetFig.pause();
     sheetFig = new Figure($('#d-fig')).set(ex);
@@ -1448,6 +1743,7 @@ function openExercise(id) {
     });
     const sp = $('#d-speed');
     sp.addEventListener('click', () => { sheetFig.speed = sheetFig.speed === 1 ? .5 : 1; sp.textContent = sheetFig.speed === 1 ? '1×' : '0,5×'; });
+    body.querySelectorAll('[data-var]').forEach(b => b.addEventListener('click', () => openExercise(b.dataset.var)));
     $('#d-train').addEventListener('click', () => {
       closeSheet();
       startPlan({ id: 'single', name: ex.name, ex: [ex.id], rounds: 3, single: true });
@@ -1466,14 +1762,14 @@ function openPlan(p) {
     body.scrollTop = 0;
     body.innerHTML = `
       <div class="d-title" style="margin-top:6px"><span class="eyebrow">Plan</span><h2 id="sheet-title">${esc(p.name)}</h2><p>${esc(p.desc || 'Sechs zufällige Übungen ohne Geräte, alle vier Zonen sind dabei.')}</p></div>
-      <div class="goal glass num"><span><span>Ablauf</span><br><b>${p.rounds} Runden · ${p.ex.length} Übungen</b></span><span>≈ ${mins(planSec(p))} Min</span></div>
+      <div class="goal glass num"><span><span>Ablauf</span><br><b>${p.rounds} ${p.rounds === 1 ? 'Runde' : 'Runden'} · ${p.ex.length} Übungen</b></span><span>≈ ${mins(planSec(p))} Min</span></div>
       <div class="plan-list" id="pl-list"></div>
       <button class="btn accent block sheet-cta" id="p-start">${ICON.play} Plan starten</button>
       ${p.id === 'mix' ? '<button class="btn ghost block" id="p-reroll" style="margin-top:10px">Neu mischen</button>' : ''}`;
     const list = $('#pl-list');
     p.ex.forEach(id => {
       const row = exRow(BY[id]);
-      row.querySelector('.lvl').outerHTML = `<span class="muted num" style="font-size:13px;font-weight:600;white-space:nowrap">${doseText(BY[id])}</span>`;
+      row.querySelector('.lvl').outerHTML = `<span class="muted num" style="font-size:13px;font-weight:600;white-space:nowrap">${doseText(BY[id], undefined, p.mult)}</span>`;
       list.appendChild(row);
     });
     $('#p-start').addEventListener('click', () => { closeSheet(); startPlan(p); });
@@ -1491,6 +1787,7 @@ const ICON = {
 /* ───────────── Player ───────────── */
 const player = $('#player');
 const pl = { steps: [], i: 0, phase: 'ready', t: 0, reps: 0, running: false, plan: null, elapsed: 0, restLen: 0, fig: null, lock: null, saved: false };
+const tg = ex => target(ex, state.level, pl.plan.mult || 1);
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 function startPlan(p) {
@@ -1521,7 +1818,7 @@ function enter(phase) {
   const showEx = step.ex;
   pl.fig.set(showEx);
   pl.fig.speed = 1;
-  pl.fig.onCycle = phase === 'work' && showEx.kind === 'reps' ? n => { pl.reps += n * showEx.anim.rpc; if (pl.reps >= target(showEx)) advance(); } : null;
+  pl.fig.onCycle = phase === 'work' && showEx.kind === 'reps' ? n => { pl.reps += n * showEx.anim.rpc; if (pl.reps >= tg(showEx)) advance(); else if (tg(showEx) - pl.reps === 3) speak('Noch drei'); } : null;
   if (phase === 'rest') pl.restLen = state.rest;
   const rest = phase !== 'work';
   $('#pl-phase').textContent = phase === 'ready' ? 'Gleich geht’s los' : phase === 'rest' ? 'Pause' : (showEx.kind === 'time' ? 'Halten' : 'Los');
@@ -1530,24 +1827,30 @@ function enter(phase) {
   $('#pl-nextlabel').hidden = !rest;
   $('#pl-add').hidden = phase !== 'rest';
   $('#pl-name').textContent = showEx.name;
-  $('#pl-cue').textContent = rest ? `${doseText(showEx)} · ${showEx.steps[0]}` : showEx.steps[1];
+  $('#pl-cue').textContent = rest ? `${doseText(showEx, undefined, pl.plan.mult)} · ${showEx.steps[0]}` : showEx.steps[1];
   const sets = pl.plan.single;
   $('#pl-step').textContent = sets ? `Satz ${pl.i + 1} von ${pl.steps.length}` : `Übung ${pl.i + 1} von ${pl.steps.length} · Runde ${step.round}`;
   [...$('#pl-segs').children].forEach((s, k) => { s.className = k < pl.i ? 'done' : k === pl.i ? 'now' : ''; });
   if (!pl.running) pl.fig.pause(); else pl.fig.play();
+  pl.lastSaid = null;
+  if (phase === 'ready') speak(`Gleich geht es los. ${showEx.name}.`);
+  if (phase === 'work') speak(`${showEx.name}. ${showEx.kind === 'time' ? tg(showEx) + ' Sekunden halten' : tg(showEx) + ' Wiederholungen'}.`);
+  if (phase === 'rest') speak(`Pause. Als Nächstes ${showEx.name}.`);
   ui();
 }
 function ui() {
   const step = pl.steps[pl.i], ex = step.ex;
   let big, unit, prog;
   if (pl.phase === 'work' && ex.kind === 'reps') {
-    const tg = target(ex);
-    big = String(Math.min(pl.reps, tg)); unit = `von ${tg} Wdh.`;
-    prog = (pl.reps + (pl.fig.acc % ex.anim.total) / ex.anim.total * ex.anim.rpc) / tg;
+    const goal = tg(ex);
+    big = String(Math.min(pl.reps, goal)); unit = `von ${goal} Wdh.`;
+    prog = (pl.reps + (pl.fig.acc % ex.anim.total) / ex.anim.total * ex.anim.rpc) / goal;
   } else {
-    const len = pl.phase === 'work' ? target(ex) : pl.phase === 'rest' ? pl.restLen : 5;
+    const len = pl.phase === 'work' ? tg(ex) : pl.phase === 'rest' ? pl.restLen : 5;
     const left = Math.max(0, len - pl.t / 1000);
     big = pl.phase === 'work' ? fmt(Math.ceil(left)) : String(Math.ceil(left));
+    const sec = Math.ceil(left);
+    if (pl.t > 600 && sec !== pl.lastSaid && (sec === 10 || sec <= 3) && sec > 0) { pl.lastSaid = sec; speak(sec === 10 ? 'Noch zehn Sekunden' : String(sec)); }
     unit = pl.phase === 'work' ? 'übrig' : 'Sekunden';
     prog = pl.t / 1000 / len;
   }
@@ -1563,7 +1866,7 @@ pl.tick = dt => {
   const ex = pl.steps[pl.i].ex;
   if (pl.phase === 'ready' && pl.t >= 5000) { enter('work'); return; }
   if (pl.phase === 'rest' && pl.t >= pl.restLen * 1000) { enter('work'); return; }
-  if (pl.phase === 'work' && ex.kind === 'time' && pl.t >= target(ex) * 1000) { advance(); return; }
+  if (pl.phase === 'work' && ex.kind === 'time' && pl.t >= tg(ex) * 1000) { advance(); return; }
   ui();
 };
 function advance() {
@@ -1609,6 +1912,8 @@ function finish() {
     const now = new Date();
     save({ history: [...state.history, { ts: now.getTime(), day: dayKey(now), name: pl.plan.name, min, ex: pl.steps.map(s => s.ex.id) }].slice(-400) });
   }
+  if (pl.plan.challengeDay) chMark(pl.plan.challengeDay);
+  speak('Geschafft. Stark gemacht!');
   $('#pl-run').hidden = true; $('#pl-done').hidden = false;
   $('#done-plan').textContent = pl.plan.name;
   $('#done-min').textContent = min;
@@ -1620,6 +1925,7 @@ function finish() {
 }
 $('#pl-finish').addEventListener('click', closePlayer);
 function closePlayer() {
+  try { speechSynthesis.cancel(); } catch (e) { /* kein Ton */ }
   pl.running = false; pl.fig && pl.fig.pause(); live.delete(pl);
   try { pl.lock && pl.lock.release(); } catch (e) { /* egal */ }
   pl.lock = null;
