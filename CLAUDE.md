@@ -19,3 +19,10 @@ und dessen Routing-Regeln folgen. Für andere Aufgaben im Repo gilt das nicht.
 Alle Tests auf Deutsch zeigen und schreiben: Testnamen (`describe`/`it`,
 pgTAP-Beschreibungen), Testausgaben-Zusammenfassungen und Testberichte an den
 Nutzer. Gilt für alle Projekte.
+
+## Agent Reach (Internet-Recherche)
+
+Agent Reach liegt in `agent-reach/` (Kopie von Panniantong/Agent-Reach, Herkunft
+in `agent-reach/UPSTREAM.md`), der Skill in `.claude/skills/agent-reach/`. In
+Cloud-Sessions installiert `.claude/hooks/agent-reach-setup.sh` den Befehl
+`agent-reach`. Welche Plattformen gerade gehen, zeigt `agent-reach doctor`.
