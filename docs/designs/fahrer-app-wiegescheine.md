@@ -137,12 +137,11 @@ Erkenntnisse daraus:
 - **Kennzeichen** stehen als „NF-RR 4500“ (mit Bindestrich) und „PI RR 4960“ (nur Leerzeichen). Der Abgleich muss beides gleich behandeln.
 - **Nicht jede Zeile ist eine Menge.** Pauschalen in „Stk“ gehören nicht in die Summen.
 - **Handschrift am Rand** (Filialnamen, Orte) wird nicht gelesen und ignoriert.
-- **Hochladedatum und Scheindatum können auseinanderliegen.** Schein 2 trägt das Datum 20.10., wurde aber am 22.10. gescannt. Ohne gelesenes Datum zählt so ein Schein zum Tag des Hochladens. Am Monatsende kann das die Monatssumme verschieben.
+- **Hochladedatum und Scheindatum können auseinanderliegen.** Schein 2 trägt das Datum 20.10., wurde aber am 22.10. gescannt. Ohne gelesenes Datum zählt so ein Schein zum Tag des Hochladens. Am Monatsende kann das die Monatssumme verschieben. Entschieden: Die KI liest das Datum **nicht**, es bleibt beim Hochladedatum. Der Admin kann es bei Bedarf ändern.
 
 ## Offene Punkte
 
 - Weitere Testscheine mit **Holz**, **Mischschrott** und möglichst einem schlechten Foto (schief, Schatten, verblasst). Die fünf vorhandenen sind saubere Scans.
-- Soll die KI zusätzlich das **Datum des Scheins** lesen? Das wäre ein weiteres Feld und würde die Monatssummen genauer machen (siehe Schein 2).
 - Grenzwerte bestätigen: 30.000 kg pro Schein, 10 Minuten für Duplikate.
 - Einverstanden damit, dass Scheine mit „Zu prüfen“ erst nach Freigabe in die Summen zählen?
 - Wer ist Admin (Rollen)? Dürfen Fahrer einen gespeicherten Schein nachträglich ändern?
