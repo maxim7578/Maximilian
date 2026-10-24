@@ -53,7 +53,7 @@ Die Ausgabe wird fest vorgegeben (strukturiert), nie als freier Text:
 | Sorte in der App | Erkennt die KI auch als |
 |---|---|
 | PPK | „1.04 Kartonagen (B19)“, „1.04.00 Verpackungen aus Papier und Karton (B19)“, „Kaufhausaltpapier 1.04“ (AVV 150101, alle zählen als PPK) |
-| AZV | „Abfall zur Verwertung“, „Gemischte Abfälle (zur Verwertung)“ (AVV 200301) – **zu bestätigen** |
+| AZV | „Abfall zur Verwertung“, „Gemischte Abfälle (zur Verwertung)“ (AVV 200301), bestätigt |
 | Folie 98/2 | „PE-Folien, 98/2“ (AVV 150102) |
 | Holz | Holz |
 | Sperrmüll | Sperrmüll |
@@ -143,7 +143,6 @@ Erkenntnisse daraus:
 
 - Weitere Testscheine mit **Holz**, **Mischschrott** und möglichst einem schlechten Foto (schief, Schatten, verblasst). Die fünf vorhandenen sind saubere Scans.
 - Welche Sorte ist **„gemischte Verpackungen“ (AVV 150106)**: AZV, Mischschrott oder eine siebte Sorte?
-- Ist **„Gemischte Abfälle (zur Verwertung)“** wirklich AZV?
 - Soll die KI zusätzlich das **Datum des Scheins** lesen? Das wäre ein weiteres Feld und würde die Monatssummen genauer machen (siehe Schein 2).
 - Grenzwerte bestätigen: 30.000 kg pro Schein, 10 Minuten für Duplikate.
 - Einverstanden damit, dass Scheine mit „Zu prüfen“ erst nach Freigabe in die Summen zählen?
