@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "artemis": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "cd \"$(git rev-parse --show-toplevel)/artemis\" && exec uv run --frozen python -m mcp_server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

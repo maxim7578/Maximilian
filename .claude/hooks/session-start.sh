@@ -71,6 +71,15 @@ if [ -n "${OPENAI_API_KEY:-}" ] && ! command -v codex > /dev/null 2>&1; then
   fi
 fi
 
+# Python-Umgebung für den Artemis-MCP-Server (.mcp.json), damit er beim Start
+# nicht erst alle Pakete laden muss. Ein Fehler bricht die Session nicht ab.
+ARTEMIS_LOG="$HOME/.cache/gstack-session-start/artemis.log"
+if [ -f "$PROJECT_DIR/artemis/uv.lock" ]; then
+  if ! "$HOME/.local/bin/uv" --directory "$PROJECT_DIR/artemis" sync --frozen --quiet > "$ARTEMIS_LOG" 2>&1; then
+    echo "Artemis uv sync ist fehlgeschlagen, Log: $ARTEMIS_LOG" >&2
+  fi
+fi
+
 # Installiert graphify (https://github.com/Graphify-Labs/graphify) samt /graphify-Skill.
 # Ein Fehler hier bricht die Session nicht ab, gstack bleibt nutzbar.
 export PATH="$HOME/.local/bin:$PATH"
