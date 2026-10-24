@@ -19,3 +19,12 @@ und dessen Routing-Regeln folgen. Für andere Aufgaben im Repo gilt das nicht.
 Alle Tests auf Deutsch zeigen und schreiben: Testnamen (`describe`/`it`,
 pgTAP-Beschreibungen), Testausgaben-Zusammenfassungen und Testberichte an den
 Nutzer. Gilt für alle Projekte.
+
+## Artemis (Android-Geräte steuern)
+
+Artemis liegt in `artemis/` und ist in `.mcp.json` als MCP-Server `artemis`
+eingetragen (`mobile_run_task`, `mobile_get_device_state` usw.). Bevor du die
+Artemis-Tools nutzt, [`artemis/mcp_server/rules.md`](artemis/mcp_server/rules.md)
+lesen. Die Tools brauchen ein per ADB erreichbares Android-Gerät oder einen
+Emulator und einen LLM-Schlüssel (z. B. `GEMINI_API_KEY`) in der Umgebung oder in
+`artemis/.env`; in Cloud-Sessions gibt es kein Gerät.
