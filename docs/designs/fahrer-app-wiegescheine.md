@@ -53,13 +53,13 @@ Die Ausgabe wird fest vorgegeben (strukturiert), nie als freier Text:
 | Sorte in der App | Erkennt die KI auch als |
 |---|---|
 | PPK | „1.04 Kartonagen (B19)“, „1.04.00 Verpackungen aus Papier und Karton (B19)“, „Kaufhausaltpapier 1.04“ (AVV 150101, alle zählen als PPK) |
-| AZV | „Abfall zur Verwertung“, „Gemischte Abfälle (zur Verwertung)“ (AVV 200301), bestätigt |
+| AZV | „Abfall zur Verwertung“, „Gemischte Abfälle (zur Verwertung)“ (AVV 200301), „gemischte Verpackungen“ (AVV 150106), alle bestätigt |
 | Folie 98/2 | „PE-Folien, 98/2“ (AVV 150102) |
 | Holz | Holz |
 | Sperrmüll | Sperrmüll |
 | Mischschrott | Mischschrott, Mischrott |
 
-Steht etwas anderes auf dem Schein, ist die Sorte „unbekannt“ und der Schein kommt zu „Zu prüfen“. Die Bezeichnungen oben stammen aus den fünf Testscheinen. Für Holz und Mischschrott gibt es noch keinen Beispielschein. „Gemischte Verpackungen“ (AVV 150106, Testschein 2) passt zu keiner der sechs Sorten und ist offen.
+Steht etwas anderes auf dem Schein, ist die Sorte „unbekannt“ und der Schein kommt zu „Zu prüfen“. Die Bezeichnungen oben stammen aus den fünf Testscheinen. Für Holz und Mischschrott gibt es noch keinen Beispielschein.
 
 ## Datenmodell (neu)
 
@@ -125,7 +125,7 @@ Die fünf Scheine (CamScanner-PDFs vom 20. bis 23.10.2026) sind der Prüfstand f
 | Nr. | Aussteller | Kennzeichen | Positionen (Sorte → Netto) | Besonderheit |
 |---|---|---|---|---|
 | 1 | REMONDIS Saar Entsorgung | NF-RR 4500 | PPK → 320 kg | Beschriftung „NETTO(kg)“ |
-| 2 | Mandausch Containerdienst | PI RR 4960 | gemischte Verpackungen → 480 kg (0,480 t), Sorte offen | Einheit t. Die Zeile „Betriebsstätten-/Brandschutzpauschale, 1,000 Stk“ ist keine Menge und wird ignoriert. |
+| 2 | Mandausch Containerdienst | PI RR 4960 | AZV („gemischte Verpackungen“) → 480 kg (0,480 t) | Einheit t. Die Zeile „Betriebsstätten-/Brandschutzpauschale, 1,000 Stk“ ist keine Menge und wird ignoriert. |
 | 3 | Degenkolbe Recycling | PI RR 4840 | PPK → 415 kg, AZV → 118 kg, Sperrmüll → 118 kg | Drei Sorten. Die Zeilen ergeben 651 kg, gedruckt sind 650 kg. Drei Wägungen, darunter „Tara/Brutto“. Das Netto steht als „Netto²“. |
 | 4 | Knettenbrech + Gurdulic | PI RR 4910 | PPK → 560 kg (0,560 t) | Einheit t. Das Netto hat **keine Beschriftung**, es ist die dritte Zahl in der Zeile nach den beiden Wägungen. Das Kennzeichen steht vor „Eingang“. |
 | 5 | REMONDIS Südwest (Dillingen) | NF-RR 4500 | Folie 98/2 → 410 kg | Beschriftung „NETTO(kg)“ |
@@ -142,7 +142,6 @@ Erkenntnisse daraus:
 ## Offene Punkte
 
 - Weitere Testscheine mit **Holz**, **Mischschrott** und möglichst einem schlechten Foto (schief, Schatten, verblasst). Die fünf vorhandenen sind saubere Scans.
-- Welche Sorte ist **„gemischte Verpackungen“ (AVV 150106)**: AZV, Mischschrott oder eine siebte Sorte?
 - Soll die KI zusätzlich das **Datum des Scheins** lesen? Das wäre ein weiteres Feld und würde die Monatssummen genauer machen (siehe Schein 2).
 - Grenzwerte bestätigen: 30.000 kg pro Schein, 10 Minuten für Duplikate.
 - Einverstanden damit, dass Scheine mit „Zu prüfen“ erst nach Freigabe in die Summen zählen?
