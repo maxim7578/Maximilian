@@ -52,14 +52,14 @@ Die Ausgabe wird fest vorgegeben (strukturiert), nie als freier Text:
 
 | Sorte in der App | Erkennt die KI auch als |
 |---|---|
-| PPK | Kaufhauspapier 1.04, B19 (beide zählen als PPK) |
-| AZV | Abfall zur Verwertung |
-| Folie 98/2 | Folie 98/2 |
+| PPK | „1.04 Kartonagen (B19)“, „1.04.00 Verpackungen aus Papier und Karton (B19)“, „Kaufhausaltpapier 1.04“ (AVV 150101, alle zählen als PPK) |
+| AZV | „Abfall zur Verwertung“, „Gemischte Abfälle (zur Verwertung)“ (AVV 200301) – **zu bestätigen** |
+| Folie 98/2 | „PE-Folien, 98/2“ (AVV 150102) |
 | Holz | Holz |
 | Sperrmüll | Sperrmüll |
 | Mischschrott | Mischschrott, Mischrott |
 
-Steht etwas anderes auf dem Schein, ist die Sorte „unbekannt“ und der Schein kommt zu „Zu prüfen“. Die genauen Bezeichnungen auf den echten Scheinen werden nach den Testfotos ergänzt.
+Steht etwas anderes auf dem Schein, ist die Sorte „unbekannt“ und der Schein kommt zu „Zu prüfen“. Die Bezeichnungen oben stammen aus den fünf Testscheinen. Für Holz und Mischschrott gibt es noch keinen Beispielschein. „Gemischte Verpackungen“ (AVV 150106, Testschein 2) passt zu keiner der sechs Sorten und ist offen.
 
 ## Datenmodell (neu)
 
@@ -88,7 +88,7 @@ Ein Schein bekommt den Status „Zu prüfen“, wenn eines davon zutrifft:
 - Das Kennzeichen passt nicht zum Fahrzeug des Fahrers, oder es ist nicht lesbar. Verglichen wird ohne Leerzeichen und Bindestriche und ohne Unterschied zwischen Groß- und Kleinschreibung.
 - Eine Sorte ist unbekannt.
 - Ein Netto fehlt, ist nicht lesbar oder null, oder die Einheit ist unklar.
-- Die Summe der Positionen weicht vom gedruckten Gesamt-Netto ab.
+- Die Summe der Positionen weicht um mehr als **2 kg** vom gedruckten Gesamt-Netto ab (Vorschlag). Eine kleine Toleranz ist nötig: Auf Testschein 3 ergeben die Zeilen 651 kg, gedruckt sind 650 kg.
 - Die Summe aller Positionen eines Scheins liegt über **30.000 kg** (Vorschlag, bitte bestätigen).
 - Mögliches Duplikat: gleicher Fahrer, gleiche Positionen, innerhalb von **10 Minuten** (Vorschlag, bitte bestätigen), oder dasselbe Foto zweimal.
 
@@ -118,9 +118,33 @@ Mit den Fotos echter Scheine, darunter mindestens je einer mit Tonnen, mit kg, m
 
 Kriterium: Bei den Testfotos wird **kein falscher Wert still übernommen**. Jede Sorte und jedes Netto ist entweder richtig oder als „Zu prüfen“ markiert. Zusätzlich wird gezählt, wie oft Sorte und Netto exakt stimmen.
 
+## Testfälle aus fünf echten Scheinen
+
+Die fünf Scheine (CamScanner-PDFs vom 20. bis 23.10.2026) sind der Prüfstand für die Erkennung. Erwartet wird:
+
+| Nr. | Aussteller | Kennzeichen | Positionen (Sorte → Netto) | Besonderheit |
+|---|---|---|---|---|
+| 1 | REMONDIS Saar Entsorgung | NF-RR 4500 | PPK → 320 kg | Beschriftung „NETTO(kg)“ |
+| 2 | Mandausch Containerdienst | PI RR 4960 | gemischte Verpackungen → 480 kg (0,480 t), Sorte offen | Einheit t. Die Zeile „Betriebsstätten-/Brandschutzpauschale, 1,000 Stk“ ist keine Menge und wird ignoriert. |
+| 3 | Degenkolbe Recycling | PI RR 4840 | PPK → 415 kg, AZV → 118 kg, Sperrmüll → 118 kg | Drei Sorten. Die Zeilen ergeben 651 kg, gedruckt sind 650 kg. Drei Wägungen, darunter „Tara/Brutto“. Das Netto steht als „Netto²“. |
+| 4 | Knettenbrech + Gurdulic | PI RR 4910 | PPK → 560 kg (0,560 t) | Einheit t. Das Netto hat **keine Beschriftung**, es ist die dritte Zahl in der Zeile nach den beiden Wägungen. Das Kennzeichen steht vor „Eingang“. |
+| 5 | REMONDIS Südwest (Dillingen) | NF-RR 4500 | Folie 98/2 → 410 kg | Beschriftung „NETTO(kg)“ |
+
+Erkenntnisse daraus:
+
+- **Jeder Aussteller hat ein anderes Layout.** Die Erkennung darf sich nicht auf feste Positionen oder die Beschriftung „Netto“ verlassen, deshalb kommt die KI-Bilderkennung zum Einsatz.
+- **Einheit und Schreibweise wechseln.** Es gibt „3.330“ in der Spalte „Gewicht in kg“ (also 3330 kg) und „3,440 t“ (3,44 Tonnen). Die KI muss die Einheit aus der Spalte oder Zeile lesen, nicht aus dem Zahlenbild raten. Im Zweifel „Zu prüfen“.
+- **Kennzeichen** stehen als „NF-RR 4500“ (mit Bindestrich) und „PI RR 4960“ (nur Leerzeichen). Der Abgleich muss beides gleich behandeln.
+- **Nicht jede Zeile ist eine Menge.** Pauschalen in „Stk“ gehören nicht in die Summen.
+- **Handschrift am Rand** (Filialnamen, Orte) wird nicht gelesen und ignoriert.
+- **Hochladedatum und Scheindatum können auseinanderliegen.** Schein 2 trägt das Datum 20.10., wurde aber am 22.10. gescannt. Ohne gelesenes Datum zählt so ein Schein zum Tag des Hochladens. Am Monatsende kann das die Monatssumme verschieben.
+
 ## Offene Punkte
 
-- Fotos echter Wiegescheine (fehlen noch).
+- Weitere Testscheine mit **Holz**, **Mischschrott** und möglichst einem schlechten Foto (schief, Schatten, verblasst). Die fünf vorhandenen sind saubere Scans.
+- Welche Sorte ist **„gemischte Verpackungen“ (AVV 150106)**: AZV, Mischschrott oder eine siebte Sorte?
+- Ist **„Gemischte Abfälle (zur Verwertung)“** wirklich AZV?
+- Soll die KI zusätzlich das **Datum des Scheins** lesen? Das wäre ein weiteres Feld und würde die Monatssummen genauer machen (siehe Schein 2).
 - Grenzwerte bestätigen: 30.000 kg pro Schein, 10 Minuten für Duplikate.
 - Einverstanden damit, dass Scheine mit „Zu prüfen“ erst nach Freigabe in die Summen zählen?
 - Wer ist Admin (Rollen)? Dürfen Fahrer einen gespeicherten Schein nachträglich ändern?
