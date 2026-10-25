@@ -109,6 +109,7 @@ stages:
       - asset_manifest
     optional_tools:
       - heygen_avatar
+      - skyreels_avatar
       - talking_head
       - lip_sync
       - tts_selector
@@ -118,6 +119,7 @@ stages:
       - video_selector
     tools_available:
       - heygen_avatar
+      - skyreels_avatar
       - talking_head
       - lip_sync
       - tts_selector
