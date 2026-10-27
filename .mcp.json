@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "artemis": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "cd \"$(git rev-parse --show-toplevel)/artemis\" && exec uv run --frozen python -m mcp_server"
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    "rea": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "rea-agents@6.8.0",
+        "mcp"
+      ]
+    }
+  }
+}
