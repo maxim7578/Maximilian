@@ -10,7 +10,7 @@ This stage prepares the actual spokesperson ingredients: narration, avatar or li
 |-------|----------|---------|
 | Schema | `schemas/artifacts/asset_manifest.schema.json` | Artifact validation |
 | Prior artifacts | `state.artifacts["scene_plan"]["scene_plan"]`, `state.artifacts["script"]["script"]`, `state.artifacts["idea"]["brief"]` | Presenter plan and narration needs |
-| Tools | `talking_head`, `lip_sync`, `tts_selector`, `subtitle_gen`, `image_selector`, `audio_enhance` — selectors auto-discover all available providers from the registry | Avatar, narration, and support asset options |
+| Tools | `skyreels_avatar`, `talking_head`, `lip_sync`, `tts_selector`, `subtitle_gen`, `image_selector`, `audio_enhance` — selectors auto-discover all available providers from the registry | Avatar, narration, and support asset options |
 | Playbook | Active style playbook | Background, type, and subtitle rules |
 
 ## Process
@@ -19,6 +19,7 @@ This stage prepares the actual spokesperson ingredients: narration, avatar or li
 
 Use one primary path and record it clearly:
 
+- `skyreels_avatar` from still image plus audio (local SkyReels-V3, up to 200 s per call, stylized characters too — read `.agents/skills/skyreels-v3/SKILL.md` first; the clip already carries the narration audio),
 - `talking_head` from still image plus audio,
 - `lip_sync` from existing presenter plate plus new audio,
 - externally supplied avatar render if created outside the current runtime.
@@ -30,7 +31,7 @@ Do not hide a blocked avatar path. Record it.
 Before batch-generating assets, produce one sample of each expensive type and show the user:
 
 1. **TTS sample** (if generating narration): Generate one section. Confirm voice, pace, and persona before batching the rest.
-2. **Avatar sample** (if using `talking_head`): Generate a short test clip. Confirm the avatar quality is acceptable before committing to full generation.
+2. **Avatar sample** (if using `skyreels_avatar` or `talking_head`): Generate a short test clip. Confirm the avatar quality is acceptable before committing to full generation.
 
 If rejected, adjust parameters and retry (max 3 iterations). Do not batch until approved.
 
