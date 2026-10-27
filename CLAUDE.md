@@ -28,3 +28,13 @@ Artemis-Tools nutzt, [`artemis/mcp_server/rules.md`](artemis/mcp_server/rules.md
 lesen. Die Tools brauchen ein per ADB erreichbares Android-Gerät oder einen
 Emulator und einen LLM-Schlüssel (z. B. `GEMINI_API_KEY`) in der Umgebung oder in
 `artemis/.env`; in Cloud-Sessions gibt es kein Gerät.
+
+## REA (Reverse Engineering)
+
+REA ([morluto/rea](https://github.com/morluto/rea)) ist in `.mcp.json` als
+MCP-Server `rea` eingetragen (`npx -y rea-agents@6.8.0 mcp`, rund 230 Tools wie
+`binary_session`, `open_binary`, `analyze_web_bundle`). Vor der Auswahl einer
+Operation `binary_session` mit `{}` aufrufen; `result.tool_availability` zeigt,
+was in der aktuellen Umgebung geht. Engines wie Ghidra, JADX, Hopper oder Frida
+sind in Cloud-Sessions nicht installiert. Zum Aktualisieren die Version in
+`.mcp.json` anheben.
