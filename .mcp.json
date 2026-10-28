@@ -17,6 +17,10 @@
         "rea-agents@6.8.0",
         "mcp"
       ]
+    },
+    "skyaccess": {
+      "type": "http",
+      "url": "https://mcp.skyaccess.com/mcp"
     }
   }
 }

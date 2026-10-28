@@ -38,3 +38,13 @@ Operation `binary_session` mit `{}` aufrufen; `result.tool_availability` zeigt,
 was in der aktuellen Umgebung geht. Engines wie Ghidra, JADX, Hopper oder Frida
 sind in Cloud-Sessions nicht installiert. Zum Aktualisieren die Version in
 `.mcp.json` anheben.
+
+## SkyAccess (Privatjet-Leerflüge)
+
+SkyAccess ([sky-access/skyaccess-mcp](https://github.com/sky-access/skyaccess-mcp))
+ist in `.mcp.json` als gehosteter MCP-Server `skyaccess` eingetragen
+(`https://mcp.skyaccess.com/mcp`, ohne Konto und Schlüssel). Tools:
+`search_empty_legs`, `get_flight`, `booking_handoff`, `get_charter_estimate`
+(nur lesend) und `request_booking`, das Name, E-Mail und Reisewunsch an
+SkyAccess schickt. `request_booking` nur aufrufen, wenn der Nutzer ausdrücklich
+kontaktiert werden will. Preise in USD; Limit 30 Tool-Aufrufe pro Minute.
