@@ -1,0 +1,454 @@
+From 0fe9f204e013c1a02025b10dd5bc17fb47e2447a Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 29 Oct 2026 16:57:06 +0000
+Subject: [PATCH 1/4] chore: bump dependencies to versions without known
+ vulnerabilities
+
+Upgrade every package in requirements.txt to its latest release.
+pip-audit reported 201 known vulnerabilities before (among others in
+aiohttp, pillow, urllib3, requests and certifi) and none after.
+
+pillow 13 requires a newer Python; tested with Python 3.12 (as used in
+the Dockerfile).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Bja6cd7jRHwAargZeaiYU9
+---
+ requirements.txt | 40 ++++++++++++++++++++--------------------
+ 1 file changed, 20 insertions(+), 20 deletions(-)
+
+diff --git a/requirements.txt b/requirements.txt
+index a027661..523cc7d 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -1,21 +1,21 @@
+-aiohappyeyeballs==2.6.1
+-aiohttp==3.12.13
+-aiosignal==1.3.2
+-attrs==25.3.0
+-certifi==2025.6.15
+-chardet==5.2.0
+-charset-normalizer==3.4.2
+-frozenlist==1.7.0
+-idna==3.10
+-markdown-it-py==3.0.0
++aiohappyeyeballs==2.7.1
++aiohttp==3.14.5
++aiosignal==1.4.0
++attrs==26.1.0
++certifi==2026.10.23
++chardet==7.7.0
++charset-normalizer==3.5.2
++frozenlist==1.8.0
++idna==3.20
++markdown-it-py==4.2.0
+ mdurl==0.1.2
+-multidict==6.6.2
+-pillow==11.3.0
+-propcache==0.3.2
+-Pygments==2.19.2
+-python-dotenv==1.1.1
+-reportlab==4.4.2
+-requests==2.32.4
+-rich==14.0.0
+-urllib3==2.5.0
+-yarl==1.20.1
++multidict==7.2.1
++pillow==13.0.0
++propcache==0.5.4
++Pygments==2.21.0
++python-dotenv==1.2.4
++reportlab==5.1.0
++requests==2.34.2
++rich==15.0.0
++urllib3==2.8.0
++yarl==1.25.1
+-- 
+2.43.0
+
+
+From 7810abb5715de766045fe4cb2a4f74a22cd83458 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 29 Oct 2026 16:57:06 +0000
+Subject: [PATCH 2/4] fix: enable TLS certificate verification for all HTTP
+ requests
+
+Both sync (requests) and async (aiohttp) requests skipped certificate
+verification, leaving the AI API key and the downloaded site list open
+to interception and tampering on the network.
+
+- verify=False -> verify=True (requests)
+- ssl=False -> ssl=True (aiohttp)
+- stop silencing urllib3 warnings
+
+Users running --proxy with an intercepting proxy need to trust its CA
+via REQUESTS_CA_BUNDLE and SSL_CERT_FILE.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Bja6cd7jRHwAargZeaiYU9
+---
+ src/modules/utils/http_client.py | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
+
+diff --git a/src/modules/utils/http_client.py b/src/modules/utils/http_client.py
+index d9d8dd7..dab1565 100644
+--- a/src/modules/utils/http_client.py
++++ b/src/modules/utils/http_client.py
+@@ -7,8 +7,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "."))
+ 
+ from log import logError
+ 
+-requests.packages.urllib3.disable_warnings()
+-
+ 
+ # Perform a Sync Request and return response details
+ def do_sync_request(method, url, config, data=None, customHeaders=None, cookies=None):
+@@ -20,7 +18,7 @@ def do_sync_request(method, url, config, data=None, customHeaders=None, cookies=
+         "method": method,
+         "url": url,
+         "timeout": config.timeout,
+-        "verify": False,
++        "verify": True,
+         "headers": headers,
+         "data": data,
+         "cookies": cookies,
+@@ -56,7 +54,7 @@ async def do_async_request(method, url, session, config, data=None, customHeader
+             proxy=proxy,
+             timeout=config.timeout,
+             allow_redirects=True,
+-            ssl=False,
++            ssl=True,
+             data=data,
+             headers=headers,
+             max_redirects=10,
+-- 
+2.43.0
+
+
+From e2f8897faa58dbf1eab44ce064efd6249cda15ea Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 29 Oct 2026 16:58:48 +0000
+Subject: [PATCH 3/4] test: flatten metadata in export mock data
+
+The mock results wrapped each account's metadata in an extra list
+([[{...}]]), while verifyUsername/verifyEmail return a flat list of
+metadata entries. saveToPdf iterated the inner list as if it were an
+entry and failed with "list indices must be integers or slices, not
+str", so no metadata was rendered in the test PDF. The error was only
+printed, so the test still passed.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Bja6cd7jRHwAargZeaiYU9
+---
+ tests/data/mock-email.json    | 94 ++++++++++++++++-------------------
+ tests/data/mock-username.json | 82 +++++++++++++++---------------
+ 2 files changed, 83 insertions(+), 93 deletions(-)
+
+diff --git a/tests/data/mock-email.json b/tests/data/mock-email.json
+index 87c62b4..b2c35b5 100644
+--- a/tests/data/mock-email.json
++++ b/tests/data/mock-email.json
+@@ -4,51 +4,47 @@
+         "url": "https://gravatar.com/142d78e466cacab37c3751a6ba0d288ce40db609ce9c49617ea6b24665f1aa9c.json",
+         "status": "FOUND",
+         "metadata": [
+-            [
+-                {
+-                    "schema": "JSON",
+-                    "type": "Image",
+-                    "name": "Avatar",
+-                    "path": [
+-                        "entry",
+-                        0,
+-                        "thumbnailUrl"
+-                    ],
+-                    "downloaded": false,
+-                    "value": "https://2.gravatar.com/avatar/142d78e466cacab37c3751a6ba0d288ce40db609ce9c49617ea6b24665f1aa9c"
+-                },
+-                {
+-                    "schema": "JSON",
+-                    "type": "String",
+-                    "name": "Name",
+-                    "path": [
+-                        "entry",
+-                        0,
+-                        "displayName"
+-                    ],
+-                    "value": "g2-1f9d9a9efc2f523b2f09629444632b5c"
+-                },
+-                {
+-                    "schema": "JSON",
+-                    "type": "String",
+-                    "name": "Username",
+-                    "path": [
+-                        "entry",
+-                        0,
+-                        "preferredUsername"
+-                    ],
+-                    "value": "g2-1f9d9a9efc2f523b2f09629444632b5c"
+-                }
+-            ]
++            {
++                "schema": "JSON",
++                "type": "Image",
++                "name": "Avatar",
++                "path": [
++                    "entry",
++                    0,
++                    "thumbnailUrl"
++                ],
++                "downloaded": false,
++                "value": "https://2.gravatar.com/avatar/142d78e466cacab37c3751a6ba0d288ce40db609ce9c49617ea6b24665f1aa9c"
++            },
++            {
++                "schema": "JSON",
++                "type": "String",
++                "name": "Name",
++                "path": [
++                    "entry",
++                    0,
++                    "displayName"
++                ],
++                "value": "g2-1f9d9a9efc2f523b2f09629444632b5c"
++            },
++            {
++                "schema": "JSON",
++                "type": "String",
++                "name": "Username",
++                "path": [
++                    "entry",
++                    0,
++                    "preferredUsername"
++                ],
++                "value": "g2-1f9d9a9efc2f523b2f09629444632b5c"
++            }
+         ]
+     },
+     {
+         "name": "Adobe",
+         "url": "https://auth.services.adobe.com/signin/v2/users/accounts",
+         "status": "FOUND",
+-        "metadata": [
+-            []
+-        ]
++        "metadata": []
+     },
+     {
+         "name": "Duolingo",
+@@ -121,17 +117,15 @@
+         "url": "https://www.eventbrite.com/api/v3/users/lookup/",
+         "status": "FOUND",
+         "metadata": [
+-            [
+-                {
+-                    "schema": "JSON",
+-                    "type": "String",
+-                    "name": "User ID",
+-                    "path": [
+-                        "user_id"
+-                    ],
+-                    "value": "941247935"
+-                }
+-            ]
++            {
++                "schema": "JSON",
++                "type": "String",
++                "name": "User ID",
++                "path": [
++                    "user_id"
++                ],
++                "value": "941247935"
++            }
+         ]
+     },
+     {
+diff --git a/tests/data/mock-username.json b/tests/data/mock-username.json
+index fb93de3..c3ea7f0 100644
+--- a/tests/data/mock-username.json
++++ b/tests/data/mock-username.json
+@@ -22,31 +22,29 @@
+         "url": "http://en.gravatar.com/p1ngul1n0.json",
+         "status": "FOUND",
+         "metadata": [
+-            [
+-                {
+-                    "schema": "JSON",
+-                    "type": "Image",
+-                    "name": "Avatar",
+-                    "path": [
+-                        "entry",
+-                        0,
+-                        "thumbnailUrl"
+-                    ],
+-                    "downloaded": false,
+-                    "value": "https://2.gravatar.com/avatar/ef2256bcf70087d4e4b57c6b9cd39c82"
+-                },
+-                {
+-                    "schema": "JSON",
+-                    "type": "String",
+-                    "name": "Name",
+-                    "path": [
+-                        "entry",
+-                        0,
+-                        "displayName"
+-                    ],
+-                    "value": "p1ngul1n0"
+-                }
+-            ]
++            {
++                "schema": "JSON",
++                "type": "Image",
++                "name": "Avatar",
++                "path": [
++                    "entry",
++                    0,
++                    "thumbnailUrl"
++                ],
++                "downloaded": false,
++                "value": "https://2.gravatar.com/avatar/ef2256bcf70087d4e4b57c6b9cd39c82"
++            },
++            {
++                "schema": "JSON",
++                "type": "String",
++                "name": "Name",
++                "path": [
++                    "entry",
++                    0,
++                    "displayName"
++                ],
++                "value": "p1ngul1n0"
++            }
+         ]
+     },
+     {
+@@ -66,24 +64,22 @@
+         "url": "https://nitter.privacydev.net/p1ngul1n0",
+         "status": "FOUND",
+         "metadata": [
+-            [
+-                {
+-                    "schema": "HTML",
+-                    "type": "Image",
+-                    "name": "Avatar",
+-                    "prefix": "https://nitter.privacydev.net",
+-                    "path": "<a[^>]*class=\"profile-card-avatar\"[^>]*><img[^>]+src=\"([^\"]+)\"",
+-                    "downloaded": false,
+-                    "value": "https://nitter.privacydev.net/pic/pbs.twimg.com%2Fprofile_images%2F1604626688813531136%2FJ7jmDiGV_400x400.jpg"
+-                },
+-                {
+-                    "schema": "HTML",
+-                    "type": "String",
+-                    "name": "Name",
+-                    "path": "<a[^>]*class=\"profile-card-fullname\"[^>]*>([^<]+)",
+-                    "value": "p1ngul1n0"
+-                }
+-            ]
++            {
++                "schema": "HTML",
++                "type": "Image",
++                "name": "Avatar",
++                "prefix": "https://nitter.privacydev.net",
++                "path": "<a[^>]*class=\"profile-card-avatar\"[^>]*><img[^>]+src=\"([^\"]+)\"",
++                "downloaded": false,
++                "value": "https://nitter.privacydev.net/pic/pbs.twimg.com%2Fprofile_images%2F1604626688813531136%2FJ7jmDiGV_400x400.jpg"
++            },
++            {
++                "schema": "HTML",
++                "type": "String",
++                "name": "Name",
++                "path": "<a[^>]*class=\"profile-card-fullname\"[^>]*>([^<]+)",
++                "value": "p1ngul1n0"
++            }
+         ]
+     },
+     {
+-- 
+2.43.0
+
+
+From 4457fe0ee6e653ea7f48adfd2549a9e59ba80597 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 29 Oct 2026 17:00:42 +0000
+Subject: [PATCH 4/4] fix: report metadata errors in PDF export instead of
+ swallowing them
+
+saveToPdf caught errors while rendering an account's metadata and only
+printed them (or, for images, silently passed), then still returned
+True. Broken metadata went unnoticed and the export test passed with
+data missing from the PDF.
+
+Errors are now logged via logError, the PDF is still written, a warning
+names the affected accounts and saveToPdf returns False.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Bja6cd7jRHwAargZeaiYU9
+---
+ src/modules/export/pdf.py | 14 +++++++++++---
+ tests/test_export.py      | 12 ++++++++++++
+ 2 files changed, 23 insertions(+), 3 deletions(-)
+
+diff --git a/src/modules/export/pdf.py b/src/modules/export/pdf.py
+index d66f634..1113907 100644
+--- a/src/modules/export/pdf.py
++++ b/src/modules/export/pdf.py
+@@ -43,6 +43,7 @@ def saveToPdf(foundAccounts, resultType, config):
+         width, height = letter
+         canva = canvas.Canvas(path, pagesize=letter)
+         accountsCount = len(foundAccounts)
++        failedAccounts = []
+ 
+         canva.drawImage(
+             os.path.join(
+@@ -336,16 +337,23 @@ def saveToPdf(foundAccounts, resultType, config):
+                                             height=35,
+                                         )
+                                         y_position -= 15
+-                                    except:
+-                                        pass
++                                    except Exception as e:
++                                        failedAccounts.append(result["name"])
++                                        logError(e, f"Coudn't add image of {result['name']} to PDF file!", config)
+                         endWidth = y_position
+                         canva.setStrokeColor("#CE0000")
+                         canva.line(85, initialWidth, 85, endWidth)
+                     y_position -= 25
+                 except Exception as e:
+-                    print(e)
++                    failedAccounts.append(result["name"])
++                    logError(e, f"Coudn't add metadata of {result['name']} to PDF file!", config)
+         canva.save()
+         config.console.print(f"💾  Saved results to '[cyan1]{fileName}[/cyan1]'")
++        if failedAccounts:
++            config.console.print(
++                f"⚠️  Some data is missing from the PDF file: {', '.join(dict.fromkeys(failedAccounts))}"
++            )
++            return False
+         return True
+     except Exception as e:
+         logError(e, "Coudn't saved results to PDF file!", config)
+diff --git a/tests/test_export.py b/tests/test_export.py
+index f09b58a..5562ddb 100644
+--- a/tests/test_export.py
++++ b/tests/test_export.py
+@@ -41,6 +41,18 @@ class TestExportToPDF(unittest.TestCase):
+         result = saveToPdf(foundAccounts, "email", config)
+         self.assertTrue(result)
+ 
++    def test_export_pdf_reports_invalid_metadata(self):
++        foundAccounts = [
++            {
++                "name": "Gravatar",
++                "url": "https://gravatar.com/john",
++                "status": "FOUND",
++                "metadata": [[{"type": "String", "name": "Name", "value": "John"}]],
++            }
++        ]
++        result = saveToPdf(foundAccounts, "email", config)
++        self.assertFalse(result)
++
+ 
+ class TestExportToCSV(unittest.TestCase):
+     config.currentUser = "p1ngul1n0"
+-- 
+2.43.0
+
