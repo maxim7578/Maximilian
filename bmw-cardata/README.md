@@ -49,7 +49,7 @@ Ohne Schritt 5 und 6 funktioniert alles außer `live`; dann mit `anmelden --nur-
 ![Die Windows-App mit dem Status eines Fahrzeugs](docs/app.png)
 
 Für Windows gibt es eine App mit Fenster (`BMW-CarData.exe`) und die Kommandozeile
-(`bmw-cardata.exe`), beide ohne Installation lauffähig. Die App bietet alle Funktionen per
+(`bmw-cardata-cli.exe`), beide ohne Installation lauffähig. Die App bietet alle Funktionen per
 Knopfdruck: Anmelden (der Link zur Bestätigung ist anklickbar), Fahrzeuge, Status,
 Basisdaten, Kontingent, Live-Daten starten und stoppen sowie den Verlauf anzeigen oder als
 CSV für Excel speichern. Sie nutzt intern genau dieselben Befehle wie die Kommandozeile.

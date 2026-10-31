@@ -1,4 +1,4 @@
-"""Startdatei der Kommandozeile für Windows (bmw-cardata.exe), gebaut mit PyInstaller."""
+"""Startdatei der Kommandozeile für Windows (bmw-cardata-cli.exe), gebaut mit PyInstaller."""
 
 import sys
 

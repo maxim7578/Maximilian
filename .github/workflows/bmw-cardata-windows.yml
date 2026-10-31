@@ -1,4 +1,5 @@
-# Testet bmw-cardata auf Windows und baut die Windows-Programme (App und Kommandozeile).
+# Testet bmw-cardata auf Windows und baut die Windows-Programme: BMW-CarData.exe (App)
+# und bmw-cardata-cli.exe (Kommandozeile).
 # Die fertigen .exe-Dateien liegen danach als Artefakt "bmw-cardata-windows" am Lauf.
 name: bmw-cardata Windows
 
@@ -44,14 +45,16 @@ jobs:
       - name: App bauen (BMW-CarData.exe)
         run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name BMW-CarData --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/app.py
 
-      - name: Kommandozeile bauen (bmw-cardata.exe)
-        run: python -m PyInstaller --noconfirm --onefile --console --name bmw-cardata --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/cli.py
+      # Eigener Name: Windows unterscheidet bei Dateinamen nicht zwischen Groß- und Klein-
+      # schreibung, "bmw-cardata.exe" würde "BMW-CarData.exe" (die App) überschreiben.
+      - name: Kommandozeile bauen (bmw-cardata-cli.exe)
+        run: python -m PyInstaller --noconfirm --onefile --console --name bmw-cardata-cli --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/cli.py
 
       - name: Kommandozeile ausprobieren
         run: |
-          dist\bmw-cardata.exe --help
+          dist\bmw-cardata-cli.exe --help
           if ($LASTEXITCODE -ne 0) { exit 1 }
-          dist\bmw-cardata.exe --state "$env:RUNNER_TEMP\probe\state.json" kontingent
+          dist\bmw-cardata-cli.exe --state "$env:RUNNER_TEMP\probe\state.json" kontingent
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Selbsttest der App (Fenster kurz öffnen)
@@ -74,13 +77,6 @@ jobs:
           dist\BMW-CarData-Diagnose.exe --selbsttest "$env:RUNNER_TEMP\diag.txt"
           Write-Output "Exit-Code: $LASTEXITCODE"
           Get-Content "$env:RUNNER_TEMP\diag.txt" -ErrorAction SilentlyContinue
-          Write-Output "--- Konsolen-Variante über Start-Process (wie die Fenster-App) ---"
-          $p = Start-Process -FilePath dist\BMW-CarData-Diagnose.exe -ArgumentList "--selbsttest", "$env:RUNNER_TEMP\sp.txt" -Wait -PassThru
-          Write-Output "Exit-Code: $($p.ExitCode)"
-          Get-Content "$env:RUNNER_TEMP\sp.txt" -ErrorAction SilentlyContinue
-          Write-Output "--- Fenster-App über cmd start /wait ---"
-          cmd /c "start /wait dist\BMW-CarData.exe --selbsttest %RUNNER_TEMP%\cmd.txt & echo Exit-Code: %ERRORLEVEL%"
-          Get-Content "$env:RUNNER_TEMP\cmd.txt" -ErrorAction SilentlyContinue
           Write-Output "--- Startprotokoll der Fenster-App ---"
           Get-Content (Join-Path ([IO.Path]::GetTempPath()) "bmw-cardata-start.log") -ErrorAction SilentlyContinue
           Write-Output "--- PyInstaller-Warnungen (Auszug) ---"
@@ -103,7 +99,7 @@ jobs:
           name: bmw-cardata-windows
           path: |
             bmw-cardata/dist/BMW-CarData.exe
-            bmw-cardata/dist/bmw-cardata.exe
+            bmw-cardata/dist/bmw-cardata-cli.exe
             bmw-cardata/dist/LIESMICH.txt
           if-no-files-found: error
           retention-days: 30

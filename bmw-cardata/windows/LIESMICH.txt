@@ -1,9 +1,9 @@
 BMW CarData für Windows
 =======================
 
-BMW-CarData.exe   Die App mit Fenster: alle Funktionen per Knopfdruck.
-bmw-cardata.exe   Dieselben Funktionen für die Eingabeaufforderung
-                  (z. B. "bmw-cardata.exe status").
+BMW-CarData.exe       Die App mit Fenster: alle Funktionen per Knopfdruck.
+bmw-cardata-cli.exe   Dieselben Funktionen für die Eingabeaufforderung
+                      (z. B. "bmw-cardata-cli.exe status").
 
 Starten
 -------
