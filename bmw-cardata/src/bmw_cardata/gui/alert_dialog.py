@@ -9,7 +9,7 @@ from tkinter import ttk
 from ..alert_store import load_settings, settings_path
 from ..config import state_path
 
-Start = Callable[..., None]
+Start = Callable[..., bool]
 
 
 class AlertDialog:
@@ -45,7 +45,7 @@ class AlertDialog:
         buttons.grid(row=5, column=0, columnspan=3, sticky="e", pady=(10, 0))
         self.save_button = ttk.Button(buttons, text="Speichern", command=self.save)
         self.save_button.pack(side="left", padx=3)
-        ttk.Button(buttons, text="Test-Push senden", command=self.test).pack(side="left", padx=3)
+        ttk.Button(buttons, text="Test-Push (gespeichertes Thema)", command=self.test).pack(side="left", padx=3)
         ttk.Button(buttons, text="Schließen", command=self.window.destroy).pack(side="left", padx=3)
 
     def values(self) -> dict[str, str]:
@@ -53,8 +53,9 @@ class AlertDialog:
                 "batterie_12v": self.v12.get(), "reifendruck_toleranz": self.tire.get()}
 
     def save(self) -> None:
-        self.start("warnungen-einstellen", einstellungen=self.values())
-        self.window.destroy()
+        """Schließt nur, wenn gespeichert wird; sonst bleiben die Eingaben stehen."""
+        if self.start("warnungen-einstellen", einstellungen=self.values()):
+            self.window.destroy()
 
     def test(self) -> None:
         self.start("warnungen-test")

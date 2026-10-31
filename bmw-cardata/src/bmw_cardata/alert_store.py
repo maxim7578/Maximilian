@@ -43,26 +43,41 @@ def _load_json(path: Path) -> Any:
         return None
 
 
-def load_settings(path: Path) -> AlertSettings:
-    raw = _load_json(path)
+def _parse_settings(raw: Any) -> AlertSettings | None:
+    """Einstellungen aus dem Dateiinhalt; None, wenn er nicht gültig ist."""
     if not isinstance(raw, dict):
-        return AlertSettings()
+        return None
     values = {field: raw[key] for field, key in _KEYS.items() if key in raw}
     if "locked_values" in values:
         locked = values["locked_values"]
         if not isinstance(locked, list) or not all(isinstance(v, str) for v in locked):
-            return AlertSettings()
+            return None
         values["locked_values"] = tuple(locked)
     try:
         return AlertSettings(**values)
     except (TypeError, ValueError):
-        return AlertSettings()
+        return None
+
+
+def load_settings(path: Path) -> AlertSettings:
+    """Die Einstellungen; fehlt die Datei oder ist sie beschädigt, gelten die Standardwerte."""
+    return _parse_settings(_load_json(path)) or AlertSettings()
+
+
+def settings_problem(path: Path) -> str | None:
+    """Ein Hinweis, falls warnungen.json existiert, aber nicht gültig ist."""
+    if not path.exists() or _parse_settings(_load_json(path)) is not None:
+        return None
+    return f"{path} ist beschädigt; es gelten die Standardwerte, Pushes sind aus. Datei reparieren oder löschen."
+
+
+def _as_file(settings: AlertSettings) -> dict[str, Any]:
+    raw = asdict(settings)
+    return {key: (list(raw[f]) if f == "locked_values" else raw[f]) for f, key in _KEYS.items()}
 
 
 def save_settings(path: Path, settings: AlertSettings) -> None:
-    raw = asdict(settings)
-    write_private(path, json.dumps({key: (list(raw[f]) if f == "locked_values" else raw[f])
-                                    for f, key in _KEYS.items()}, ensure_ascii=False, indent=2))
+    write_private(path, json.dumps(_as_file(settings), ensure_ascii=False, indent=2))
 
 
 def settings_lines(settings: AlertSettings) -> list[str]:
@@ -82,9 +97,17 @@ class _Snapshot:
 
 
 def load_alert_state(path: Path, vin: str) -> dict[str, Any]:
+    """Der letzte Stand eines Fahrzeugs; ein beschädigter Eintrag zählt wie keiner."""
     raw = _load_json(path)
     entry = raw.get(vin) if isinstance(raw, dict) else None
-    return entry if isinstance(entry, dict) else {}
+    if not isinstance(entry, dict):
+        return {}
+    active, status = entry.get("aktiv", []), entry.get("ladestatus")
+    if not isinstance(active, list) or not all(isinstance(k, str) for k in active):
+        return {}
+    if status is not None and not isinstance(status, str):
+        return {}
+    return {"aktiv": active, "ladestatus": status}
 
 
 def save_alert_state(path: Path, vin: str, active: tuple[Alert, ...], status: str | None) -> None:

@@ -204,7 +204,10 @@ bmw-cardata meldet, wenn am Auto etwas auffällt:
 | Laden beendet | Ladestatus wechselt von „lädt“ zu etwas anderem |
 
 Jede Warnung meldet sich einmal, wenn sie auftritt, nicht bei jedem Abruf. Ist sie behoben
-und tritt wieder auf, meldet sie sich erneut. `status` zeigt alle gerade geltenden Warnungen.
+und tritt wieder auf, meldet sie sich erneut. Kommt ein Push nicht an (z. B. kein Netz), wird
+er beim nächsten Mal wiederholt. Werte wie `INVALID` gelten weder als Alarm noch als
+Entwarnung, und eine Ladepause zählt nicht als „Laden beendet“. `status` zeigt alle gerade
+geltenden Warnungen.
 
 - **Sofort:** `bmw-cardata live --warnungen` (in der App: „Warnungen melden“ beim Live-Start).
 - **Nach Zeitplan:** `bmw-cardata warnungen pruefen` (1 Abruf), z. B. per Cron oder

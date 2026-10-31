@@ -153,3 +153,22 @@ def test_live_json_schreibt_warnungen_auf_stderr(bmw, mit_stream, monkeypatch):
     _, ausgabe, fehler = _starte(bmw, mit_stream, "live", "--json", "--warnungen")
     assert "Warnung: Heckklappe offen" in fehler
     assert all(json.loads(zeile) for zeile in ausgabe.splitlines())
+
+
+def test_einstellen_überschreibt_keine_beschädigte_datei(bmw, tmp_path):
+    pfad = tmp_path / "s.json"
+    settings_path(pfad).write_text("{kaputt")
+    code, _, fehler = _starte(bmw, pfad, "warnungen", "einstellen", "--ladestand", "30")
+    assert code == 1 and "beschädigt" in fehler
+    assert settings_path(pfad).read_text() == "{kaputt"
+
+
+def test_pruefen_weist_auf_beschädigte_einstellungen_hin(bmw, angemeldet):
+    settings_path(angemeldet).write_text("{kaputt")
+    bmw.add("GET", TELEMATIK, body=OFFEN)
+    assert "beschädigt" in _starte(bmw, angemeldet, "warnungen", "pruefen", VIN)[1]
+
+
+def test_kurzes_thema_bekommt_einen_hinweis(bmw, tmp_path):
+    ausgabe = _starte(bmw, tmp_path / "s.json", "warnungen", "einstellen", "--ntfy-thema", "bmw")[1]
+    assert "erratbar" in ausgabe

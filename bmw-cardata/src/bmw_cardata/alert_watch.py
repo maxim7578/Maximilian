@@ -28,18 +28,25 @@ class AlertWatcher:
         status = charging_status(snapshot)
         previous = load_alert_state(self.state_file, vin)
         fresh = new_alerts(current, previous, status)
+        delivered = self._announce(vin, fresh)
+        # Nicht zugestellte Warnungen gelten als noch nicht gemeldet: beim nächsten Mal erneut.
+        undelivered = set() if delivered else {a.key for a in fresh}
+        active = [a for a in current if a.key not in undelivered]
         kept = carried_over([k for k in previous.get("aktiv") or [] if k not in {a.key for a in current}], snapshot)
-        save_alert_state(self.state_file, vin, (*current, *(Alert(k, "") for k in kept)), status)
-        self._announce(vin, fresh)
+        status_to_keep = previous.get("ladestatus") if "laden_beendet" in undelivered else status
+        save_alert_state(self.state_file, vin, (*active, *(Alert(k, "") for k in kept)), status_to_keep)
         return fresh
 
-    def _announce(self, vin: str, fresh: list[Alert]) -> None:
+    def _announce(self, vin: str, fresh: list[Alert]) -> bool:
+        """Meldet neue Warnungen; False, wenn der Push nicht zugestellt wurde."""
         for alert in fresh:
             self.report(f"Warnung: {alert.text}")
         if not fresh or self.push is None:
-            return
+            return True
         title = f"BMW {mask_vin(vin)}: {len(fresh)} Warnung{'en' if len(fresh) > 1 else ''}"
         try:
             self.push(title, [alert.text for alert in fresh])
         except NtfyError as error:
-            self.report(f"Hinweis: {error}")
+            self.report(f"Hinweis: {error} Erneuter Versuch beim nächsten Mal.")
+            return False
+        return True

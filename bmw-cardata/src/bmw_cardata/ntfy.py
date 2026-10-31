@@ -12,6 +12,9 @@ import httpx
 from .alerts import AlertSettings
 
 
+PUSH_TIMEOUT_SECONDS = 10.0
+
+
 class NtfyError(Exception):
     """Der Push konnte nicht zugestellt werden."""
 
@@ -26,8 +29,9 @@ def send_push(http: httpx.Client, settings: AlertSettings, title: str, lines: li
     payload = {"topic": settings.ntfy_topic, "title": title, "message": "\n".join(lines),
                "priority": 4, "tags": ["warning"]}
     try:
-        response = http.post(settings.ntfy_server.rstrip("/") + "/", json=payload)
-    except httpx.HTTPError as error:
+        # kurzes Zeitlimit: im Live-Modus wartet sonst der Empfang auf einen hängenden Server
+        response = http.post(settings.ntfy_server.rstrip("/") + "/", json=payload, timeout=PUSH_TIMEOUT_SECONDS)
+    except (httpx.HTTPError, httpx.InvalidURL) as error:
         raise NtfyError(f"Push nicht zugestellt ({type(error).__name__}).") from error
-    if response.status_code >= 400:
+    if not response.is_success:  # auch eine Weiterleitung ist kein zugestellter Push
         raise NtfyError(f"Push nicht zugestellt (HTTP {response.status_code}).")

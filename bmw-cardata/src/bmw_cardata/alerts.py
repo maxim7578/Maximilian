@@ -13,12 +13,16 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+import httpx
+
 from .descriptors import STATUS_FIELDS, TIRES
 from .report import field_entry, format_value
 
 # Laut Home-Assistant-Integration (soc_prediction.py) Werte für aktives Laden.
 CHARGING_ACTIVE = frozenset({"CHARGINGACTIVE", "CHARGING_ACTIVE", "CHARGING", "CHARGING_IN_PROGRESS"})
-_OPEN_WORDS = frozenset({"OPEN", "INTERMEDIATE"})
+_OPEN_WORDS = frozenset({"OPEN", "INTERMEDIATE", "TRUE"})
+_CLOSED_WORDS = frozenset({"CLOSED", "FALSE"})
+_NO_VALUE = frozenset({"", "INVALID", "UNKNOWN"})  # wie "kein Wert": weder Alarm noch Entwarnung
 _TOPIC = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _BY_LABEL = {field.label: field for field in STATUS_FIELDS}
 
@@ -45,8 +49,8 @@ class AlertSettings:
     locked_values: tuple[str, ...] = ("LOCKED", "SECURED")
 
     def __post_init__(self) -> None:
-        if not self.ntfy_server.startswith("https://"):
-            raise ValueError("Der ntfy-Server muss mit https:// beginnen.")
+        if not _valid_server(self.ntfy_server):
+            raise ValueError("Der ntfy-Server muss eine gültige Adresse mit https:// sein.")
         if self.ntfy_topic is not None and not _TOPIC.fullmatch(self.ntfy_topic):
             raise ValueError("Das ntfy-Thema darf nur Buchstaben, Ziffern, - und _ enthalten (höchstens 64).")
         for name, value in (("Ladestand", self.min_soc), ("12-V-Grenze", self.min_12v)):
@@ -54,6 +58,14 @@ class AlertSettings:
                 raise ValueError(f"{name} muss zwischen 0 und 100 % liegen.")
         if not 0 <= self.tire_tolerance_bar <= 2:
             raise ValueError("Die Reifendruck-Toleranz muss zwischen 0 und 2 bar liegen.")
+
+
+def _valid_server(address: str) -> bool:
+    try:
+        url = httpx.URL(address)
+    except (httpx.InvalidURL, TypeError, ValueError):
+        return False
+    return url.scheme == "https" and bool(url.host) and " " not in address
 
 
 def _number(entry: dict[str, Any] | None) -> float | None:
@@ -71,18 +83,26 @@ def _entry(data: dict[str, dict[str, Any]], label: str) -> dict[str, Any] | None
     return field_entry(data, _BY_LABEL[label])
 
 
-def _is_open(entry: dict[str, Any]) -> bool:
-    value = entry.get("value")
+def _opening(entry: dict[str, Any] | None) -> bool | None:
+    """True offen, False geschlossen, None ohne verwertbaren Wert (fehlt, INVALID, unbekannt)."""
+    value = entry.get("value") if entry else None
     if isinstance(value, bool):
         return value
-    return isinstance(value, str) and value.strip().upper() in _OPEN_WORDS | {"TRUE"}
+    word = value.strip().upper() if isinstance(value, str) else None
+    return True if word in _OPEN_WORDS else False if word in _CLOSED_WORDS else None
+
+
+def _lock_value(entry: dict[str, Any] | None) -> str | None:
+    value = entry.get("value") if entry else None
+    word = value.strip().upper() if isinstance(value, str) else ""
+    return None if word in _NO_VALUE else word
 
 
 def _openings(data: dict[str, dict[str, Any]]) -> list[Alert]:
     found = []
     for label in _OPENINGS:
         entry = _entry(data, label)
-        if entry is None or not _is_open(entry):
+        if entry is None or _opening(entry) is not True:
             continue
         is_boolean = label.endswith(" offen")
         text = label if is_boolean else f"{label}: {format_value(entry)}"
@@ -92,8 +112,8 @@ def _openings(data: dict[str, dict[str, Any]]) -> list[Alert]:
 
 def _lock(data: dict[str, dict[str, Any]], settings: AlertSettings) -> list[Alert]:
     entry = _entry(data, "Türschloss")
-    value = entry.get("value") if entry else None
-    if not isinstance(value, str) or value.strip().upper() in {v.upper() for v in settings.locked_values}:
+    value = _lock_value(entry)
+    if value is None or value in {v.upper() for v in settings.locked_values}:
         return []
     return [Alert("nicht_verriegelt", f"Nicht verriegelt (Türschloss meldet {format_value(entry or {})})")]
 
@@ -133,8 +153,8 @@ def evaluate(data: dict[str, dict[str, Any]], settings: AlertSettings) -> tuple[
 
 
 def charging_status(data: dict[str, dict[str, Any]]) -> str | None:
-    value = (_entry(data, "Ladestatus") or {}).get("value")
-    return value.strip().upper() if isinstance(value, str) and value.strip() else None
+    """Der Ladestatus; INVALID, UNKNOWN oder leer zählen als "kein Wert"."""
+    return _lock_value(_entry(data, "Ladestatus"))
 
 
 def is_charging(status: str | None) -> bool:
@@ -146,24 +166,31 @@ def new_alerts(current: tuple[Alert, ...], previous: dict[str, Any], status: str
     before = set(previous.get("aktiv") or [])
     fresh = [alert for alert in current if alert.key not in before]
     was_charging = is_charging(previous.get("ladestatus"))
-    if was_charging and status is not None and not is_charging(status):
+    paused = status is not None and "PAUSE" in status  # eine Pause ist kein Ende
+    if was_charging and status is not None and not is_charging(status) and not paused:
         fresh = [*fresh, Alert("laden_beendet", f"Laden beendet ({status})")]
     return fresh
 
 
-def _labels_for(key: str) -> tuple[str, ...]:
+def _evaluable(key: str, data: dict[str, dict[str, Any]]) -> bool | None:
+    """Ob die Daten die Regel einer Warnung beurteilen können; None für unbekannte Schlüssel."""
     kind, _, detail = key.partition(":")
-    return {
-        "offen": (detail,) if detail in _BY_LABEL else (),
-        "nicht_verriegelt": ("Türschloss",),
-        "ladestand_niedrig": ("Ladestand Hochvoltbatterie",),
-        "batterie_12v_niedrig": ("12-V-Batterie",),
-        "reifendruck": (f"Reifendruck {detail}", f"Solldruck {detail}"),
-    }.get(kind, ())
+    if kind == "offen":
+        return _opening(_entry(data, detail)) is not None if detail in _BY_LABEL else None
+    if kind == "reifendruck":
+        if f"Reifendruck {detail}" not in _BY_LABEL:
+            return None
+        return None not in (_kpa(_entry(data, f"Reifendruck {detail}")), _kpa(_entry(data, f"Solldruck {detail}")))
+    checks = {
+        "nicht_verriegelt": lambda: _lock_value(_entry(data, "Türschloss")) is not None,
+        "ladestand_niedrig": lambda: _number(_entry(data, "Ladestand Hochvoltbatterie")) is not None,
+        "batterie_12v_niedrig": lambda: _number(_entry(data, "12-V-Batterie")) is not None,
+    }
+    return checks[kind]() if kind in checks else None
 
 
 def carried_over(previous_keys: list[str], data: dict[str, dict[str, Any]]) -> list[str]:
-    """Bisher aktive Warnungen, zu denen die Daten nichts sagen (z. B. eine Live-Nachricht
-    ohne Fensterwerte): Sie bleiben aktiv, damit sie sich nicht erneut melden."""
-    return [key for key in previous_keys
-            if _labels_for(key) and not any(_entry(data, label) for label in _labels_for(key))]
+    """Bisher aktive Warnungen, die die Daten nicht beurteilen können (z. B. eine Live-Nachricht
+    nur mit dem Reifendruck, ohne Solldruck): Sie bleiben aktiv, damit sie sich nicht erneut melden.
+    Unbekannte Schlüssel (etwa aus älteren Versionen) fallen weg."""
+    return [key for key in previous_keys if _evaluable(key, data) is False]

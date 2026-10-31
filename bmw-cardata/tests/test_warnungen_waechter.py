@@ -71,10 +71,43 @@ def test_laden_beendet(tmp_path):
 def test_push_fehler_wird_gemeldet_ohne_abbruch(tmp_path):
     waechter, gemeldet, _ = _waechter(tmp_path, fehler="Push nicht zugestellt (HTTP 500).")
     waechter.check(VIN, {HECK: {"value": True}})
-    assert gemeldet == ["Warnung: Heckklappe offen", "Hinweis: Push nicht zugestellt (HTTP 500)."]
+    assert gemeldet == ["Warnung: Heckklappe offen",
+                        "Hinweis: Push nicht zugestellt (HTTP 500). Erneuter Versuch beim nächsten Mal."]
 
 
 def test_ohne_push_nur_meldung(tmp_path):
     waechter, gemeldet, gepusht = _waechter(tmp_path, push=False)
     waechter.check(VIN, {HECK: {"value": True}})
     assert gemeldet == ["Warnung: Heckklappe offen"] and gepusht == []
+
+
+def test_gescheiterter_push_wird_beim_nächsten_mal_wiederholt(tmp_path):
+    waechter, gemeldet, _ = _waechter(tmp_path, fehler="Push nicht zugestellt (HTTP 503).")
+    waechter.check(VIN, {HECK: {"value": True}})
+    assert load_alert_state(tmp_path / "z.json", VIN)["aktiv"] == []
+    waechter.push = lambda titel, zeilen: gemeldet.append(f"gepusht: {zeilen}")
+    waechter.check(VIN, {HECK: {"value": True}})
+    assert gemeldet[-1] == "gepusht: ['Heckklappe offen']"
+    assert load_alert_state(tmp_path / "z.json", VIN)["aktiv"] == ["offen:Heckklappe offen"]
+
+
+def test_gescheiterter_push_von_laden_beendet_wird_wiederholt(tmp_path):
+    waechter, gemeldet, _ = _waechter(tmp_path, fehler="weg")
+    waechter.check(VIN, {LADEN: {"value": "CHARGINGACTIVE"}})
+    waechter.check(VIN, {LADEN: {"value": "NOCHARGING"}})
+    assert load_alert_state(tmp_path / "z.json", VIN)["ladestatus"] == "CHARGINGACTIVE"
+    waechter.push = lambda titel, zeilen: gemeldet.append(f"gepusht: {zeilen}")
+    waechter.check(VIN, {LADEN: {"value": "NOCHARGING"}})
+    assert gemeldet[-1] == "gepusht: ['Laden beendet (NOCHARGING)']"
+
+
+def test_beschädigter_zustand_bricht_nichts_ab(tmp_path):
+    import json
+
+    pfad = tmp_path / "z.json"
+    for inhalt in ({VIN: {"aktiv": 5}}, {VIN: {"aktiv": [1]}}, {VIN: {"ladestatus": ["x"]}}):
+        pfad.write_text(json.dumps(inhalt))
+        assert load_alert_state(pfad, VIN) == {}
+    waechter, gemeldet, _ = _waechter(tmp_path)
+    waechter.check(VIN, {HECK: {"value": True}})
+    assert gemeldet == ["Warnung: Heckklappe offen"]

@@ -134,20 +134,23 @@ class App:
         AlertDialog(self.root, self.state, self._start)
 
     def _start(self, command: str, *, speichern: bool = False, warnungen: bool = False,
-               anzahl: int | None = None, einstellungen: dict[str, str] | None = None) -> None:
+               anzahl: int | None = None, einstellungen: dict[str, str] | None = None) -> bool:
+        """Startet einen Befehl; False, wenn das nicht ging (läuft schon einer, Eingabe ungültig)."""
         if self.job and self.job.running:
-            return
+            self.append("Bitte warten, bis der laufende Befehl fertig ist (Live zuerst stoppen).\n", "err")
+            return False
         try:
             args = build_args(command, vin=self.vin.get(), client_id=self.client_id.get(),
                               nur_api=self.nur_api.get(), speichern=speichern, warnungen=warnungen,
                               anzahl=anzahl, einstellungen=einstellungen)
         except ValueError as error:
             self.append(f"{error}\n", "err")
-            return
+            return False
         self.append(f"\n> bmw-cardata {' '.join(args[:2] if args[:2] == ['warnungen', 'einstellen'] else args)}\n")
         self.status.set(f"Läuft: {command} …")
         self._set_busy(True, live=command == "live")
         self.job = start_command(args, self.events, state=self.state, run=self.run)
+        return True
 
     def stop(self) -> None:
         if self.job:

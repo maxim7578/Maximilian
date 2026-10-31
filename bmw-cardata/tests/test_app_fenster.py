@@ -316,3 +316,24 @@ def test_ungültige_zahl_im_einstellungsfenster(fenster, tmp_path):
     dialog.soc.set("viel")
     dialog.save()
     assert befehle.aufrufe == [] and "Bitte eine Zahl" in app.text()
+
+
+def test_einstellungsfenster_bleibt_offen_wenn_nicht_gespeichert_wird(fenster, tmp_path):
+    from bmw_cardata.gui.alert_dialog import AlertDialog
+
+    befehle = Befehle()
+    app = App(fenster, state=str(tmp_path / "s.json"), run=befehle)
+    dialog = AlertDialog(fenster, str(tmp_path / "s.json"), app._start)
+    dialog.soc.set("viel")
+    dialog.save()
+    assert dialog.window.winfo_exists() and dialog.soc.get() == "viel"
+    dialog.soc.set("25")
+    _knopf(app, "Live starten").invoke()
+    dialog.save()
+    assert dialog.window.winfo_exists()
+    assert "Bitte warten" in app.text()
+    app.stop()
+    _bis_fertig(app, fenster)
+    dialog.save()
+    assert not dialog.window.winfo_exists()
+    _bis_fertig(app, fenster)

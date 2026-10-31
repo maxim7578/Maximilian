@@ -127,3 +127,33 @@ def test_netzfehler_beim_push():
     client = httpx.Client(transport=httpx.MockTransport(kaputt))
     with pytest.raises(NtfyError, match="ConnectError"):
         send_push(client, AlertSettings(ntfy_topic="bmw-x"), "t", ["x"])
+
+
+def test_ungültige_url_und_weiterleitung_beim_push():
+    client, _ = _sender([httpx.Response(301, headers={"location": "https://anders.example/"})])
+    with pytest.raises(NtfyError, match="HTTP 301"):
+        send_push(client, AlertSettings(ntfy_topic="bmw-x"), "t", ["x"])
+
+    def kaputt(request):
+        raise httpx.InvalidURL("kaputt")
+
+    fehlerhaft = httpx.Client(transport=httpx.MockTransport(kaputt))
+    with pytest.raises(NtfyError):
+        send_push(fehlerhaft, AlertSettings(ntfy_topic="bmw-x"), "t", ["x"])
+
+
+def test_push_hat_ein_kurzes_zeitlimit():
+    client, gesendet = _sender([])
+    send_push(client, AlertSettings(ntfy_topic="bmw-x"), "t", ["x"])
+    assert gesendet[0].extensions["timeout"]["read"] == 10
+
+
+def test_beschädigte_einstellungen_werden_erkannt(tmp_path):
+    from bmw_cardata.alert_store import settings_problem
+
+    pfad = tmp_path / "warnungen.json"
+    assert settings_problem(pfad) is None
+    save_settings(pfad, AlertSettings())
+    assert settings_problem(pfad) is None
+    pfad.write_text("{kaputt")
+    assert "beschädigt" in settings_problem(pfad)

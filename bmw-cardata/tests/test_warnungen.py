@@ -128,10 +128,51 @@ def test_warnungen_ohne_neue_daten_bleiben_aktiv():
     alt = ["offen:Fenster Fahrer", "ladestand_niedrig", "reifendruck:vorne links", "nicht_verriegelt", "unbekannt"]
     assert carried_over(alt, {SOC: w(80, "%")}) == [
         "offen:Fenster Fahrer", "reifendruck:vorne links", "nicht_verriegelt"]
-    assert carried_over(alt, {SOLL_VL: w(250, "kPa"), SCHLOSS: w("LOCKED")}) == ["offen:Fenster Fahrer", "ladestand_niedrig"]
+    # Nur der Solldruck reicht nicht, um die Reifenwarnung zu beurteilen: Sie bleibt aktiv.
+    assert carried_over(alt, {SOLL_VL: w(250, "kPa"), SCHLOSS: w("LOCKED")}) == [
+        "offen:Fenster Fahrer", "ladestand_niedrig", "reifendruck:vorne links"]
 
 
 def test_unbekannte_öffnung_im_zustand_wird_verworfen():
     from bmw_cardata.alerts import carried_over
 
     assert carried_over(["offen:gibt es nicht"], {}) == []
+
+
+def test_reifenwarnung_bleibt_wenn_nur_der_druck_kommt():
+    from bmw_cardata.alerts import carried_over
+
+    assert carried_over(["reifendruck:vorne links"], {DRUCK_VL: w(230, "kPa")}) == ["reifendruck:vorne links"]
+    assert carried_over(["reifendruck:vorne links"], {DRUCK_VL: w(250, "kPa"), SOLL_VL: w(250, "kPa")}) == []
+
+
+@pytest.mark.parametrize("daten", [{SCHLOSS: w("INVALID")}, {SOC: w("INVALID", "%")}, {FENSTER: w("INVALID")}])
+def test_ungültige_werte_beenden_keine_warnung(daten):
+    from bmw_cardata.alerts import carried_over
+
+    alt = ["nicht_verriegelt", "ladestand_niedrig", "offen:Fenster hinten Beifahrerseite"]
+    assert len(carried_over(alt, daten)) == 3
+
+
+def test_ungültiges_türschloss_ist_kein_alarm():
+    assert evaluate({SCHLOSS: w("INVALID")}, AlertSettings()) == ()
+    assert evaluate({SCHLOSS: w(" ")}, AlertSettings()) == ()
+
+
+@pytest.mark.parametrize("neu", ["INVALID", "UNKNOWN", "", "CHARGINGPAUSED", "CHARGING_PAUSED"])
+def test_pause_und_ungültig_sind_kein_ladeende(neu):
+    assert charging_status({LADEN: w(neu)}) in (None, "CHARGINGPAUSED", "CHARGING_PAUSED")
+    assert new_alerts((), {"ladestatus": "CHARGINGACTIVE"}, charging_status({LADEN: w(neu)})) == []
+
+
+def test_server_adresse_wird_geprüft():
+    for adresse in ("https://", "https://[::1", "https:// leer.example"):
+        with pytest.raises(ValueError, match="https"):
+            AlertSettings(ntfy_server=adresse)
+    assert AlertSettings(ntfy_server="https://push.example:8443/").ntfy_server == "https://push.example:8443/"
+
+
+def test_unbekannte_reifenposition_im_zustand_wird_verworfen():
+    from bmw_cardata.alerts import carried_over
+
+    assert carried_over(["reifendruck:mitte"], {}) == []

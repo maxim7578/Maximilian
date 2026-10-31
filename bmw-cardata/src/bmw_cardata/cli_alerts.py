@@ -10,7 +10,15 @@ from typing import Any
 
 import httpx
 
-from .alert_store import load_settings, new_topic, save_settings, settings_lines, settings_path, state_path_for
+from .alert_store import (
+    load_settings,
+    new_topic,
+    save_settings,
+    settings_lines,
+    settings_path,
+    settings_problem,
+    state_path_for,
+)
 from .alert_watch import AlertWatcher
 from .alerts import AlertSettings, evaluate
 from .config import ConfigError
@@ -64,13 +72,19 @@ def _changes(args: argparse.Namespace) -> tuple[dict[str, Any], bool]:
 def configure(args: argparse.Namespace, path: Path) -> list[str]:
     file = settings_path(path)
     changes, created = _changes(args)
+    problem = settings_problem(file)
+    if problem and changes:
+        raise ConfigError(f"Nicht gespeichert: {problem}")
     try:
         settings = replace(load_settings(file), **changes)
     except ValueError as error:
         raise ConfigError(str(error)) from error
     if changes:
         save_settings(file, settings)
-    lines = settings_lines(settings)
+    lines = [*([f"Hinweis: {problem}"] if problem else []), *settings_lines(settings)]
+    if settings.ntfy_topic and len(settings.ntfy_topic) < 16 and not created:
+        lines.append("Hinweis: Kurze Themen sind erratbar; wer das Thema kennt, kann die Pushes mitlesen. "
+                     "Besser: --ntfy-thema neu")
     if created:
         lines += [
             f"Neues Thema: {settings.ntfy_topic}",
@@ -99,10 +113,12 @@ def send_test(path: Path, http: httpx.Client) -> list[str]:
 
 def check(vin: str, data: dict[str, dict[str, Any]], path: Path, http: httpx.Client, show_all: bool) -> list[str]:
     """Meldet neue Warnungen (und pusht sie); mit show_all zusätzlich alle, die gerade gelten."""
-    reported: list[str] = []
+    problem = settings_problem(settings_path(path))
+    reported: list[str] = [f"Hinweis: {problem}"] if problem else []
     make_watcher(path, http, reported.append).check(vin, data)
     if not show_all:
-        return [f"Fahrzeug {vin}", *(reported or ["Keine neuen Warnungen."])]
+        news = [line for line in reported if line.startswith("Warnung:")]
+        return [f"Fahrzeug {vin}", *reported, *([] if news else ["Keine neuen Warnungen."])]
     current = [f"Warnung: {a.text}" for a in evaluate(data, load_settings(settings_path(path)))]
     extra = [line for line in reported if line not in current]  # z. B. "Laden beendet", Push-Hinweise
     return [f"Fahrzeug {vin}", *(current or ([] if extra else ["Keine Warnungen."])), *extra]
