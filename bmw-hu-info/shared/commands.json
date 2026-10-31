@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "beschreibung": "Nur-Lese-Diagnosebefehle fuer BMW-Headunits (NBT, NBTEVO, ENAVEVO, MGU). Platzhalter in spitzen Klammern <...> am Geraet anpassen.",
+  "kategorien": [
+    {
+      "id": "system",
+      "titel": "System",
+      "befehle": [
+        { "id": "hostname", "titel": "Hostname", "command": "hostname", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "kernel", "titel": "Kernel / System", "command": "uname -a", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "os_release", "titel": "OS-Version", "command": "cat /etc/os-release", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "uptime", "titel": "Laufzeit", "command": "uptime", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "datum", "titel": "Systemzeit", "command": "date", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
+      ]
+    },
+    {
+      "id": "hardware",
+      "titel": "Hardware",
+      "befehle": [
+        { "id": "cpuinfo", "titel": "Prozessor", "command": "cat /proc/cpuinfo", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "meminfo", "titel": "Arbeitsspeicher", "command": "cat /proc/meminfo", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "speicher", "titel": "Belegung Datentraeger", "command": "df -h", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "ram_frei", "titel": "Freier Speicher", "command": "free -m", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "mounts", "titel": "Eingehaengte Dateisysteme", "command": "mount", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
+      ]
+    },
+    {
+      "id": "netzwerk",
+      "titel": "Netzwerk",
+      "befehle": [
+        { "id": "ip_addr", "titel": "IP-Adressen", "command": "ip addr", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "ip_route", "titel": "Routing", "command": "ip route", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "ifconfig", "titel": "Netzwerk (Fallback)", "command": "ifconfig -a", "headunits": ["NBT", "NBTEVO"] }
+      ]
+    },
+    {
+      "id": "fehlerspeicher",
+      "titel": "Fehlerspeicher / Logs",
+      "befehle": [
+        { "id": "dmesg", "titel": "Kernel-Meldungen", "command": "dmesg", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "dmesg_fehler", "titel": "Kernel-Fehler (gefiltert)", "command": "dmesg | grep -i -E 'error|fail|warn'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "journal_fehler", "titel": "Systemd-Fehler", "command": "journalctl -p err -n 200 --no-pager", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] }
+      ]
+    },
+    {
+      "id": "headunit",
+      "titel": "Headunit (Platzhalter anpassen)",
+      "befehle": [
+        { "id": "sw_version", "titel": "Software-/Teilenummer lesen", "command": "cat <PFAD_ZUR_VERSIONSDATEI>", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Pfad je Headunit unterschiedlich. Am Geraet den korrekten Pfad eintragen." },
+        { "id": "vin", "titel": "VIN lesen", "command": "cat <PFAD_ZUR_VIN_DATEI>", "headunits": ["NBT", "NBTEVO", "MGU"], "hinweis": "Nur Lesen der am Geraet hinterlegten VIN. Pfad am Geraet ermitteln (siehe Kategorie 'VIN / Softwarestand finden') und eintragen." },
+        { "id": "vin_enavevo", "titel": "VIN lesen (ENAVEVO)", "command": "cat /etc/bmw/vehicle.cfg", "headunits": ["ENAVEVO"], "hinweis": "Pfad vom Nutzer am echten ENAVEVO ermittelt. Liest die Datei, in der die VIN hinterlegt ist." }
+      ]
+    },
+    {
+      "id": "suche",
+      "titel": "VIN / Softwarestand finden (lesend)",
+      "befehle": [
+        { "id": "vin_breit", "titel": "VIN ueberall suchen (alle Headunits)", "command": "grep -rIsoE 'WB[A-HJ-NPR-Z0-9]{15}' /etc /opt /var /mnt /data /persistency", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Durchsucht die ueblichen Ablageorte aller vier Headunits. Ausgabe als Dateipfad:VIN - dieser Pfad ist der echte Wert fuer die VIN-Lesefunktion. Nicht vorhandene Verzeichnisse werden ignoriert." },
+        { "id": "vin_suche", "titel": "VIN im Verzeichnis suchen (Pfad anpassen)", "command": "grep -rIsoE 'WB[A-HJ-NPR-Z0-9]{15}' <SUCHVERZEICHNIS>", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "<SUCHVERZEICHNIS> z. B. durch / ersetzen, wenn die breite Suche nichts findet. Grosse Baeume koennen dauern." },
+        { "id": "vin_dateiname", "titel": "Dateien mit 'vin' im Namen", "command": "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*vin*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Nicht vorhandene Verzeichnisse werden ignoriert (Meldung landet in stderr)." },
+        { "id": "version_dateiname", "titel": "Dateien mit 'version' im Namen", "command": "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*version*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "swfl_dateiname", "titel": "Dateien zu Softwarestand (swfl)", "command": "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*swfl*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "istep_dateiname", "titel": "Dateien zu I-Stufe (istep)", "command": "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*istep*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
+      ]
+    }
+  ]
+}
