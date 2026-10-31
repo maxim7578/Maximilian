@@ -4,17 +4,21 @@ from __future__ import annotations
 
 import queue
 import re
+import sys
+import time
 import tkinter as tk
+import traceback
 import webbrowser
 from collections.abc import Callable
 from pathlib import Path
-from tkinter import filedialog, ttk
+from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
 from .. import __version__
 from .runner import Event, Job, Runner, _cli_run, build_args, drain, export_csv, start_command
 
 POLL_MS = 100
+CRASH_LOG = Path.home() / ".config" / "bmw-cardata" / "app-fehler.log"
 _LINK = re.compile(r"https://[^\s)\"']+")
 
 
@@ -198,7 +202,48 @@ class App:
                 return
 
 
-def main() -> None:
-    root = tk.Tk()
-    App(root)
-    root.mainloop()
+def _self_test(report: Path, seconds: float = 2.0) -> int:
+    """Öffnet das Fenster kurz und schreibt "OK" oder die Fehlermeldung in report.
+
+    Für Prüfungen ohne Bildschirmausgabe, z. B. im Windows-Bau: Eine Fenster-App hat
+    unter Windows keine Konsole, in der ein Fehler sichtbar würde.
+    """
+    try:
+        root = tk.Tk()
+        App(root)
+        end = time.monotonic() + seconds
+        while time.monotonic() < end:
+            root.update()
+            time.sleep(0.05)
+        root.destroy()
+    except Exception:  # noqa: BLE001 - jeder Fehler gehört in den Bericht
+        report.write_text(traceback.format_exc(), encoding="utf-8")
+        return 1
+    report.write_text("OK\n", encoding="utf-8")
+    return 0
+
+
+def _report_crash(details: str, log: Path) -> None:
+    """Schreibt einen Absturz in eine Datei und nennt sie in einem Hinweisfenster."""
+    try:
+        log.parent.mkdir(parents=True, exist_ok=True)
+        log.write_text(details, encoding="utf-8")
+    except OSError:
+        pass
+    try:
+        messagebox.showerror("BMW CarData", f"Die App ist auf einen Fehler gestoßen.\n\nDetails stehen in:\n{log}")
+    except tk.TclError:
+        pass
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = sys.argv[1:] if argv is None else argv
+    if args[:1] == ["--selbsttest"]:
+        sys.exit(_self_test(Path(args[1] if len(args) > 1 else "selbsttest.txt")))
+    try:
+        root = tk.Tk()
+        App(root)
+        root.mainloop()
+    except Exception:  # noqa: BLE001 - ohne Konsole wäre der Fehler sonst unsichtbar
+        _report_crash(traceback.format_exc(), CRASH_LOG)
+        sys.exit(1)

@@ -1,3 +1,4 @@
+import gc
 import time
 import tkinter as tk
 
@@ -15,6 +16,9 @@ def fenster():
     root.withdraw()
     yield root
     root.destroy()
+    # tkinter-Variablen im Haupt-Thread aufräumen: Räumt sie später ein Hintergrund-Thread
+    # auf, bricht Tcl mit "Tcl_AsyncDelete: async handler deleted by the wrong thread" ab.
+    gc.collect()
 
 
 class Befehle:
@@ -185,5 +189,56 @@ def test_programmstart_öffnet_das_fenster(fenster, monkeypatch):
 
     gestartet = []
     monkeypatch.setattr(modul.tk.Tk, "mainloop", lambda self: gestartet.append(self.title()))
-    modul.main()
+    modul.main([])
     assert gestartet and gestartet[0].startswith("BMW CarData")
+
+
+def test_selbsttest_schreibt_ok(fenster, tmp_path):
+    from bmw_cardata.gui import app as modul
+
+    bericht = tmp_path / "bericht.txt"
+    with pytest.raises(SystemExit) as ende:
+        modul.main(["--selbsttest", str(bericht)])
+    assert ende.value.code == 0
+    assert bericht.read_text(encoding="utf-8") == "OK\n"
+
+
+def test_selbsttest_schreibt_den_fehler(tmp_path, monkeypatch):
+    from bmw_cardata.gui import app as modul
+
+    def kaputt():
+        raise RuntimeError("kein Tcl")
+
+    monkeypatch.setattr(modul.tk, "Tk", kaputt)
+    bericht = tmp_path / "bericht.txt"
+    assert modul._self_test(bericht) == 1
+    assert "RuntimeError: kein Tcl" in bericht.read_text(encoding="utf-8")
+
+
+def test_absturz_landet_im_protokoll(tmp_path, monkeypatch):
+    from bmw_cardata.gui import app as modul
+
+    def kaputt():
+        raise RuntimeError("kein Tcl")
+
+    gezeigt = []
+    monkeypatch.setattr(modul.tk, "Tk", kaputt)
+    monkeypatch.setattr(modul, "CRASH_LOG", tmp_path / "unter" / "app-fehler.log")
+    monkeypatch.setattr(modul.messagebox, "showerror", lambda titel, text: gezeigt.append(text))
+    with pytest.raises(SystemExit) as ende:
+        modul.main([])
+    assert ende.value.code == 1
+    assert "RuntimeError: kein Tcl" in (tmp_path / "unter" / "app-fehler.log").read_text(encoding="utf-8")
+    assert "app-fehler.log" in gezeigt[0]
+
+
+def test_absturzbericht_übersteht_fehler_beim_schreiben_und_anzeigen(tmp_path, monkeypatch):
+    from bmw_cardata.gui import app as modul
+
+    def ohne_anzeige(titel, text):
+        raise modul.tk.TclError("keine Anzeige")
+
+    monkeypatch.setattr(modul.messagebox, "showerror", ohne_anzeige)
+    datei = tmp_path / "datei"
+    datei.write_text("")
+    modul._report_crash("Fehler", datei / "app-fehler.log")

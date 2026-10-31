@@ -54,6 +54,14 @@ jobs:
           dist\bmw-cardata.exe --state "$env:RUNNER_TEMP\probe\state.json" kontingent
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
+      - name: Selbsttest der App (Fenster kurz öffnen)
+        run: |
+          $bericht = "$env:RUNNER_TEMP\selbsttest.txt"
+          $app = Start-Process -FilePath dist\BMW-CarData.exe -ArgumentList "--selbsttest", "`"$bericht`"" -Wait -PassThru
+          Write-Output "Exit-Code: $($app.ExitCode)"
+          if (Test-Path $bericht) { Get-Content $bericht } else { Write-Output "Kein Bericht geschrieben (Absturz vor dem Python-Start?)" }
+          if ($app.ExitCode -ne 0) { exit 1 }
+
       - name: App starten und prüfen, dass sie läuft
         run: |
           $app = Start-Process -FilePath dist\BMW-CarData.exe -PassThru
