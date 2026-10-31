@@ -87,20 +87,24 @@ ANTWORTEN: dict[str, tuple[str, int]] = {
         "Oct 31 11:41:15 bmw-nbtevo connd[511]: BT a2dp stream reset\n",
         0,
     ),
-    "grep -rIsoE 'WB[A-HJ-NPR-Z0-9]{15}' /etc": (
+    "grep -rIsoE 'WB[A-HJ-NPR-Z0-9]{15}' /etc /opt /var /mnt /data /persistency": (
         "/etc/bmw/vehicle.cfg:WBA8E9C50GK123456\n",
         0,
     ),
-    "find /etc /opt /var -maxdepth 5 -type f -iname '*vin*'": (
+    "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*vin*'": (
         "/etc/bmw/vin.cfg\n/opt/bmw/data/vehicle_vin.dat\n",
         0,
     ),
-    "find /etc /opt /var -maxdepth 5 -type f -iname '*version*'": (
+    "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*version*'": (
         "/etc/bmw/sw_version.cfg\n/opt/bmw/hu_version.txt\n",
         0,
     ),
-    "find /etc /opt /var -maxdepth 5 -type f -iname '*swfl*'": (
+    "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*swfl*'": (
         "/etc/bmw/swfl_istep.cfg\n",
+        0,
+    ),
+    "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*istep*'": (
+        "/etc/bmw/swfl_istep.cfg\n/persistency/istep.info\n",
         0,
     ),
 }
