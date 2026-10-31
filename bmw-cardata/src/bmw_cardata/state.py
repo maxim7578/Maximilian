@@ -1,13 +1,14 @@
-"""Speichert Client-ID, Tokens und Container-ID lokal (Dateirechte 600)."""
+"""Speichert Client-ID, Tokens, Container-ID und Fahrgestellnummer lokal (Dateirechte 600)."""
 
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 from .auth import Tokens
+from .config import ConfigError, validate_vin
+from .files import write_private
 
 
 class StateError(Exception):
@@ -19,12 +20,30 @@ class State:
     client_id: str
     tokens: Tokens
     container_id: str | None = None
+    vin: str | None = None  # gemerkt, solange das Konto genau ein Fahrzeug hat
 
     def with_tokens(self, tokens: Tokens) -> State:
         return replace(self, tokens=tokens)
 
     def with_container(self, container_id: str | None) -> State:
         return replace(self, container_id=container_id)
+
+    def with_vin(self, vin: str | None) -> State:
+        return replace(self, vin=vin)
+
+
+def _optional_vin(raw: object) -> str | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        raise TypeError("vin")
+    return validate_vin(raw)
+
+
+def _optional_text(raw: object) -> str | None:
+    if raw is not None and not isinstance(raw, str):
+        raise TypeError("container_id")
+    return raw
 
 
 def load_state(path: Path) -> State:
@@ -35,20 +54,16 @@ def load_state(path: Path) -> State:
         return State(
             client_id=str(raw["client_id"]),
             tokens=Tokens(**raw["tokens"]),
-            container_id=raw.get("container_id"),
+            container_id=_optional_text(raw.get("container_id")),
+            vin=_optional_vin(raw.get("vin")),
         )
-    except (OSError, ValueError, KeyError, TypeError) as err:
+    except (OSError, ValueError, KeyError, TypeError, ConfigError) as err:
         raise StateError(f"Gespeicherte Anmeldung in {path} ist beschädigt.") from err
 
 
 def save_state(path: Path, state: State) -> None:
     """Schreibt atomar und nur für den eigenen Benutzer lesbar."""
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    tmp = path.with_name(path.name + ".tmp")
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        json.dump(asdict(state), handle, indent=2)
-    os.replace(tmp, path)
+    write_private(path, json.dumps(asdict(state), indent=2))
 
 
 def delete_state(path: Path) -> bool:

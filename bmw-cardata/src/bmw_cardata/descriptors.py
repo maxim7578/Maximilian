@@ -7,6 +7,9 @@ from dataclasses import dataclass
 CONTAINER_NAME = "bmw-cardata-cli Status"
 CONTAINER_PURPOSE = "Fahrzeugstatus fuer den Kommandozeilen-Client"
 
+LATITUDE = "vehicle.cabin.infotainment.navigation.currentLocation.latitude"
+LONGITUDE = "vehicle.cabin.infotainment.navigation.currentLocation.longitude"
+
 
 @dataclass(frozen=True)
 class Field:
@@ -36,8 +39,8 @@ STATUS_FIELDS: tuple[Field, ...] = (
     Field("Türschloss", ("vehicle.cabin.door.lock.status",)),
     Field("12-V-Batterie", ("vehicle.electricalSystem.battery.stateOfCharge",)),
     Field("Nächster Service in", ("vehicle.status.serviceDistance.next",)),
-    Field("Breitengrad", ("vehicle.cabin.infotainment.navigation.currentLocation.latitude",)),
-    Field("Längengrad", ("vehicle.cabin.infotainment.navigation.currentLocation.longitude",)),
+    Field("Breitengrad", (LATITUDE,)),
+    Field("Längengrad", (LONGITUDE,)),
 )
 
 

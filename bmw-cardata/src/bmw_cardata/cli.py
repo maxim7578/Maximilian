@@ -1,4 +1,4 @@
-"""Kommandozeile: bmw-cardata anmelden | fahrzeuge | basisdaten | status | abmelden."""
+"""Kommandozeile: anmelden | fahrzeuge | basisdaten | status | verlauf | kontingent | abmelden."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import argparse
 import sys
 import time
 from collections.abc import Callable, Sequence
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TextIO
 
@@ -14,15 +15,28 @@ import httpx
 from .api import ApiError
 from .auth import AuthError, create_pkce_pair, poll_for_tokens, request_device_code
 from .config import HTTP_TIMEOUT_SECONDS, ConfigError, client_id_from_env, state_path, validate_client_id, validate_vin
-from .report import basic_data_lines, status_lines
-from .service import Session, fetch_status, open_session, resolve_vin
+from .history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
+from .report import basic_data_lines, status_json, status_lines
+from .service import Session, fetch_vehicle_status, open_session, remember_vehicles
 from .state import State, StateError, delete_state, load_state, save_state
+from .usage import DAILY_LIMIT, load_usage, record_call, usage_path
 
 HttpFactory = Callable[[], httpx.Client]
+MAX_HISTORY_LINES = 1000
 
 
 def _default_http() -> httpx.Client:
     return httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
+
+
+def _line_count(raw: str) -> int:
+    try:
+        count = int(raw)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError("muss eine ganze Zahl sein") from err
+    if not 1 <= count <= MAX_HISTORY_LINES:
+        raise argparse.ArgumentTypeError(f"muss zwischen 1 und {MAX_HISTORY_LINES} liegen")
+    return count
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
     basic.add_argument("vin", help="Fahrgestellnummer")
     status = commands.add_parser("status", help="Aktuellen Fahrzeugstatus anzeigen")
     status.add_argument("vin", nargs="?", help="Fahrgestellnummer (ohne Angabe: dein einziges Fahrzeug)")
+    status.add_argument("--json", action="store_true", help="Ausgabe als JSON")
+    status.add_argument("--speichern", action="store_true", help="Abruf im lokalen Verlauf ablegen")
+    history = commands.add_parser("verlauf", help="Gespeicherte Abrufe anzeigen (ohne Abruf bei BMW)")
+    history.add_argument("--anzahl", type=_line_count, default=10, help="Wie viele Einträge (Standard: 10)")
+    history.add_argument("--csv", action="store_true", help="Alle Einträge als CSV ausgeben")
+    commands.add_parser("kontingent", help="Eigene Abrufe der letzten 24 Stunden anzeigen")
     commands.add_parser("abmelden", help="Gespeicherte Anmeldung löschen")
     return parser
 
@@ -60,17 +80,79 @@ def _only_vehicle(vins: list[str]) -> str:
     return vins[0]
 
 
+def _utc_stamp(now: float) -> str:
+    return datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _status(args: argparse.Namespace, session: Session, path: Path) -> list[str]:
+    explicit = validate_vin(args.vin) if args.vin else None
+    vin, data = fetch_vehicle_status(session, explicit, _only_vehicle, path)
+    stamp = _utc_stamp(time.time())
+    saved = _save_history(path, Entry(stamp, vin, data)) if args.speichern else []
+    if args.json:
+        return [status_json(vin, data, stamp)]
+    return [f"Fahrzeug {vin}", *status_lines(data), *saved]
+
+
+def _save_history(path: Path, entry: Entry) -> list[str]:
+    """Speichert den Abruf; ein Dateifehler kostet nur den Verlaufseintrag, nicht die Ausgabe."""
+    try:
+        append_entry(history_path(path), entry)
+    except OSError as error:
+        return [f"Verlauf konnte nicht gespeichert werden: {error.strerror or error}"]
+    return ["Im Verlauf gespeichert."]
+
+
+def _vehicles(session: Session, path: Path) -> list[str]:
+    vins = session.api.vehicles()
+    remember_vehicles(session, vins, path)
+    return vins or ["Keine Fahrzeuge gefunden."]
+
+
 def _run_with_session(args: argparse.Namespace, path: Path, http: httpx.Client, out: TextIO) -> None:
-    session: Session = open_session(http, load_state(path), path, time.time())
+    counter = usage_path(path)
+    session = open_session(http, load_state(path), path, time.time(), lambda: record_call(counter, time.time()))
     if args.command == "fahrzeuge":
-        vins = session.api.vehicles()
-        lines = vins or ["Keine Fahrzeuge gefunden."]
+        lines = _vehicles(session, path)
     elif args.command == "basisdaten":
         lines = basic_data_lines(session.api.basic_data(validate_vin(args.vin)))
     else:
-        vin = resolve_vin(session, validate_vin(args.vin) if args.vin else None, _only_vehicle)
-        lines = [f"Fahrzeug {vin}", *status_lines(fetch_status(session, vin, path))]
+        lines = _status(args, session, path)
     print("\n".join(lines), file=out)
+
+
+def _quota_lines(path: Path, now: float) -> list[str]:
+    usage = load_usage(usage_path(path))
+    lines = [
+        f"Abrufe in den letzten 24 Stunden: {len(usage.recent(now))} von {DAILY_LIMIT}",
+        f"Noch frei: {usage.remaining(now)}",
+    ]
+    free_at = usage.next_free_at(now)
+    if free_at is not None:
+        lines.append(f"Nächster Abruf frei ab: {datetime.fromtimestamp(free_at).astimezone():%d.%m.%Y %H:%M}")
+    return [*lines, "Gezählt werden nur Abrufe dieses Programms auf diesem Rechner."]
+
+
+def _history_output(args: argparse.Namespace, path: Path) -> str:
+    entries = load_entries(history_path(path))
+    if args.csv:
+        return history_csv(entries).rstrip("\n")
+    return "\n".join(history_lines(entries, args.anzahl))
+
+
+def _offline(args: argparse.Namespace, path: Path, out: TextIO) -> bool:
+    """Befehle ohne Abruf bei BMW; True, wenn einer davon ausgeführt wurde."""
+    if args.command == "abmelden":
+        print("Abgemeldet." if delete_state(path) else "Es war keine Anmeldung gespeichert.", file=out)
+        if history_path(path).exists():
+            print(f"Der Verlauf {history_path(path)} bleibt erhalten; zum Löschen die Datei entfernen.", file=out)
+    elif args.command == "kontingent":
+        print("\n".join(_quota_lines(path, time.time())), file=out)
+    elif args.command == "verlauf":
+        print(_history_output(args, path), file=out)
+    else:
+        return False
+    return True
 
 
 def run(
@@ -82,9 +164,7 @@ def run(
     args = build_parser().parse_args(argv)
     path = state_path(args.state)
     try:
-        if args.command == "abmelden":
-            removed = delete_state(path)
-            print("Abgemeldet." if removed else "Es war keine Anmeldung gespeichert.", file=out)
+        if _offline(args, path, out):
             return 0
         with http_factory() as http:
             if args.command == "anmelden":
@@ -96,6 +176,8 @@ def run(
         print(f"Fehler: {error}", file=err)
     except httpx.HTTPError as error:
         print(f"Netzwerkfehler: {type(error).__name__}", file=err)
+    except OSError as error:
+        print(f"Dateifehler: {error.strerror or error} ({error.filename or 'unbekannte Datei'})", file=err)
     except KeyboardInterrupt:
         print("Abgebrochen.", file=err)
     return 1
