@@ -11,12 +11,16 @@ import httpx
 from .config import API_BASE_URL, API_VERSION, validate_vin
 
 _CONTAINER_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
+_BMW_CODE = re.compile(r"CU-\d{3}")
+CONTAINER_GONE = "CU-105"  # "No permission for specified containerId": Container gelöscht
+QUOTA_EXCEEDED = "CU-429"  # Tageslimit, von BMW teils als HTTP 403 gemeldet
 
 
 class ApiError(Exception):
-    def __init__(self, message: str, status: int) -> None:
+    def __init__(self, message: str, status: int, code: str | None = None) -> None:
         super().__init__(message)
         self.status = status
+        self.code = code  # BMWs Fehlercode aus der Antwort, z. B. CU-105
 
 
 class RateLimitError(ApiError):
@@ -29,6 +33,12 @@ def _items(payload: Any, *keys: str) -> list[dict[str, Any]]:
     if not isinstance(payload, list):
         return []
     return [item for item in payload if isinstance(item, dict)]
+
+
+def _bmw_code(response: httpx.Response) -> str | None:
+    """BMWs Fehlercode (CU-…) aus dem Anfang der Antwort; nie mehr als der Code selbst."""
+    found = _BMW_CODE.search(response.content[:4096].decode("utf-8", errors="replace"))
+    return found.group(0) if found else None
 
 
 class CarDataApi:
@@ -48,19 +58,25 @@ class CarDataApi:
         if self._on_request is not None:
             self._on_request()
         status = response.status_code
-        if status == 429:
+        code = _bmw_code(response) if status >= 400 else None
+        if status == 429 or code == QUOTA_EXCEEDED:
             raise RateLimitError(
                 "Tageslimit der BMW CarData API erreicht (50 Abrufe pro Tag). Bitte später erneut versuchen; "
                 "'bmw-cardata kontingent' zeigt die eigenen Abrufe.",
                 status,
+                code,
             )
+        if code == CONTAINER_GONE:
+            raise ApiError("Der Datencontainer ist bei BMW nicht mehr vorhanden.", status, code)
         if status in (401, 403):
             raise ApiError(
                 f"Zugriff verweigert (HTTP {status}). Ist der CarData-API-Zugriff im BMW-Portal freigeschaltet?",
                 status,
+                code,
             )
         if status >= 400:
-            raise ApiError(f"BMW CarData API meldet HTTP {status} für {path.split('/')[2]}.", status)
+            suffix = f", {code}" if code else ""
+            raise ApiError(f"BMW CarData API meldet HTTP {status}{suffix} für {path.split('/')[2]}.", status, code)
         if not response.content:
             return None
         try:

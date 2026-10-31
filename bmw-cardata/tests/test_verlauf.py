@@ -132,3 +132,7 @@ def test_verlauf_folgt_keinem_symbolischen_link(tmp_path):
     with pytest.raises(OSError):
         append_entry(pfad, _eintrag("2026-10-30T10:00:00Z", 1))
     assert ziel.read_text() == ""
+
+
+def test_csv_kopf_nennt_die_einheit_des_reifendrucks():
+    assert "Reifendruck vorne links (kPa)" in history_csv([]).splitlines()[0].split(";")

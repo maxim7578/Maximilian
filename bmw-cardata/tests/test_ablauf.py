@@ -1,10 +1,12 @@
 import pytest
 from conftest import VIN, VIN2
 
-from bmw_cardata.api import ApiError, CarDataApi, RateLimitError
-from bmw_cardata.descriptors import CONTAINER_NAME, CONTAINER_PURPOSE, all_descriptors, descriptor_signature
+from bmw_cardata.api import ApiError, CarDataApi
+from bmw_cardata.descriptors import descriptor_signature
 from bmw_cardata.service import (
+    Fetched,
     Session,
+    StatusResult,
     ensure_container,
     fetch_status,
     fetch_vehicle_status,
@@ -17,11 +19,6 @@ from bmw_cardata.state import load_state, save_state
 TOKEN_PATH = "/gcdm/oauth/token"
 CONTAINERS = "/customers/containers"
 TELEMATIK = f"/customers/vehicles/{VIN}/telematicData"
-
-
-def _passender_container(container_id="behaelter-alt"):
-    return {"containerId": container_id, "name": CONTAINER_NAME, "purpose": CONTAINER_PURPOSE,
-            "technicalDescriptors": list(all_descriptors())}
 
 
 def _sitzung(bmw, zustand):
@@ -44,74 +41,57 @@ def test_abgelaufene_tokens_werden_erneuert_und_gespeichert(bmw, make_state, tmp
 
 def test_gespeicherter_container_wird_ohne_anfrage_genutzt(bmw, make_state, tmp_path):
     sitzung = _sitzung(bmw, make_state(container_id="behaelter-1"))
-    assert ensure_container(sitzung, tmp_path / "s.json") is sitzung
+    assert ensure_container(sitzung, tmp_path / "s.json") == (sitzung, None)
     assert bmw.requests == []
 
 
-def test_vorhandener_passender_container_wird_wiederverwendet(bmw, make_state, tmp_path):
+def test_neuer_container_wird_mit_signatur_gespeichert(bmw, make_state, tmp_path):
     pfad = tmp_path / "s.json"
-    fremd = {"containerId": "fremd", "name": "Anderes", "purpose": "x"}
-    bmw.add("GET", CONTAINERS, body=[fremd, _passender_container()])
-    sitzung = ensure_container(_sitzung(bmw, make_state()), pfad)
-    assert sitzung.state.container_id == "behaelter-alt"
-    assert load_state(pfad).container_signature == descriptor_signature()
-    assert [r.method for r in bmw.requests] == ["GET"]
-
-
-def test_container_mit_anderen_datenpunkten_wird_ersetzt(bmw, make_state, tmp_path):
-    veraltet = {**_passender_container(), "technicalDescriptors": ["vehicle.alt"]}
-    bmw.add("GET", CONTAINERS, body=[veraltet])
-    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=204)
+    bmw.add("GET", CONTAINERS, body=[])
     bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
-    sitzung = ensure_container(_sitzung(bmw, make_state()), tmp_path / "s.json")
+    sitzung, hinweis = ensure_container(_sitzung(bmw, make_state()), pfad)
+    assert hinweis is None
+    assert (load_state(pfad).container_id, load_state(pfad).container_signature) == ("behaelter-neu", descriptor_signature())
     assert sitzung.state.container_id == "behaelter-neu"
-    assert [r.method for r in bmw.requests] == ["GET", "DELETE", "POST"]
 
 
-def test_gespeicherter_container_mit_alter_signatur_wird_ersetzt(bmw, make_state, tmp_path):
+def test_abgelehnter_neuer_container_lässt_den_alten_in_gebrauch(bmw, make_state, tmp_path):
     pfad = tmp_path / "s.json"
-    alt = make_state().with_container("behaelter-alt", "alte-signatur")
-    ohne_liste = {"containerId": "behaelter-alt", "name": CONTAINER_NAME, "purpose": CONTAINER_PURPOSE}
-    bmw.add("GET", CONTAINERS, body=[ohne_liste, {"containerId": "fremd", "name": "Anderes", "purpose": "x"}])
-    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=204)
-    bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
-    sitzung = ensure_container(_sitzung(bmw, alt), pfad)
-    assert sitzung.state.container_id == "behaelter-neu"
-    assert load_state(pfad).container_signature == descriptor_signature()
-    assert [r.method for r in bmw.requests] == ["GET", "DELETE", "POST"]
-
-
-def test_fehler_beim_löschen_alter_container_halten_nicht_auf(bmw, make_state, tmp_path):
-    veraltet = {**_passender_container(), "technicalDescriptors": ["vehicle.alt"]}
-    bmw.add("GET", CONTAINERS, body=[veraltet])
-    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=500)
-    bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
-    assert ensure_container(_sitzung(bmw, make_state()), tmp_path / "s.json").state.container_id == "behaelter-neu"
-
-
-def test_tageslimit_beim_löschen_wird_gemeldet(bmw, make_state, tmp_path):
-    veraltet = {**_passender_container(), "technicalDescriptors": ["vehicle.alt"]}
-    bmw.add("GET", CONTAINERS, body=[veraltet])
-    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=429)
-    with pytest.raises(RateLimitError):
-        ensure_container(_sitzung(bmw, make_state()), tmp_path / "s.json")
+    bmw.add("GET", CONTAINERS, body=[])
+    bmw.add("POST", CONTAINERS, status=400)
+    bmw.add("GET", TELEMATIK, body={"telematicData": {"a.b": {"value": 1}}})
+    alt = make_state().with_container("behaelter-alt", None)
+    ergebnis = fetch_status(_sitzung(bmw, alt), VIN, pfad)
+    assert ergebnis.data == {"a.b": {"value": 1}}
+    assert "abgelehnt" in ergebnis.notes[0]
+    assert load_state(pfad).container_id == "behaelter-alt"
+    assert bmw.requests[-1].url.params["containerId"] == "behaelter-alt"
 
 
 def test_status_holt_telematik_mit_gespeichertem_container(bmw, make_state, tmp_path):
     bmw.add("GET", TELEMATIK, body={"telematicData": {"a.b": {"value": 1}}})
-    daten = fetch_status(_sitzung(bmw, make_state(container_id="behaelter-1")), VIN, tmp_path / "s.json")
-    assert daten == {"a.b": {"value": 1}}
+    ergebnis = fetch_status(_sitzung(bmw, make_state(container_id="behaelter-1")), VIN, tmp_path / "s.json")
+    assert ergebnis == Fetched({"a.b": {"value": 1}})
 
 
-def test_verschwundener_container_wird_einmal_neu_angelegt(bmw, make_state, tmp_path):
+@pytest.mark.parametrize("antwort", [{"status": 404}, {"status": 403, "body": {"code": "CU-105"}}])
+def test_verschwundener_container_wird_einmal_neu_angelegt(bmw, make_state, tmp_path, antwort):
     pfad = tmp_path / "s.json"
-    bmw.add("GET", TELEMATIK, status=404)
+    bmw.add("GET", TELEMATIK, **antwort)
     bmw.add("GET", TELEMATIK, body={"telematicData": {"a.b": {"value": 2}}})
     bmw.add("GET", CONTAINERS, body=[])
     bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
-    daten = fetch_status(_sitzung(bmw, make_state(container_id="behaelter-weg")), VIN, pfad)
-    assert daten == {"a.b": {"value": 2}}
+    ergebnis = fetch_status(_sitzung(bmw, make_state(container_id="behaelter-weg")), VIN, pfad)
+    assert ergebnis.data == {"a.b": {"value": 2}}
     assert load_state(pfad).container_id == "behaelter-neu"
+    assert not any(r.method == "DELETE" for r in bmw.requests)
+
+
+def test_http_400_legt_keinen_neuen_container_an(bmw, make_state, tmp_path):
+    bmw.add("GET", TELEMATIK, status=400, body={"code": "CU-400"})
+    with pytest.raises(ApiError, match="CU-400"):
+        fetch_status(_sitzung(bmw, make_state(container_id="b")), VIN, tmp_path / "s.json")
+    assert len(bmw.requests) == 1
 
 
 def test_andere_fehler_beim_status_werden_weitergereicht(bmw, make_state, tmp_path):
@@ -200,8 +180,8 @@ def test_veraltete_gemerkte_vin_wird_durch_die_aktuelle_ersetzt(bmw, make_state,
     bmw.add("GET", f"/customers/vehicles/{VIN2}/telematicData", status=403)
     bmw.add("GET", "/customers/vehicles/mappings", body=[{"vin": VIN}])
     bmw.add("GET", TELEMATIK, body={"telematicData": {"a.b": {"value": 3}}})
-    pfad, (vin, daten) = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN2)
-    assert (vin, daten) == (VIN, {"a.b": {"value": 3}})
+    pfad, ergebnis = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN2)
+    assert (ergebnis.vin, ergebnis.data) == (VIN, {"a.b": {"value": 3}})
     assert load_state(pfad).vin == VIN
     assert len(bmw.requests) == 3
     assert not any(r.url.path == CONTAINERS for r in bmw.requests)
@@ -209,8 +189,8 @@ def test_veraltete_gemerkte_vin_wird_durch_die_aktuelle_ersetzt(bmw, make_state,
 
 def test_gemerkte_vin_ohne_fehler_kostet_einen_abruf(bmw, make_state, tmp_path):
     bmw.add("GET", TELEMATIK, body={"telematicData": {}})
-    _, (vin, _) = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN)
-    assert vin == VIN and len(bmw.requests) == 1
+    _, ergebnis = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN)
+    assert ergebnis == StatusResult(VIN, {}) and len(bmw.requests) == 1
 
 
 def test_gemerkte_vin_und_verschwundener_container_werden_beide_repariert(bmw, make_state, tmp_path):
@@ -220,8 +200,8 @@ def test_gemerkte_vin_und_verschwundener_container_werden_beide_repariert(bmw, m
     bmw.add("GET", "/customers/vehicles/mappings", body=[{"vin": VIN}])
     bmw.add("GET", CONTAINERS, body=[])
     bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
-    pfad, (vin, daten) = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN)
-    assert daten == {"a.b": {"value": 4}}
+    pfad, ergebnis = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN)
+    assert ergebnis.data == {"a.b": {"value": 4}}
     assert load_state(pfad).container_id == "behaelter-neu"
     assert load_state(pfad).vin == VIN
 
@@ -234,5 +214,5 @@ def test_andere_fehler_mit_gemerkter_vin_werden_weitergereicht(bmw, make_state, 
 
 def test_angegebene_vin_nutzt_den_normalen_ablauf(bmw, make_state, tmp_path):
     bmw.add("GET", TELEMATIK, body={"telematicData": {}})
-    vin, _ = fetch_vehicle_status(_sitzung(bmw, make_state(container_id="b")), VIN, lambda v: v[0], tmp_path / "s.json")
-    assert vin == VIN
+    ergebnis = fetch_vehicle_status(_sitzung(bmw, make_state(container_id="b")), VIN, lambda v: v[0], tmp_path / "s.json")
+    assert ergebnis.vin == VIN

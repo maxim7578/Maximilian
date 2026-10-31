@@ -18,7 +18,7 @@ BMW CarData.
   Klimatisierung, kein Ladestart.
 - **Nur EU-Konten.** Das CarData-Portal gibt es nicht in jedem Land.
 - **50 Abrufe pro Tag** pro Konto. `fahrzeuge` und `basisdaten` kosten je 1 Abruf, `status`
-  1 Abruf. Nur beim allerersten `status` ohne Fahrgestellnummer kommt 1 Abruf für die
+  1 Abruf, einmal am Tag 1 weiteren für die Wartungsdaten. Nur beim allerersten `status` ohne Fahrgestellnummer kommt 1 Abruf für die
   Fahrzeugliste dazu (danach ist das Fahrzeug gemerkt) und einmalig 1 bis 2 Abrufe für den
   Datencontainer. `verlauf` und `kontingent` kosten nichts. Ist das Limit erreicht, meldet BMW
   HTTP 429, der Client zeigt dann „Tageslimit erreicht“. `live` nutzt den Datenstrom und
@@ -184,14 +184,24 @@ werden automatisch erneuert; lehnt BMW die Erneuerung ab, einfach neu `anmelden`
 ## Datencontainer
 
 Für Telematikdaten verlangt BMW einen „Container“, der festlegt, welche Datenpunkte
-geliefert werden. Der Client legt beim ersten `status` einen Container namens
-`bmw-cardata-cli Status` an und merkt sich dessen ID zusammen mit einem Fingerabdruck der
-Datenpunkte. Ändern sich die Datenpunkte (etwa nach einem Update dieses Clients), legt er
-einmalig einen neuen Container an und löscht seine alten; das kostet einmal etwa 3 der 50
-Tagesabrufe. Welche Datenpunkte abgefragt werden, steht in `src/bmw_cardata/descriptors.py`.
+geliefert werden. Der Client nutzt zwei:
 
-Nutzen zwei Rechner mit unterschiedlichen Versionen dieses Clients dasselbe Konto, legen
-sie den Container abwechselnd neu an. Dann beide auf denselben Stand bringen.
+- `bmw-cardata-cli Status` mit allen Werten außer den Wartungsdaten, bei jedem `status`.
+- `bmw-cardata-cli Wartung` mit nächstem Service und Hauptuntersuchung, höchstens einmal am
+  Tag je Fahrzeug; die Werte liegen dazwischen in `wartung.json`. Die Home-Assistant-
+  Integration hat diese Datenpunkte getrennt, nachdem sie am 20.10.2026 jeden Abruf ihres
+  Containers mit `CU-400` scheitern ließen. Ein solcher Fehler kostet hier nur die zwei
+  Wartungswerte (Hinweis in der Ausgabe, neuer Versuch am nächsten Tag).
+
+Der Client merkt sich jeden Container mit einem Fingerabdruck der Datenpunkte. Ändern sie
+sich (etwa nach einem Update), legt er einmalig einen neuen an und löscht danach den alten,
+den er selbst gespeichert hatte; das kostet einmal etwa 3 Abrufe. Container anderer
+Installationen mit gleichem Namen bleibt unberührt. Lehnt BMW den neuen Container ab,
+bleibt der alte in Gebrauch, und erst am nächsten Tag folgt ein neuer Versuch.
+
+Meldet BMW einen Container als gelöscht (HTTP 404 oder `CU-105`), wird er einmal neu
+angelegt. Andere Fehler wie HTTP 400 legen keinen neuen an, weil das jedes Mal Abrufe
+kosten würde. Welche Datenpunkte abgefragt werden, steht in `src/bmw_cardata/descriptors.py`.
 
 ## Tests
 

@@ -12,6 +12,12 @@ from dataclasses import dataclass
 
 CONTAINER_NAME = "bmw-cardata-cli Status"
 CONTAINER_PURPOSE = "Fahrzeugstatus fuer den Kommandozeilen-Client"
+# Wartungsdaten (vehicle.status.*) liegen in einem eigenen Container, der höchstens einmal
+# am Tag gelesen wird: Am 20.10.2026 ließen sie laut Home-Assistant-Integration jeden
+# Abruf ihres Containers mit CU-400 scheitern. So kostet ein solcher Fehler nur sie.
+SERVICE_CONTAINER_NAME = "bmw-cardata-cli Wartung"
+SERVICE_CONTAINER_PURPOSE = "Wartungstermine fuer den Kommandozeilen-Client"
+SERVICE_DESCRIPTORS = ("vehicle.status.serviceDistance.next", "vehicle.status.serviceTime.inspectionDateLegal")
 
 LATITUDE = "vehicle.cabin.infotainment.navigation.currentLocation.latitude"
 LONGITUDE = "vehicle.cabin.infotainment.navigation.currentLocation.longitude"
@@ -21,6 +27,7 @@ LONGITUDE = "vehicle.cabin.infotainment.navigation.currentLocation.longitude"
 class Field:
     label: str
     descriptors: tuple[str, ...]  # der erste vorhandene Wert wird angezeigt
+    raw_unit: str = ""  # Einheit der Rohwerte, wo sie feststeht (für den CSV-Kopf)
 
 
 @dataclass(frozen=True)
@@ -35,7 +42,7 @@ def _f(label: str, *descriptors: str) -> Field:
 
 
 def _tire(position: str, axle: str, side: str) -> Field:
-    return _f(f"Reifendruck {position}", f"vehicle.chassis.axle.{axle}.wheel.{side}.tire.pressure")
+    return Field(f"Reifendruck {position}", (f"vehicle.chassis.axle.{axle}.wheel.{side}.tire.pressure",), "kPa")
 
 
 STATUS_GROUPS: tuple[Group, ...] = (
@@ -94,8 +101,8 @@ STATUS_GROUPS: tuple[Group, ...] = (
     Group("Wartung und Bordnetz", (
         _f("12-V-Batterie", "vehicle.electricalSystem.battery.stateOfCharge"),
         _f("12-V-Spannung", "vehicle.electricalSystem.battery.voltage"),
-        _f("Nächster Service in", "vehicle.status.serviceDistance.next"),
-        _f("Nächste Hauptuntersuchung", "vehicle.status.serviceTime.inspectionDateLegal"),
+        _f("Nächster Service in", SERVICE_DESCRIPTORS[0]),
+        _f("Nächste Hauptuntersuchung", SERVICE_DESCRIPTORS[1]),
     )),
     Group("Position", (
         _f("Breitengrad", LATITUDE),
@@ -110,7 +117,12 @@ def all_descriptors() -> tuple[str, ...]:
     return tuple(d for field in STATUS_FIELDS for d in field.descriptors)
 
 
+def polled_descriptors() -> tuple[str, ...]:
+    """Die Datenpunkte des Status-Containers: alle außer den Wartungsdaten."""
+    return tuple(d for d in all_descriptors() if d not in SERVICE_DESCRIPTORS)
+
+
 def descriptor_signature(descriptors: tuple[str, ...] | None = None) -> str:
     """Kurzer Fingerabdruck der Datenpunkte; ändert er sich, braucht es einen neuen Container."""
-    chosen = all_descriptors() if descriptors is None else descriptors
+    chosen = polled_descriptors() if descriptors is None else descriptors
     return hashlib.sha256("\n".join(sorted(chosen)).encode("utf-8")).hexdigest()[:16]

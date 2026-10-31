@@ -132,3 +132,24 @@ def test_ungültige_container_id_erreicht_nie_den_server(bmw):
     with pytest.raises(ApiError):
         _api(bmw).delete_container("../vehicles")
     assert bmw.requests == []
+
+
+def test_gelöschter_container_wird_als_cu_105_erkannt(bmw):
+    bmw.add("GET", TELEMATIK, status=403, body={"exveErrorId": "CU-105", "exveErrorMsg": "No permission"})
+    with pytest.raises(ApiError) as fehler:
+        _api(bmw).telematic_data(VIN, "b")
+    assert fehler.value.code == "CU-105"
+    assert "nicht mehr vorhanden" in str(fehler.value)
+
+
+def test_tageslimit_als_http_403_mit_cu_429(bmw):
+    bmw.add("GET", MAPPINGS, status=403, body={"exveErrorId": "CU-429"})
+    with pytest.raises(RateLimitError):
+        _api(bmw).vehicles()
+
+
+def test_fehlercode_steht_in_der_meldung(bmw):
+    bmw.add("GET", TELEMATIK, status=400, body={"exveErrorId": "CU-400"})
+    with pytest.raises(ApiError, match="CU-400") as fehler:
+        _api(bmw).telematic_data(VIN, "b")
+    assert fehler.value.code == "CU-400"

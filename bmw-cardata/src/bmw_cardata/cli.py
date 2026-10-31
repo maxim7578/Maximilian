@@ -26,6 +26,7 @@ from .config import (
     validate_vin,
 )
 from .history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
+from .maintenance import maintenance_path, maintenance_values
 from .report import basic_data_lines, status_json, status_lines
 from .service import Session, fetch_vehicle_status, open_session, remember_vehicles
 from .state import State, StateError, delete_state, load_state, save_state
@@ -111,13 +112,17 @@ def _utc_stamp(now: float) -> str:
 
 def _status(args: argparse.Namespace, session: Session, path: Path) -> list[str]:
     explicit = validate_vin(args.vin) if args.vin else None
-    vin, data = fetch_vehicle_status(session, explicit, _only_vehicle, path)
+    result = fetch_vehicle_status(session, explicit, _only_vehicle, path)
+    vin = result.vin
+    service, service_notes = maintenance_values(session.api, vin, maintenance_path(path), time.time())
+    data = {**service, **result.data}
+    notes = [*result.notes, *service_notes]
     stamp = _utc_stamp(time.time())
     problem = _save_history(path, Entry(stamp, vin, data)) if args.speichern else None
     if args.json:
-        return [status_json(vin, data, stamp)]
+        return [status_json(vin, data, stamp, notes)]
     saved = [problem or "Im Verlauf gespeichert."] if args.speichern else []
-    return [f"Fahrzeug {vin}", *status_lines(data), *saved]
+    return [f"Fahrzeug {vin}", *status_lines(data), *saved, *(f"Hinweis: {note}" for note in notes)]
 
 
 def _save_history(path: Path, entry: Entry) -> str | None:

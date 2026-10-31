@@ -116,7 +116,9 @@ def test_öffnungswerte_werden_übersetzt():
 def test_reifendruck_nur_bei_kpa_und_zahlen_umgerechnet():
     assert format_value({"value": "240", "unit": "kPa"}) == "2.40 bar (240 kPa)"
     assert format_value({"value": "hoch", "unit": "kPa"}) == "hoch kPa"
-    assert format_value({"value": True, "unit": "kPa"}) == "ja kPa"
+    assert format_value({"value": True, "unit": "kPa"}) == "ja"
+    assert format_value({"value": "INVALID", "unit": "kPa"}) == "ungültig"
+    assert format_value({"value": "nan", "unit": "kPa"}) == "nan kPa"
     assert format_value({"value": 2.4, "unit": "bar"}) == "2.4 bar"
 
 

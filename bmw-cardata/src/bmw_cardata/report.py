@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import unicodedata
 from typing import Any
 
@@ -28,27 +29,31 @@ def printable(text: str) -> str:
 
 
 def _number(value: Any) -> float | None:
-    if isinstance(value, bool):
-        return None
+    """Eine endliche Zahl; Ja/Nein-Werte kommen hier nicht an (siehe format_value)."""
     try:
-        return float(value)
+        number = float(value)
     except (TypeError, ValueError):
         return None
+    return number if math.isfinite(number) else None
 
 
-def _word(value: Any) -> str:
+def _word(value: Any) -> str | None:
+    """Die deutsche Übersetzung, falls der Wert ein bekanntes Wort oder Ja/Nein ist."""
     if isinstance(value, bool):
         return _BOOLEANS[value]
     if isinstance(value, str):
-        return _WORDS.get(value.strip().lower(), value)
-    return str(value)
+        return _WORDS.get(value.strip().lower())
+    return None
 
 
 def format_value(entry: dict[str, Any]) -> str | None:
     value = entry.get("value")
     if value is None or value == "":
         return None
-    text = _word(value)
+    word = _word(value)
+    if word is not None:
+        return word  # ein Wort hat keine Einheit, auch wenn BMW eine mitschickt
+    text = str(value)
     unit = entry.get("unit")
     pressure = _number(value) if unit == "kPa" else None
     if pressure is not None:
@@ -119,9 +124,11 @@ def map_link(data: dict[str, dict[str, Any]]) -> str | None:
     return f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=17/{lat}/{lon}"
 
 
-def status_json(vin: str, data: dict[str, dict[str, Any]], fetched_at: str) -> str:
+def status_json(vin: str, data: dict[str, dict[str, Any]], fetched_at: str, notes: list[str] | None = None) -> str:
     """Maschinenlesbarer Status: nur die abgefragten Datenpunkte, unverändert von BMW."""
     wanted = set(all_descriptors())
     values = {key: entry for key, entry in sorted(data.items()) if key in wanted}
-    payload = {"fahrgestellnummer": vin, "abgerufen": fetched_at, "werte": values}
+    payload: dict[str, Any] = {"fahrgestellnummer": vin, "abgerufen": fetched_at, "werte": values}
+    if notes:
+        payload["hinweise"] = notes
     return json.dumps(payload, indent=2)  # maskiert Steuerzeichen aus dem Netz

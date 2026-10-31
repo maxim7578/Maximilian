@@ -20,7 +20,7 @@ class State:
     client_id: str
     tokens: Tokens
     container_id: str | None = None
-    vin: str | None = None
+    vin: str | None = None  # gemerkt, solange das Konto genau ein Fahrzeug hat
     container_signature: str | None = None  # Datenpunkte, mit denen der Container angelegt wurde  # gemerkt, solange das Konto genau ein Fahrzeug hat
 
     def with_tokens(self, tokens: Tokens) -> State:

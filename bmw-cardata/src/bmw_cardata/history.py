@@ -115,7 +115,8 @@ def history_csv(entries: list[Entry]) -> str:
     """Alle Einträge als CSV mit Semikolon (öffnet in deutschem Excel direkt in Spalten)."""
     out = io.StringIO()
     writer = csv.writer(out, delimiter=";", lineterminator="\n")
-    writer.writerow(["zeit", "fahrgestellnummer", *(field.label for field in STATUS_FIELDS)])
+    header = [f"{field.label} ({field.raw_unit})" if field.raw_unit else field.label for field in STATUS_FIELDS]
+    writer.writerow(["zeit", "fahrgestellnummer", *header])
     for entry in entries:
         writer.writerow([entry.time, entry.vin, *(_cell(entry, field) for field in STATUS_FIELDS)])
     return out.getvalue()
