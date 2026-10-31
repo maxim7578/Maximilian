@@ -62,6 +62,21 @@ jobs:
           if (Test-Path $bericht) { Get-Content $bericht } else { Write-Output "Kein Bericht geschrieben (Absturz vor dem Python-Start?)" }
           if ($app.ExitCode -ne 0) { exit 1 }
 
+      - name: Diagnose, falls der Selbsttest scheitert
+        if: failure()
+        run: |
+          Write-Output "--- Python direkt (ohne PyInstaller) ---"
+          python windows/app.py --selbsttest "$env:RUNNER_TEMP\py.txt"
+          Write-Output "Exit-Code: $LASTEXITCODE"
+          Get-Content "$env:RUNNER_TEMP\py.txt" -ErrorAction SilentlyContinue
+          Write-Output "--- Dieselbe App mit Konsolenfenster ---"
+          python -m PyInstaller --noconfirm --onefile --console --name BMW-CarData-Diagnose --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/app.py *> $null
+          dist\BMW-CarData-Diagnose.exe --selbsttest "$env:RUNNER_TEMP\diag.txt"
+          Write-Output "Exit-Code: $LASTEXITCODE"
+          Get-Content "$env:RUNNER_TEMP\diag.txt" -ErrorAction SilentlyContinue
+          Write-Output "--- PyInstaller-Warnungen (Auszug) ---"
+          Get-Content build\BMW-CarData\warn-BMW-CarData.txt -ErrorAction SilentlyContinue | Select-Object -First 40
+
       - name: App starten und prüfen, dass sie läuft
         run: |
           $app = Start-Process -FilePath dist\BMW-CarData.exe -PassThru
