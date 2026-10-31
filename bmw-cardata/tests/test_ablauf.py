@@ -3,8 +3,16 @@ from conftest import VIN, VIN2
 
 from bmw_cardata.api import ApiError, CarDataApi
 from bmw_cardata.descriptors import CONTAINER_NAME, CONTAINER_PURPOSE, all_descriptors
-from bmw_cardata.service import Session, ensure_container, fetch_status, open_session, remember_vehicles, resolve_vin
-from bmw_cardata.state import load_state
+from bmw_cardata.service import (
+    Session,
+    ensure_container,
+    fetch_status,
+    fetch_vehicle_status,
+    open_session,
+    remember_vehicles,
+    resolve_vin,
+)
+from bmw_cardata.state import load_state, save_state
 
 TOKEN_PATH = "/gcdm/oauth/token"
 CONTAINERS = "/customers/containers"
@@ -137,3 +145,63 @@ def test_abrufe_werden_über_die_sitzung_gemeldet(bmw, make_state, tmp_path):
     sitzung = open_session(bmw.client(), make_state(), tmp_path / "s.json", 0.0, on_request=lambda: gezaehlt.append(1))
     sitzung.api.vehicles()
     assert gezaehlt == [1]
+
+
+def test_fahrgestellnummer_aus_der_liste_wird_vereinheitlicht(bmw, make_state, tmp_path):
+    bmw.add("GET", "/customers/vehicles/mappings", body=[{"vin": VIN.lower()}])
+    sitzung, vin = resolve_vin(_sitzung(bmw, make_state()), None, lambda v: v[0], tmp_path / "s.json")
+    assert vin == VIN and sitzung.state.vin == VIN
+
+
+def test_ungültige_fahrgestellnummer_aus_der_liste_wird_nicht_gemerkt(bmw, make_state, tmp_path):
+    sitzung = remember_vehicles(_sitzung(bmw, make_state()), ["kaputt"], tmp_path / "s.json")
+    assert sitzung.state.vin is None
+
+
+def _status_mit_gemerkter_vin(bmw, make_state, tmp_path, gemerkt):
+    pfad = tmp_path / "s.json"
+    zustand = make_state(container_id="behaelter-1").with_vin(gemerkt)
+    save_state(pfad, zustand)
+    return pfad, fetch_vehicle_status(_sitzung(bmw, zustand), None, lambda v: v[0], pfad)
+
+
+def test_veraltete_gemerkte_vin_wird_durch_die_aktuelle_ersetzt(bmw, make_state, tmp_path):
+    bmw.add("GET", f"/customers/vehicles/{VIN2}/telematicData", status=403)
+    bmw.add("GET", "/customers/vehicles/mappings", body=[{"vin": VIN}])
+    bmw.add("GET", TELEMATIK, body={"telematicData": {"a.b": {"value": 3}}})
+    pfad, (vin, daten) = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN2)
+    assert (vin, daten) == (VIN, {"a.b": {"value": 3}})
+    assert load_state(pfad).vin == VIN
+    assert len(bmw.requests) == 3
+    assert not any(r.url.path == CONTAINERS for r in bmw.requests)
+
+
+def test_gemerkte_vin_ohne_fehler_kostet_einen_abruf(bmw, make_state, tmp_path):
+    bmw.add("GET", TELEMATIK, body={"telematicData": {}})
+    _, (vin, _) = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN)
+    assert vin == VIN and len(bmw.requests) == 1
+
+
+def test_gemerkte_vin_und_verschwundener_container_werden_beide_repariert(bmw, make_state, tmp_path):
+    bmw.add("GET", TELEMATIK, status=404)
+    bmw.add("GET", TELEMATIK, status=404)
+    bmw.add("GET", TELEMATIK, body={"telematicData": {"a.b": {"value": 4}}})
+    bmw.add("GET", "/customers/vehicles/mappings", body=[{"vin": VIN}])
+    bmw.add("GET", CONTAINERS, body=[])
+    bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
+    pfad, (vin, daten) = _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN)
+    assert daten == {"a.b": {"value": 4}}
+    assert load_state(pfad).container_id == "behaelter-neu"
+    assert load_state(pfad).vin == VIN
+
+
+def test_andere_fehler_mit_gemerkter_vin_werden_weitergereicht(bmw, make_state, tmp_path):
+    bmw.add("GET", TELEMATIK, status=500)
+    with pytest.raises(ApiError):
+        _status_mit_gemerkter_vin(bmw, make_state, tmp_path, VIN)
+
+
+def test_angegebene_vin_nutzt_den_normalen_ablauf(bmw, make_state, tmp_path):
+    bmw.add("GET", TELEMATIK, body={"telematicData": {}})
+    vin, _ = fetch_vehicle_status(_sitzung(bmw, make_state(container_id="b")), VIN, lambda v: v[0], tmp_path / "s.json")
+    assert vin == VIN

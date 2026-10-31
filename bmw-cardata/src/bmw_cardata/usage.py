@@ -31,11 +31,15 @@ class Usage:
         return max(0, DAILY_LIMIT - len(self.recent(now)))
 
     def next_free_at(self, now: float) -> float | None:
-        """Wann der älteste gezählte Abruf aus dem Fenster fällt, falls alles verbraucht ist."""
-        recent = self.recent(now)
+        """Ab wann wieder weniger als DAILY_LIMIT Abrufe im Fenster liegen, falls alles verbraucht ist.
+
+        Auch abgelehnte Abrufe (HTTP 429) werden gezählt, es können also mehr als
+        DAILY_LIMIT im Fenster liegen; frei wird es erst, wenn genug davon herausfallen.
+        """
+        recent = sorted(self.recent(now))
         if len(recent) < DAILY_LIMIT:
             return None
-        return min(recent) + WINDOW_SECONDS
+        return recent[len(recent) - DAILY_LIMIT] + WINDOW_SECONDS
 
 
 def usage_path(state_file: Path) -> Path:
@@ -59,4 +63,8 @@ def save_usage(path: Path, usage: Usage) -> None:
 
 
 def record_call(path: Path, now: float) -> None:
-    save_usage(path, load_usage(path).record(now))
+    """Erfasst einen Abruf. Der Zähler ist nur eine Anzeige: Schreibfehler brechen nichts ab."""
+    try:
+        save_usage(path, load_usage(path).record(now))
+    except OSError:
+        pass

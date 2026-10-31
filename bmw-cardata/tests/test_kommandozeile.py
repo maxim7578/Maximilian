@@ -254,3 +254,32 @@ def test_leerer_verlauf_gibt_einen_hinweis(bmw, tmp_path):
 def test_ungültige_anzahl_wird_abgelehnt(bmw, tmp_path, anzahl):
     with pytest.raises(SystemExit):
         _starte(bmw, tmp_path / "state.json", "verlauf", "--anzahl", anzahl)
+
+
+def test_abmelden_weist_auf_den_verbleibenden_verlauf_hin(bmw, angemeldet):
+    append_entry(history_path(angemeldet), Entry("2026-10-30T10:00:00Z", VIN, {}))
+    ausgabe = _starte(bmw, angemeldet, "abmelden")[1]
+    assert "Abgemeldet." in ausgabe and "verlauf.jsonl" in ausgabe
+    assert history_path(angemeldet).exists()
+
+
+def test_nicht_speicherbarer_verlauf_zeigt_trotzdem_den_status(bmw, angemeldet, monkeypatch):
+    def kaputt(*args):
+        raise PermissionError("kein Zugriff")
+
+    monkeypatch.setattr(cli, "append_entry", kaputt)
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    code, ausgabe, _ = _starte(bmw, angemeldet, "status", VIN, "--speichern")
+    assert code == 0
+    assert "Kilometerstand: 1000 km" in ausgabe
+    assert "Verlauf konnte nicht gespeichert werden" in ausgabe
+
+
+def test_unlesbare_datei_ergibt_eine_fehlermeldung_statt_absturz(bmw, angemeldet, monkeypatch):
+    def kaputt(*args):
+        raise PermissionError("kein Zugriff")
+
+    monkeypatch.setattr(cli, "load_entries", kaputt)
+    code, _, fehler = _starte(bmw, angemeldet, "verlauf")
+    assert code == 1
+    assert fehler.startswith("Dateifehler:")

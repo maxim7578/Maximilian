@@ -1,6 +1,8 @@
 import stat
 from datetime import timezone
 
+import pytest
+
 from conftest import VIN, VIN2
 
 from bmw_cardata.history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
@@ -102,3 +104,29 @@ def test_nicht_numerischer_kilometerstand_ergibt_keine_differenz():
 def test_kommazahlen_bei_der_differenz():
     eintraege = [_eintrag("2026-10-30T10:00:00Z", 10.5), _eintrag("2026-10-31T10:00:00Z", 12)]
     assert history_lines(eintraege, limit=10, tz=timezone.utc)[1].endswith("(+1.5 km)")
+
+
+def test_ungültiges_utf8_im_verlauf_bricht_nicht_ab(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    append_entry(pfad, _eintrag("2026-10-30T10:00:00Z", 1))
+    with pfad.open("ab") as datei:
+        datei.write(b"\xff\xfe kaputt\n")
+    assert len(load_entries(pfad)) == 1
+
+
+def test_vorhandene_offene_verlaufsdatei_wird_auf_600_gesetzt(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    pfad.write_text("")
+    pfad.chmod(0o666)
+    append_entry(pfad, _eintrag("2026-10-30T10:00:00Z", 1))
+    assert stat.S_IMODE(pfad.stat().st_mode) == 0o600
+
+
+def test_verlauf_folgt_keinem_symbolischen_link(tmp_path):
+    ziel = tmp_path / "anderswo.txt"
+    ziel.write_text("")
+    pfad = tmp_path / "verlauf.jsonl"
+    pfad.symlink_to(ziel)
+    with pytest.raises(OSError):
+        append_entry(pfad, _eintrag("2026-10-30T10:00:00Z", 1))
+    assert ziel.read_text() == ""

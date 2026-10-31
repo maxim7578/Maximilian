@@ -63,3 +63,32 @@ def test_ältere_datei_ohne_fahrgestellnummer_bleibt_lesbar(tmp_path, make_state
     del roh["vin"]
     pfad.write_text(json.dumps(roh))
     assert load_state(pfad).vin is None
+
+
+@pytest.mark.parametrize("feld, wert", [("vin", 123), ("vin", "zu-kurz"), ("container_id", ["x"])])
+def test_ungültige_gemerkte_werte_gelten_als_beschädigt(tmp_path, make_state, feld, wert):
+    pfad = tmp_path / "state.json"
+    save_state(pfad, make_state())
+    roh = json.loads(pfad.read_text())
+    roh[feld] = wert
+    pfad.write_text(json.dumps(roh))
+    with pytest.raises(StateError, match="beschädigt"):
+        load_state(pfad)
+
+
+def test_gleichzeitiges_schreiben_nutzt_eigene_zwischendateien(tmp_path, make_state, monkeypatch):
+    import bmw_cardata.files as dateien
+
+    namen = []
+    original = dateien.tempfile.mkstemp
+
+    def merken(*args, **kwargs):
+        fd, name = original(*args, **kwargs)
+        namen.append(name)
+        return fd, name
+
+    monkeypatch.setattr(dateien.tempfile, "mkstemp", merken)
+    save_state(tmp_path / "state.json", make_state())
+    save_state(tmp_path / "state.json", make_state())
+    assert len(set(namen)) == 2
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["state.json"]

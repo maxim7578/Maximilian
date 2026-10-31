@@ -79,8 +79,9 @@ Hat BMW eine Position geliefert, steht am Ende ein Link zu OpenStreetMap
 
 Hat dein Konto genau ein Fahrzeug, merkt sich der Client dessen Fahrgestellnummer beim
 ersten `status` und spart danach den Abruf der Fahrzeugliste. `fahrzeuge` frischt die
-gemerkte Nummer auf (bei mehreren Fahrzeugen wird keine gemerkt). Nach einem
-Fahrzeugwechsel also einmal `bmw-cardata fahrzeuge` aufrufen.
+gemerkte Nummer auf (bei mehreren Fahrzeugen wird keine gemerkt). Lehnt BMW das gemerkte
+Fahrzeug ab (z. B. nach einem Verkauf), vergisst der Client die Nummer, holt einmal die
+aktuelle Fahrzeugliste und versucht es damit erneut.
 
 ### Verlauf
 
@@ -94,8 +95,8 @@ mit den seit dem Eintrag davor gefahrenen Kilometern:
 ```
 
 `verlauf --csv` gibt alle Einträge mit Semikolon getrennt aus, so öffnet ein deutsches
-Excel sie direkt in Spalten. `abmelden` löscht den Verlauf nicht; zum Löschen die Datei
-`verlauf.jsonl` entfernen.
+Excel sie direkt in Spalten. `abmelden` löscht den Verlauf nicht (es weist aber darauf hin);
+zum Löschen die Datei `verlauf.jsonl` entfernen.
 
 Für einen regelmäßigen Verlauf eignet sich ein Cron-Eintrag, z. B. zweimal am Tag
 (`crontab -e`; den vollen Pfad liefert `command -v bmw-cardata`):

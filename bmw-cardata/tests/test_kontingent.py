@@ -59,3 +59,21 @@ def test_abruf_erfassen_schreibt_sofort_in_die_datei(tmp_path):
     record_call(pfad, now=10.0)
     record_call(pfad, now=20.0)
     assert load_usage(pfad).calls == (10.0, 20.0)
+
+
+def test_nächster_freier_abruf_stimmt_auch_bei_mehr_als_50_gezählten():
+    zaehlung = Usage(tuple(float(t) for t in range(100, 160)))
+    frei_ab = zaehlung.next_free_at(now=200.0)
+    assert frei_ab == 110.0 + TAG
+    assert zaehlung.remaining(now=frei_ab) == 1
+
+
+def test_nicht_schreibbarer_zähler_bricht_nichts_ab(tmp_path, monkeypatch):
+    import bmw_cardata.usage as zaehler
+
+    def kaputt(*args):
+        raise PermissionError("kein Zugriff")
+
+    monkeypatch.setattr(zaehler, "write_private", kaputt)
+    record_call(tmp_path / "abrufe.json", now=1.0)
+    assert not (tmp_path / "abrufe.json").exists()

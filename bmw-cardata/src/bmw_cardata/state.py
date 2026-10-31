@@ -7,6 +7,7 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 from .auth import Tokens
+from .config import ConfigError, validate_vin
 from .files import write_private
 
 
@@ -31,6 +32,20 @@ class State:
         return replace(self, vin=vin)
 
 
+def _optional_vin(raw: object) -> str | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, str):
+        raise TypeError("vin")
+    return validate_vin(raw)
+
+
+def _optional_text(raw: object) -> str | None:
+    if raw is not None and not isinstance(raw, str):
+        raise TypeError("container_id")
+    return raw
+
+
 def load_state(path: Path) -> State:
     if not path.exists():
         raise StateError("Nicht angemeldet. Bitte zuerst 'bmw-cardata anmelden' ausführen.")
@@ -39,10 +54,10 @@ def load_state(path: Path) -> State:
         return State(
             client_id=str(raw["client_id"]),
             tokens=Tokens(**raw["tokens"]),
-            container_id=raw.get("container_id"),
-            vin=raw.get("vin"),
+            container_id=_optional_text(raw.get("container_id")),
+            vin=_optional_vin(raw.get("vin")),
         )
-    except (OSError, ValueError, KeyError, TypeError) as err:
+    except (OSError, ValueError, KeyError, TypeError, ConfigError) as err:
         raise StateError(f"Gespeicherte Anmeldung in {path} ist beschädigt.") from err
 
 

@@ -17,7 +17,7 @@ from .auth import AuthError, create_pkce_pair, poll_for_tokens, request_device_c
 from .config import HTTP_TIMEOUT_SECONDS, ConfigError, client_id_from_env, state_path, validate_client_id, validate_vin
 from .history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
 from .report import basic_data_lines, status_json, status_lines
-from .service import Session, fetch_status, open_session, remember_vehicles, resolve_vin
+from .service import Session, fetch_vehicle_status, open_session, remember_vehicles
 from .state import State, StateError, delete_state, load_state, save_state
 from .usage import DAILY_LIMIT, load_usage, record_call, usage_path
 
@@ -86,15 +86,21 @@ def _utc_stamp(now: float) -> str:
 
 def _status(args: argparse.Namespace, session: Session, path: Path) -> list[str]:
     explicit = validate_vin(args.vin) if args.vin else None
-    session, vin = resolve_vin(session, explicit, _only_vehicle, path)
-    data = fetch_status(session, vin, path)
+    vin, data = fetch_vehicle_status(session, explicit, _only_vehicle, path)
     stamp = _utc_stamp(time.time())
-    if args.speichern:
-        append_entry(history_path(path), Entry(stamp, vin, data))
+    saved = _save_history(path, Entry(stamp, vin, data)) if args.speichern else []
     if args.json:
         return [status_json(vin, data, stamp)]
-    saved = ["Im Verlauf gespeichert."] if args.speichern else []
     return [f"Fahrzeug {vin}", *status_lines(data), *saved]
+
+
+def _save_history(path: Path, entry: Entry) -> list[str]:
+    """Speichert den Abruf; ein Dateifehler kostet nur den Verlaufseintrag, nicht die Ausgabe."""
+    try:
+        append_entry(history_path(path), entry)
+    except OSError as error:
+        return [f"Verlauf konnte nicht gespeichert werden: {error.strerror or error}"]
+    return ["Im Verlauf gespeichert."]
 
 
 def _vehicles(session: Session, path: Path) -> list[str]:
@@ -138,6 +144,8 @@ def _offline(args: argparse.Namespace, path: Path, out: TextIO) -> bool:
     """Befehle ohne Abruf bei BMW; True, wenn einer davon ausgeführt wurde."""
     if args.command == "abmelden":
         print("Abgemeldet." if delete_state(path) else "Es war keine Anmeldung gespeichert.", file=out)
+        if history_path(path).exists():
+            print(f"Der Verlauf {history_path(path)} bleibt erhalten; zum Löschen die Datei entfernen.", file=out)
     elif args.command == "kontingent":
         print("\n".join(_quota_lines(path, time.time())), file=out)
     elif args.command == "verlauf":
@@ -168,6 +176,8 @@ def run(
         print(f"Fehler: {error}", file=err)
     except httpx.HTTPError as error:
         print(f"Netzwerkfehler: {type(error).__name__}", file=err)
+    except OSError as error:
+        print(f"Dateifehler: {error.strerror or error} ({error.filename or 'unbekannte Datei'})", file=err)
     except KeyboardInterrupt:
         print("Abgebrochen.", file=err)
     return 1

@@ -51,7 +51,7 @@ def load_entries(path: Path) -> list[Entry]:
     """Alle lesbaren Einträge in gespeicherter Reihenfolge; kaputte Zeilen werden übersprungen."""
     if not path.exists():
         return []
-    lines = path.read_text(encoding="utf-8").splitlines()
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     return [entry for entry in (_parse(line) for line in lines if line.strip()) if entry is not None]
 
 
