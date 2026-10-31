@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+import httpx
+
 from .auth import Tokens
 from .config import STREAMING_SCOPE, ConfigError, validate_vin
 from .descriptors import STATUS_FIELDS
@@ -27,6 +29,14 @@ KEEPALIVE_SECONDS = 30
 LOOP_TIMEOUT_SECONDS = 1.0
 REFRESH_MARGIN_SECONDS = 300.0  # Zugang so lange vor dem Ablauf erneuern
 RECONNECT_DELAYS = (5, 10, 30, 60)
+# BMW hält eine alte Sitzung kurz fest: nach neuen Zugangsdaten und nach einer Ablehnung
+# kurz warten (wie die Home-Assistant-Integration), erst die dritte Ablehnung in Folge ist endgültig.
+CREDENTIAL_PAUSE_SECONDS = 2.0
+REFUSAL_PAUSE_SECONDS = 3.0
+MAX_REFUSALS = 3
+STABLE_SECONDS = 60.0  # so lange verbunden (oder eine Nachricht erhalten) gilt als stabil
+MAX_SHORT_DROPS = 3  # so oft kurz nach dem Aufbau getrennt: vermutlich eine zweite Verbindung
+_TRANSIENT_RENEWAL = (httpx.HTTPError, OSError)
 _AUTH_REFUSALS = frozenset({"Bad user name or password", "Not authorized"})
 _LABELS = {descriptor: field.label for field in STATUS_FIELDS for descriptor in field.descriptors}
 
@@ -82,10 +92,9 @@ def message_lines(data: dict[str, dict[str, Any]], received: datetime) -> list[s
 
 
 def tls_context() -> ssl.SSLContext:
-    """Zertifikat und Rechnername werden geprüft. TLS 1.2 wie in der Home-Assistant-Integration."""
+    """Zertifikat und Rechnername werden geprüft. BMWs Server verlangt TLS 1.3."""
     context = ssl.create_default_context()
-    context.minimum_version = ssl.TLSVersion.TLSv1_2
-    context.maximum_version = ssl.TLSVersion.TLSv1_2
+    context.minimum_version = ssl.TLSVersion.TLSv1_3
     return context
 
 
@@ -104,12 +113,19 @@ def create_client(gcid: str) -> Any:
 class _Connection:
     """Zustand einer Verbindung, gesetzt von den paho-Rückrufen."""
 
-    def __init__(self, topic: str, handle: DataHandler, notify: Callable[[str], None]) -> None:
-        self.topic = topic
-        self.handle = handle
-        self.notify = notify
+    def __init__(
+        self, topic: str, handle: DataHandler, notify: Callable[[str], None], clock: Callable[[], float]
+    ) -> None:
+        self.topic, self.handle, self.notify, self.clock = topic, handle, notify, clock
         self.connected = False
+        self.connected_at = 0.0
+        self.got_message = False
         self.refused: str | None = None
+        self.subscribe_refused = False
+        self.short_drops = 0
+
+    def stable(self) -> bool:
+        return self.connected and (self.got_message or self.clock() - self.connected_at >= STABLE_SECONDS)
 
     def on_connect(self, client: Any, userdata: Any, flags: Any, reason_code: Any, properties: Any = None) -> None:
         if getattr(reason_code, "is_failure", False):
@@ -117,17 +133,23 @@ class _Connection:
             if str(reason_code) in _AUTH_REFUSALS:
                 self.refused = str(reason_code)
             return
-        self.connected = True
-        self.refused = None
+        self.connected, self.connected_at, self.got_message, self.refused = True, self.clock(), False, None
         client.subscribe(self.topic)
         self.notify("Verbunden. Warte auf Daten vom Auto … (Strg+C beendet)")
+
+    def on_subscribe(self, client: Any, userdata: Any, mid: Any, reason_codes: Any, properties: Any = None) -> None:
+        if any(getattr(code, "is_failure", False) for code in reason_codes):
+            self.subscribe_refused = True
 
     def on_message(self, client: Any, userdata: Any, message: Any) -> None:
         parsed = parse_message(bytes(message.payload))
         if parsed is not None:
+            self.got_message = True
             self.handle(*parsed)
 
     def on_disconnect(self, client: Any, userdata: Any, flags: Any, reason_code: Any, properties: Any = None) -> None:
+        if self.connected and not self.stable():
+            self.short_drops += 1
         self.connected = False
 
 
@@ -139,11 +161,39 @@ def _refusal_error(reason: str) -> StreamError:
     )
 
 
-def _reconnect(client: Any) -> None:
+_SUBSCRIBE_REFUSED = StreamError(
+    "BMW hat das Abonnement des Datenstroms abgelehnt. Ist der Datenstrom im Portal konfiguriert "
+    "(unter CARDATA STREAMING Datenpunkte angehakt)?"
+)
+_KICKED_OUT = StreamError(
+    "Die Verbindung wird immer wieder kurz nach dem Aufbau getrennt. Vermutlich nutzt ein anderes "
+    "Programm (z. B. Home Assistant) den Datenstrom; BMW erlaubt nur eine Verbindung pro Konto."
+)
+
+
+def _open(action: Callable[[], Any], notify: Callable[[str], None]) -> None:
+    """Verbindet; Netzfehler werden gemeldet und später wiederholt, TLS-Fehler sind endgültig."""
     try:
-        client.reconnect()
-    except OSError:
-        pass  # der nächste loop()-Durchlauf meldet die fehlende Verbindung erneut
+        action()
+    except ssl.SSLCertVerificationError as err:
+        raise StreamError(
+            "Das Zertifikat des BMW-Servers ist ungültig; Verbindung abgebrochen. Liegt ein Proxy "
+            "dazwischen, der TLS aufbricht?"
+        ) from err
+    except ssl.SSLError as err:
+        raise StreamError(
+            f"TLS-Fehler beim Verbinden ({type(err).__name__}). BMWs Server verlangt TLS 1.3; "
+            "dafür ist OpenSSL 1.1.1 oder neuer nötig."
+        ) from err
+    except OSError as err:
+        notify(f"Keine Verbindung zu BMW ({type(err).__name__}).")
+
+
+def _renew(credentials: Callable[[bool], Credentials], previous: Credentials, now: float) -> Credentials:
+    creds = credentials(True)
+    if creds.expires_at - REFRESH_MARGIN_SECONDS <= now or creds.id_token == previous.id_token:
+        raise StreamError("BMW hat den Zugang nicht verlängert. Bitte neu anmelden ('bmw-cardata anmelden').")
+    return creds
 
 
 def run_stream(
@@ -153,7 +203,7 @@ def run_stream(
     notify: Callable[[str], None],
     *,
     clock: Callable[[], float] = time.time,
-    sleep: Callable[[float], None] = time.sleep,
+    sleep: Callable[[float], None] | None = None,
     stop: Callable[[], bool] = lambda: False,
 ) -> None:
     """Hält die Verbindung, erneuert den Zugang rechtzeitig und verbindet nach Abbrüchen neu.
@@ -161,57 +211,93 @@ def run_stream(
     credentials(True) muss die Tokens erneuern; credentials(False) darf gespeicherte liefern.
     """
     creds = credentials(False)
-    state = _Connection(topic_for(creds.gcid), handle, notify)
-    client.on_connect, client.on_message, client.on_disconnect = state.on_connect, state.on_message, state.on_disconnect
+    conn = _Connection(topic_for(creds.gcid), handle, notify, clock)
+    client.on_connect, client.on_subscribe = conn.on_connect, conn.on_subscribe
+    client.on_message, client.on_disconnect = conn.on_message, conn.on_disconnect
     client.username_pw_set(creds.gcid, creds.id_token)
     try:
-        try:
-            client.connect(STREAM_HOST, STREAM_PORT, KEEPALIVE_SECONDS)
-        except OSError:
-            notify("Keine Verbindung zu BMW.")
-        _serve(client, state, creds, credentials, clock, sleep, stop)
+        _open(lambda: client.connect(STREAM_HOST, STREAM_PORT, KEEPALIVE_SECONDS), notify)
+        _Loop(client, conn, creds, credentials, sleep or time.sleep).run(stop)
     finally:
         client.disconnect()
 
 
-def _fresh(credentials: Callable[[bool], Credentials], now: float) -> Credentials:
-    creds = credentials(True)
-    if creds.expires_at - REFRESH_MARGIN_SECONDS <= now:
-        raise StreamError("BMW hat den Zugang nicht verlängert. Bitte neu anmelden ('bmw-cardata anmelden').")
-    return creds
+class _Loop:
+    """Die Schleife um client.loop(): Ablehnungen, Erneuerung des Zugangs, Wiederverbinden."""
 
+    def __init__(
+        self,
+        client: Any,
+        conn: _Connection,
+        creds: Credentials,
+        credentials: Callable[[bool], Credentials],
+        sleep: Callable[[float], None],
+    ) -> None:
+        self.client, self.conn, self.creds, self.credentials, self.sleep = client, conn, creds, credentials, sleep
+        self.refusals = 0
+        self.failures = 0
 
-def _serve(
-    client: Any,
-    state: _Connection,
-    creds: Credentials,
-    credentials: Callable[[bool], Credentials],
-    clock: Callable[[], float],
-    sleep: Callable[[float], None],
-    stop: Callable[[], bool],
-) -> None:
-    retried = False
-    failures = 0
-    while not stop():
-        rc = client.loop(LOOP_TIMEOUT_SECONDS)
-        if state.refused:
-            if retried:
-                raise _refusal_error(state.refused)
-            retried, state.refused = True, None
-            creds = _fresh(credentials, clock())
-            client.username_pw_set(creds.gcid, creds.id_token)
-            _reconnect(client)
-            continue
-        if state.connected:
-            retried, failures = False, 0
-        if clock() >= creds.expires_at - REFRESH_MARGIN_SECONDS:
-            creds = _fresh(credentials, clock())
-            client.username_pw_set(creds.gcid, creds.id_token)
-            client.disconnect()
-            _reconnect(client)
-        elif rc != 0 and not state.connected:
-            delay = RECONNECT_DELAYS[min(failures, len(RECONNECT_DELAYS) - 1)]
-            failures += 1
-            state.notify(f"Verbindung getrennt, neuer Versuch in {delay} s.")
-            sleep(delay)
-            _reconnect(client)
+    def run(self, stop: Callable[[], bool]) -> None:
+        while not stop():
+            rc = self.client.loop(LOOP_TIMEOUT_SECONDS)
+            self._check()
+            if self.conn.refused:
+                self._refused()
+            elif self.conn.clock() >= self.creds.expires_at - REFRESH_MARGIN_SECONDS:
+                self._renew_and_reconnect()
+            elif rc != 0 and not self.conn.connected:
+                self._back_off(f"Verbindung getrennt, neuer Versuch in {self._next_delay()} s.")
+                self._reconnect()
+
+    def _check(self) -> None:
+        if self.conn.subscribe_refused:
+            raise _SUBSCRIBE_REFUSED
+        if self.conn.short_drops >= MAX_SHORT_DROPS:
+            raise _KICKED_OUT
+        if self.conn.connected:
+            self.refusals = 0
+        if self.conn.stable():
+            self.failures, self.conn.short_drops = 0, 0
+
+    def _next_delay(self) -> int:
+        return RECONNECT_DELAYS[min(self.failures, len(RECONNECT_DELAYS) - 1)]
+
+    def _back_off(self, message: str) -> None:
+        delay = self._next_delay()
+        self.failures += 1
+        self.conn.notify(message)
+        self.sleep(delay)
+
+    def _reconnect(self) -> None:
+        _open(self.client.reconnect, self.conn.notify)
+
+    def _use(self, creds: Credentials) -> None:
+        self.creds = creds
+        self.client.username_pw_set(creds.gcid, creds.id_token)
+
+    def _try_renew(self) -> bool:
+        """Erneuert den Zugang; bei Netzproblemen später erneut (False), sonst endgültig."""
+        try:
+            self._use(_renew(self.credentials, self.creds, self.conn.clock()))
+            return True
+        except _TRANSIENT_RENEWAL as err:
+            self._back_off(f"Zugang konnte nicht erneuert werden ({type(err).__name__}), "
+                           f"neuer Versuch in {self._next_delay()} s.")
+            return False
+
+    def _refused(self) -> None:
+        reason, self.conn.refused = self.conn.refused or "", None
+        self.refusals += 1
+        if self.refusals >= MAX_REFUSALS:
+            raise _refusal_error(reason)
+        if self.refusals == 2 and not self._try_renew():
+            return
+        self.sleep(REFUSAL_PAUSE_SECONDS)
+        self._reconnect()
+
+    def _renew_and_reconnect(self) -> None:
+        if not self._try_renew():
+            return
+        self.client.disconnect()
+        self.sleep(CREDENTIAL_PAUSE_SECONDS)
+        self._reconnect()

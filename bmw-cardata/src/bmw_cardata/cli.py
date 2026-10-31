@@ -82,7 +82,15 @@ def build_parser() -> argparse.ArgumentParser:
 def _login(args: argparse.Namespace, path: Path, http: httpx.Client, out: TextIO) -> None:
     client_id = validate_client_id(args.client_id) if args.client_id else client_id_from_env()
     verifier, challenge = create_pkce_pair()
-    device = request_device_code(http, client_id, challenge, API_ONLY_SCOPE if args.nur_api else DEFAULT_SCOPE)
+    try:
+        device = request_device_code(http, client_id, challenge, API_ONLY_SCOPE if args.nur_api else DEFAULT_SCOPE)
+    except AuthError as error:
+        if args.nur_api:
+            raise
+        raise AuthError(
+            f"{error} Ist im Portal kein Zugriff auf CarData Stream angefordert, ohne Live-Daten "
+            "anmelden: 'bmw-cardata anmelden --nur-api'."
+        ) from error
     link = device.verification_uri_complete or device.verification_uri
     print(f"Öffne {link} und bestätige mit dem Code {device.user_code}.", file=out)
     print("Warte auf die Bestätigung …", file=out, flush=True)
@@ -147,9 +155,13 @@ class _LivePrinter:
         self.as_json, self.save = args.json, args.speichern
         self.path, self.out, self.err = path, out, err
         self.last_vin: str | None = None
+        self.skipped: set[str] = set()
 
     def __call__(self, vin: str, data: dict[str, dict[str, object]]) -> None:
         if self.only and vin != self.only:
+            if vin not in self.skipped:
+                self.skipped.add(vin)
+                print(f"Nachrichten für {vin} werden übergangen (nur {self.only} gewählt).", file=self.err)
             return
         stamp = _utc_stamp(time.time())
         problem = _save_history(self.path, Entry(stamp, vin, data)) if self.save else None
@@ -157,7 +169,8 @@ class _LivePrinter:
             print(problem, file=self.err)
         if self.as_json:
             line = {"fahrgestellnummer": vin, "empfangen": stamp, "werte": data}
-            print(json.dumps(line, ensure_ascii=False), file=self.out, flush=True)
+            # ensure_ascii: Steuerzeichen aus dem Netz erscheinen nur maskiert im Terminal
+            print(json.dumps(line), file=self.out, flush=True)
             return
         lines = message_lines(data, datetime.now().astimezone())
         if lines and vin != self.last_vin:

@@ -91,4 +91,4 @@ def status_json(vin: str, data: dict[str, dict[str, Any]], fetched_at: str) -> s
     wanted = set(all_descriptors())
     values = {key: entry for key, entry in sorted(data.items()) if key in wanted}
     payload = {"fahrgestellnummer": vin, "abgerufen": fetched_at, "werte": values}
-    return json.dumps(payload, ensure_ascii=False, indent=2)
+    return json.dumps(payload, indent=2)  # maskiert Steuerzeichen aus dem Netz

@@ -129,9 +129,14 @@ Fahrzeug WBA12345678901234
 - `live WBA…` zeigt nur ein Fahrzeug, `--json` gibt eine JSON-Zeile pro Nachricht aus,
   `--speichern` legt jede Nachricht im Verlauf ab.
 - Der Zugang wird vor dem Ablauf automatisch erneuert, nach einem Abbruch verbindet sich
-  der Client von selbst neu (nach 5, 10, 30, dann alle 60 Sekunden).
+  der Client von selbst neu (nach 5, 10, 30, dann alle 60 Sekunden). Lehnt BMW kurz ab,
+  versucht er es nach 3 Sekunden erneut; erst die dritte Ablehnung in Folge beendet `live`
+  mit einer Erklärung.
 - **Nur eine Verbindung pro Konto:** Läuft schon Home Assistant oder ein anderes Programm
-  mit dem Datenstrom, lehnt BMW `live` ab.
+  mit dem Datenstrom, lehnt BMW `live` ab oder wirft es immer wieder hinaus. Dann beendet
+  sich `live` mit einem Hinweis, statt den anderen Stream dauerhaft zu stören.
+- BMWs Server verlangt **TLS 1.3**; dafür braucht Python OpenSSL 1.1.1 oder neuer (bei
+  aktuellen Python-Versionen der Fall).
 - Wer sich vor dieser Version angemeldet hat, muss sich für `live` einmal neu anmelden,
   damit BMW die Berechtigung `cardata:streaming:read` erteilt.
 

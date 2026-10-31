@@ -13,6 +13,14 @@ from bmw_cardata.state import State, load_state, save_state
 STREAM_SCOPE = "authenticate_user openid cardata:api:read cardata:streaming:read"
 
 
+@pytest.fixture(autouse=True)
+def ohne_warten(monkeypatch):
+    """Pausen zwischen Verbindungsversuchen in den Tests überspringen."""
+    import time
+
+    monkeypatch.setattr(time, "sleep", lambda sekunden: None)
+
+
 def _starte(bmw, pfad, *argumente):
     aus, fehler = io.StringIO(), io.StringIO()
     code = cli.run(["--state", str(pfad), *argumente], out=aus, err=fehler, http_factory=bmw.client)
@@ -67,8 +75,9 @@ def test_fahrzeug_wird_nur_beim_wechsel_genannt(bmw, mit_stream, client):
 def test_live_mit_fahrgestellnummer_filtert_andere_fahrzeuge(bmw, mit_stream, client):
     zweite = json.dumps({"vin": VIN2, "data": {KM: {"value": 7}}}).encode()
     client(verbunden, empfangen(zweite), empfangen())
-    ausgabe = _starte(bmw, mit_stream, "live", VIN.lower())[1]
+    _, ausgabe, fehler = _starte(bmw, mit_stream, "live", VIN.lower())
     assert VIN2 not in ausgabe and "42063" in ausgabe
+    assert f"Nachrichten für {VIN2} werden übergangen" in fehler
 
 
 def test_live_als_json_eine_zeile_pro_nachricht(bmw, mit_stream, client):
@@ -121,7 +130,7 @@ def test_live_erneuert_ein_abgelaufenes_token_vor_dem_verbinden(bmw, mit_stream,
 
 def test_live_mit_dauerhafter_ablehnung_endet_mit_hinweis(bmw, mit_stream, client):
     bmw.add("POST", "/gcdm/oauth/token", body={"access_token": "z2", "id_token": "neu", "expires_in": 3600})
-    client(abgelehnt("Not authorized"), abgelehnt("Not authorized"))
+    client(*[abgelehnt("Not authorized")] * 3)
     code, _, fehler = _starte(bmw, mit_stream, "live")
     assert code == 1
     assert "Home Assistant" in fehler
@@ -163,3 +172,24 @@ def test_nachricht_ohne_werte_erzeugt_keine_ausgabe(bmw, mit_stream, client):
     leer = json.dumps({"vin": VIN, "data": {KM: {"value": None}}}).encode()
     client(verbunden, empfangen(leer))
     assert _starte(bmw, mit_stream, "live")[1] == ""
+
+
+def test_json_ausgabe_maskiert_steuerzeichen(bmw, mit_stream, client):
+    roh = json.dumps({"vin": VIN, "data": {KM: {"value": "a\u009b31m\u202e"}}}).encode()
+    client(verbunden, empfangen(roh))
+    ausgabe = _starte(bmw, mit_stream, "live", "--json")[1]
+    assert "\u009b" not in ausgabe and "\u202e" not in ausgabe
+    assert json.loads(ausgabe)["werte"][KM]["value"] == "a\u009b31m\u202e"
+
+
+def test_abgelehnter_gerätecode_weist_auf_nur_api_hin(bmw, tmp_path, monkeypatch):
+    monkeypatch.setenv("BMW_CARDATA_CLIENT_ID", "client-1234-abcd")
+    bmw.add("POST", "/gcdm/oauth/device/code", status=400, body={"error": "invalid_scope"})
+    fehler = _starte(bmw, tmp_path / "s.json", "anmelden")[2]
+    assert "--nur-api" in fehler
+
+
+def test_nur_api_ohne_zusätzlichen_hinweis(bmw, tmp_path, monkeypatch):
+    monkeypatch.setenv("BMW_CARDATA_CLIENT_ID", "client-1234-abcd")
+    bmw.add("POST", "/gcdm/oauth/device/code", status=400, body={"error": "x"})
+    assert "--nur-api" not in _starte(bmw, tmp_path / "s.json", "anmelden", "--nur-api")[2]
