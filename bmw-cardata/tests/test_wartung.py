@@ -1,7 +1,6 @@
 import json
-import stat
 
-from conftest import VIN, VIN2
+from conftest import VIN, VIN2, ist_privat
 
 from bmw_cardata.api import CarDataApi
 from bmw_cardata.maintenance import MAX_AGE_SECONDS, maintenance_path, maintenance_values
@@ -32,7 +31,7 @@ def test_erster_abruf_legt_den_container_an_und_speichert_die_werte(bmw, tmp_pat
     assert _abrufen(bmw, pfad) == (WERTE, [])
     gespeichert = json.loads(pfad.read_text())
     assert gespeichert["container_id"] == "wartung-1"
-    assert stat.S_IMODE(pfad.stat().st_mode) == 0o600
+    assert ist_privat(pfad)
     anlegen = json.loads(bmw.requests[1].content)
     assert anlegen["name"] == "bmw-cardata-cli Wartung"
     assert set(anlegen["technicalDescriptors"]) == {SERVICE, "vehicle.status.serviceTime.inspectionDateLegal"}

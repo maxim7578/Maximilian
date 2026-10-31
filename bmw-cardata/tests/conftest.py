@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import stat
+import sys
+from pathlib import Path
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
@@ -13,6 +16,15 @@ import pytest
 from bmw_cardata.auth import Tokens
 from bmw_cardata.descriptors import descriptor_signature
 from bmw_cardata.state import State
+
+IST_WINDOWS = sys.platform == "win32"
+nur_posix = pytest.mark.skipif(IST_WINDOWS, reason="Unix-Dateirechte, Links und /proc gibt es unter Windows nicht")
+
+
+def ist_privat(pfad: Path) -> bool:
+    """Datei nur für den eigenen Benutzer lesbar (unter Windows schützt das Benutzerprofil)."""
+    return IST_WINDOWS or stat.S_IMODE(pfad.stat().st_mode) == 0o600
+
 
 VIN = "WBA12345678901234"
 VIN2 = "WBY98765432109876"

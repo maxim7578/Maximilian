@@ -44,6 +44,24 @@ BMW CarData.
 
 Ohne Schritt 5 und 6 funktioniert alles außer `live`; dann mit `anmelden --nur-api` anmelden.
 
+## Windows-App
+
+![Die Windows-App mit dem Status eines Fahrzeugs](docs/app.png)
+
+Für Windows gibt es eine App mit Fenster (`BMW-CarData.exe`) und die Kommandozeile
+(`bmw-cardata.exe`), beide ohne Installation lauffähig. Die App bietet alle Funktionen per
+Knopfdruck: Anmelden (der Link zur Bestätigung ist anklickbar), Fahrzeuge, Status,
+Basisdaten, Kontingent, Live-Daten starten und stoppen sowie den Verlauf anzeigen oder als
+CSV für Excel speichern. Sie nutzt intern genau dieselben Befehle wie die Kommandozeile.
+
+**Herunterladen:** Der Workflow „bmw-cardata Windows“ (GitHub → Actions) testet bei jeder
+Änderung alles unter Windows, baut beide Programme und hängt sie als Artefakt
+`bmw-cardata-windows` an den Lauf. Windows warnt beim ersten Start, weil die Programme
+nicht signiert sind („Weitere Informationen“ → „Trotzdem ausführen“). Mehr in
+[`windows/LIESMICH.txt`](windows/LIESMICH.txt).
+
+Aus dem Quellcode startet die App mit `bmw-cardata-app` (nach `pip install .`).
+
 ## Installation
 
 ```bash

@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from conftest import nur_posix
 
 from bmw_cardata import files
 from bmw_cardata.files import append_private, write_private
@@ -16,6 +17,7 @@ def test_fehler_beim_ersetzen_hinterlässt_keine_zwischendatei(tmp_path, monkeyp
     assert list(tmp_path.iterdir()) == []
 
 
+@nur_posix
 def test_datei_eines_anderen_benutzers_wird_nicht_beschrieben(tmp_path, monkeypatch):
     pfad = tmp_path / "verlauf.jsonl"
     pfad.write_text("fremd\n")
@@ -32,3 +34,10 @@ def test_anhängen_ergänzt_zeilen(tmp_path):
     append_private(pfad, "eins")
     append_private(pfad, "zwei")
     assert pfad.read_text() == "eins\nzwei\n"
+
+
+def test_ohne_unix_rechte_wie_unter_windows_wird_trotzdem_angehängt(tmp_path, monkeypatch):
+    monkeypatch.delattr(files.os, "fchmod", raising=False)
+    pfad = tmp_path / "verlauf.jsonl"
+    append_private(pfad, "eins")
+    assert pfad.read_text() == "eins\n"

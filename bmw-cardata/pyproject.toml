@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bmw-cardata"
-version = "0.4.0"
+version = "0.5.0"
 description = "Kommandozeilen-Client für die offizielle BMW CarData API und ihren Datenstrom (nur lesend)"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,6 +16,9 @@ dev = ["pytest>=8", "pytest-cov>=5"]
 
 [project.scripts]
 bmw-cardata = "bmw_cardata.cli:main"
+
+[project.gui-scripts]
+bmw-cardata-app = "bmw_cardata.gui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

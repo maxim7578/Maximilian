@@ -1,5 +1,6 @@
 import json
-import stat
+
+from conftest import ist_privat
 
 from bmw_cardata.usage import DAILY_LIMIT, Usage, load_usage, record_call, save_usage, usage_path
 
@@ -43,7 +44,7 @@ def test_zählung_wird_gespeichert_und_geladen(tmp_path):
     pfad = tmp_path / "unter" / "abrufe.json"
     save_usage(pfad, Usage((1.0, 2.0)))
     assert load_usage(pfad) == Usage((1.0, 2.0))
-    assert stat.S_IMODE(pfad.stat().st_mode) == 0o600
+    assert ist_privat(pfad)
 
 
 def test_fehlende_oder_beschädigte_zählung_beginnt_von_vorn(tmp_path):

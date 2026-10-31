@@ -32,9 +32,15 @@ def write_private(path: Path, text: str) -> None:
 
 
 def _check_own_file(fd: int, path: Path) -> None:
-    """Bricht ab, wenn die Datei einem anderen gehört; zu offene Rechte werden auf 600 gesetzt."""
+    """Bricht ab, wenn die Datei einem anderen gehört; zu offene Rechte werden auf 600 gesetzt.
+
+    Unter Windows gibt es weder Benutzer-IDs noch Unix-Rechte (und os.fchmod erst ab
+    Python 3.13); dort schützt das Benutzerprofil die Dateien.
+    """
+    if not hasattr(os, "getuid") or not hasattr(os, "fchmod"):
+        return
     info = os.fstat(fd)
-    if hasattr(os, "getuid") and info.st_uid != os.getuid():
+    if info.st_uid != os.getuid():
         raise PermissionError(f"{path} gehört einem anderen Benutzer.")
     if info.st_mode & 0o077:
         os.fchmod(fd, 0o600)

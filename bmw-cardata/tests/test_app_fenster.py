@@ -1,0 +1,189 @@
+import time
+import tkinter as tk
+
+import pytest
+
+from bmw_cardata.gui.app import App
+
+
+@pytest.fixture
+def fenster():
+    try:
+        root = tk.Tk()
+    except tk.TclError:
+        pytest.skip("Keine Anzeige vorhanden (z. B. ohne Xvfb)")
+    root.withdraw()
+    yield root
+    root.destroy()
+
+
+class Befehle:
+    """Nachgebaute Kommandozeile: merkt sich Aufrufe und antwortet fest."""
+
+    def __init__(self, antwort="", fehler="", code=0):
+        self.aufrufe, self.antwort, self.fehler, self.code = [], antwort, fehler, code
+
+    def __call__(self, argv, out, err, stop):
+        self.aufrufe.append(argv)
+        if argv[-1] == "live" or "live" in argv:
+            while not stop():
+                time.sleep(0.01)
+            out.write("live beendet\n")
+            return 0
+        out.write(self.antwort)
+        err.write(self.fehler)
+        return self.code
+
+
+def _bis_fertig(app, root, sekunden=5):
+    ende = time.time() + sekunden
+    while time.time() < ende:
+        root.update()
+        if not (app.job and app.job.running) and app.events.empty():
+            root.update()
+            return
+        time.sleep(0.01)
+    raise AssertionError("Befehl wurde nicht fertig")
+
+
+def _knopf(app, text):
+    return next(b for b in [*app.buttons, app.stop_button] if b.cget("text") == text)
+
+
+def test_fenster_hat_alle_funktionen(fenster):
+    app = App(fenster, run=Befehle())
+    texte = {b.cget("text") for b in app.buttons} | {app.stop_button.cget("text")}
+    assert texte == {"Anmelden", "Abmelden", "Fahrzeuge", "Status", "Status speichern", "Basisdaten",
+                     "Kontingent", "Live starten", "Live stoppen", "Anzeigen", "Als CSV speichern …"}
+    assert fenster.title().startswith("BMW CarData")
+
+
+def test_status_knopf_zeigt_die_ausgabe(fenster):
+    befehle = Befehle(antwort="Fahrzeug WBA12345678901234\n  Kilometerstand: 42063 km\n")
+    app = App(fenster, state="/tmp/s.json", run=befehle)
+    app.vin.set("WBA12345678901234")
+    _knopf(app, "Status").invoke()
+    _bis_fertig(app, fenster)
+    assert befehle.aufrufe == [["--state", "/tmp/s.json", "status", "WBA12345678901234"]]
+    assert "Kilometerstand: 42063 km" in app.text()
+    assert app.status.get() == "Fertig."
+
+
+def test_fehler_erscheinen_und_knöpfe_werden_wieder_frei(fenster):
+    app = App(fenster, run=Befehle(fehler="Fehler: Nicht angemeldet.\n", code=1))
+    _knopf(app, "Fahrzeuge").invoke()
+    assert str(_knopf(app, "Status").cget("state")) == "disabled"
+    _bis_fertig(app, fenster)
+    assert "Nicht angemeldet" in app.text()
+    assert "Code 1" in app.status.get()
+    assert str(_knopf(app, "Status").cget("state")) == "normal"
+
+
+def test_anmelden_übergibt_client_id_und_nur_api(fenster):
+    befehle = Befehle(antwort="Öffne https://bmw.example/geraet?code=AB und bestätige.\n")
+    app = App(fenster, run=befehle)
+    app.client_id.set("client-1234")
+    app.nur_api.set(True)
+    _knopf(app, "Anmelden").invoke()
+    _bis_fertig(app, fenster)
+    assert befehle.aufrufe == [["anmelden", "--client-id", "client-1234", "--nur-api"]]
+    links = app.output.tag_ranges("link")
+    assert app.output.get(links[0], links[1]) == "https://bmw.example/geraet?code=AB"
+
+
+def test_link_öffnet_den_browser(fenster):
+    geoeffnet = []
+    app = App(fenster, run=Befehle(), open_link=geoeffnet.append)
+    app.append("Öffne https://bmw.example/x jetzt\n")
+    fenster.deiconify()
+    fenster.update()
+    start = app.output.tag_ranges("link")[0]
+    x, y, _, _ = app.output.bbox(start)
+
+    class Klick:
+        pass
+
+    klick = Klick()
+    klick.x, klick.y = x + 2, y + 2
+    app._click_link(klick)
+    assert geoeffnet == ["https://bmw.example/x"]
+
+
+def test_live_lässt_sich_stoppen(fenster):
+    app = App(fenster, run=Befehle())
+    app.live_speichern.set(True)
+    _knopf(app, "Live starten").invoke()
+    fenster.update()
+    assert str(app.stop_button.cget("state")) == "normal"
+    app.stop()
+    _bis_fertig(app, fenster)
+    assert "live beendet" in app.text()
+    assert str(app.stop_button.cget("state")) == "disabled"
+
+
+def test_basisdaten_ohne_fahrgestellnummer_gibt_einen_hinweis(fenster):
+    befehle = Befehle()
+    app = App(fenster, run=befehle)
+    _knopf(app, "Basisdaten").invoke()
+    fenster.update()
+    assert befehle.aufrufe == []
+    assert "Fahrgestellnummer" in app.text()
+
+
+def test_verlauf_mit_anzahl(fenster):
+    befehle = Befehle(antwort="31.10.2026 10:00  Kilometerstand: 42063 km\n")
+    app = App(fenster, run=befehle)
+    app.anzahl.set(3)
+    _knopf(app, "Anzeigen").invoke()
+    _bis_fertig(app, fenster)
+    assert befehle.aufrufe == [["verlauf", "--anzahl", "3"]]
+
+
+def test_csv_speichern(fenster, tmp_path, monkeypatch):
+    app = App(fenster, run=Befehle(antwort="zeit;Kilometerstand\n"))
+    ziel = tmp_path / "v.csv"
+    monkeypatch.setattr("bmw_cardata.gui.app.filedialog.asksaveasfilename", lambda **kw: str(ziel))
+    _knopf(app, "Als CSV speichern …").invoke()
+    assert ziel.read_text(encoding="utf-8-sig") == "zeit;Kilometerstand\n"
+    assert "Verlauf gespeichert" in app.text()
+
+
+def test_csv_abbrechen_und_fehler(fenster, tmp_path, monkeypatch):
+    app = App(fenster, run=Befehle(fehler="kaputt\n", code=1))
+    monkeypatch.setattr("bmw_cardata.gui.app.filedialog.asksaveasfilename", lambda **kw: "")
+    app.save_csv()
+    assert app.text() == ""
+    app.write_csv(tmp_path / "v.csv")
+    assert "kaputt" in app.text()
+    app.run = Befehle(antwort="x\n")
+    app.write_csv(tmp_path / "fehlt" / "v.csv")
+    assert "Datei konnte nicht geschrieben werden" in app.text()
+
+
+def test_ungültige_anzahl_fällt_auf_10_zurück(fenster):
+    app = App(fenster, run=Befehle())
+    app.anzahl.set(0)
+    assert app._count() == 1
+    fenster.setvar(str(app.anzahl), "abc")
+    assert app._count() == 10
+
+
+def test_ausgabe_leeren_und_kein_doppelstart(fenster):
+    befehle = Befehle()
+    app = App(fenster, run=befehle)
+    _knopf(app, "Live starten").invoke()
+    app._start("status")
+    assert len(befehle.aufrufe) <= 1
+    app.stop()
+    _bis_fertig(app, fenster)
+    app.clear()
+    assert app.text() == ""
+
+
+def test_programmstart_öffnet_das_fenster(fenster, monkeypatch):
+    from bmw_cardata.gui import app as modul
+
+    gestartet = []
+    monkeypatch.setattr(modul.tk.Tk, "mainloop", lambda self: gestartet.append(self.title()))
+    modul.main()
+    assert gestartet and gestartet[0].startswith("BMW CarData")

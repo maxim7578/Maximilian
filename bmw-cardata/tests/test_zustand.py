@@ -1,7 +1,8 @@
 import json
-import stat
 
 import pytest
+
+from conftest import ist_privat
 
 from bmw_cardata.state import StateError, delete_state, load_state, save_state
 
@@ -16,7 +17,7 @@ def test_gespeicherter_zustand_wird_unverändert_geladen(tmp_path, make_state):
 def test_datei_ist_nur_für_den_eigenen_benutzer_lesbar(tmp_path, make_state):
     pfad = tmp_path / "state.json"
     save_state(pfad, make_state())
-    assert stat.S_IMODE(pfad.stat().st_mode) == 0o600
+    assert ist_privat(pfad)
     assert not (tmp_path / "state.json.tmp").exists()
 
 
