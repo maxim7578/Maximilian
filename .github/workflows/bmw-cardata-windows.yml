@@ -74,6 +74,15 @@ jobs:
           dist\BMW-CarData-Diagnose.exe --selbsttest "$env:RUNNER_TEMP\diag.txt"
           Write-Output "Exit-Code: $LASTEXITCODE"
           Get-Content "$env:RUNNER_TEMP\diag.txt" -ErrorAction SilentlyContinue
+          Write-Output "--- Konsolen-Variante über Start-Process (wie die Fenster-App) ---"
+          $p = Start-Process -FilePath dist\BMW-CarData-Diagnose.exe -ArgumentList "--selbsttest", "$env:RUNNER_TEMP\sp.txt" -Wait -PassThru
+          Write-Output "Exit-Code: $($p.ExitCode)"
+          Get-Content "$env:RUNNER_TEMP\sp.txt" -ErrorAction SilentlyContinue
+          Write-Output "--- Fenster-App über cmd start /wait ---"
+          cmd /c "start /wait dist\BMW-CarData.exe --selbsttest %RUNNER_TEMP%\cmd.txt & echo Exit-Code: %ERRORLEVEL%"
+          Get-Content "$env:RUNNER_TEMP\cmd.txt" -ErrorAction SilentlyContinue
+          Write-Output "--- Startprotokoll der Fenster-App ---"
+          Get-Content (Join-Path ([IO.Path]::GetTempPath()) "bmw-cardata-start.log") -ErrorAction SilentlyContinue
           Write-Output "--- PyInstaller-Warnungen (Auszug) ---"
           Get-Content build\BMW-CarData\warn-BMW-CarData.txt -ErrorAction SilentlyContinue | Select-Object -First 40
 
