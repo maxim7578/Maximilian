@@ -1,9 +1,9 @@
 # bmw-cardata
 
-Kommandozeilen-Client für die **offizielle BMW CarData API**. Er liest Kilometerstand,
-Ladestand, Reichweite, Ladestatus, Tankfüllstand, Türschloss, 12-V-Batterie,
-Service-Fälligkeit und Position deines BMW oder MINI, auf Wunsch auch live über den
-Datenstrom von BMW (`bmw-cardata live`).
+Kommandozeilen-Client für die **offizielle BMW CarData API**. Er liest rund 40 Werte
+deines BMW oder MINI, gruppiert nach Fahren und Reichweite, Laden, Türen/Fenster/Klappen,
+Reifen, Wartung und Position, auf Wunsch auch live über den Datenstrom von BMW
+(`bmw-cardata live`).
 
 ## Warum nicht bimmer_connected?
 
@@ -18,7 +18,7 @@ BMW CarData.
   Klimatisierung, kein Ladestart.
 - **Nur EU-Konten.** Das CarData-Portal gibt es nicht in jedem Land.
 - **50 Abrufe pro Tag** pro Konto. `fahrzeuge` und `basisdaten` kosten je 1 Abruf, `status`
-  1 Abruf. Nur beim allerersten `status` ohne Fahrgestellnummer kommt 1 Abruf für die
+  1 Abruf, einmal am Tag 1 weiteren für die Wartungsdaten. Nur beim allerersten `status` ohne Fahrgestellnummer kommt 1 Abruf für die
   Fahrzeugliste dazu (danach ist das Fahrzeug gemerkt) und einmalig 1 bis 2 Abrufe für den
   Datencontainer. `verlauf` und `kontingent` kosten nichts. Ist das Limit erreicht, meldet BMW
   HTTP 429, der Client zeigt dann „Tageslimit erreicht“. `live` nutzt den Datenstrom und
@@ -43,6 +43,24 @@ BMW CarData.
    angehakte Datenpunkte schickt das Auto.
 
 Ohne Schritt 5 und 6 funktioniert alles außer `live`; dann mit `anmelden --nur-api` anmelden.
+
+## Windows-App
+
+![Die Windows-App mit dem Status eines Fahrzeugs](docs/app.png)
+
+Für Windows gibt es eine App mit Fenster (`BMW-CarData.exe`) und die Kommandozeile
+(`bmw-cardata-cli.exe`), beide ohne Installation lauffähig. Die App bietet alle Funktionen per
+Knopfdruck: Anmelden (der Link zur Bestätigung ist anklickbar), Fahrzeuge, Status,
+Basisdaten, Kontingent, Live-Daten starten und stoppen sowie den Verlauf anzeigen oder als
+CSV für Excel speichern. Sie nutzt intern genau dieselben Befehle wie die Kommandozeile.
+
+**Herunterladen:** Der Workflow „bmw-cardata Windows“ (GitHub → Actions) testet bei jeder
+Änderung alles unter Windows, baut beide Programme und hängt sie als Artefakt
+`bmw-cardata-windows` an den Lauf. Windows warnt beim ersten Start, weil die Programme
+nicht signiert sind („Weitere Informationen“ → „Trotzdem ausführen“). Mehr in
+[`windows/LIESMICH.txt`](windows/LIESMICH.txt).
+
+Aus dem Quellcode startet die App mit `bmw-cardata-app` (nach `pip install .`).
 
 ## Installation
 
@@ -71,14 +89,40 @@ bmw-cardata live              # Live-Daten empfangen, bis Strg+C
 bmw-cardata abmelden          # gespeicherte Anmeldung löschen
 ```
 
-Beispielausgabe:
+Beispielausgabe (gekürzt):
 
 ```
 Fahrzeug WBA12345678901234
-Kilometerstand: 42000 km  (Stand: 2026-10-30T10:00:00Z)
-Ladestand Hochvoltbatterie: 80 %
-Elektrische Reichweite: 210 km
+Fahren und Reichweite
+  Kilometerstand: 42063 km  (Stand: 2026-10-30T10:00:00Z)
+  Elektrische Reichweite: 214 km
+Laden
+  Ladestand Hochvoltbatterie: 64 %
+Türen, Fenster und Klappen
+  Türschloss: SECURED
+  Fenster hinten Beifahrerseite: teilweise offen
+Reifen
+  Reifendruck vorne links: 2.50 bar (250 kPa)
+Wartung und Bordnetz
+  Nächste Hauptuntersuchung: 2027-05
 ```
+
+### Welche Werte
+
+| Gruppe | Werte |
+|---|---|
+| Fahren und Reichweite | Kilometerstand, Gesamt-, elektrische und Kraftstoffreichweite, Tankfüllstand, Restkraftstoff, in Bewegung |
+| Laden | Ladestand, Ladeziel, Ladestatus, Restladezeit, Ladeleistung, Kabel eingesteckt, Ladeklappe offen, Batteriegesundheit |
+| Türen, Fenster und Klappen | Türschloss, Türen gesamt und einzeln, vier Fenster, Heckklappe offen/verriegelt, Motorhaube, Schiebedach, Licht, Alarmanlage |
+| Reifen | Reifendruck an allen vier Rädern, Reifendiagnose |
+| Wartung und Bordnetz | 12-V-Batterie (Ladung und Spannung), nächster Service, nächste Hauptuntersuchung |
+| Position | Breiten- und Längengrad, Kartenlink |
+
+Was ein Auto wirklich liefert, hängt von Modell und Ausstattung ab; fehlende Werte werden
+nicht angezeigt. Fenster und Schiebedach werden übersetzt (geschlossen, teilweise offen,
+offen, ungültig), Ja/Nein-Werte ebenso; andere Textwerte wie beim Türschloss zeigt der
+Client so, wie BMW sie liefert. Den Reifendruck liefert BMW in kPa, angezeigt wird er
+zusätzlich in bar. Eine Außentemperatur gibt es in CarData nicht.
 
 Hat BMW eine Position geliefert, steht am Ende ein Link zu OpenStreetMap
 (`Karte: https://www.openstreetmap.org/?mlat=…`).
@@ -158,10 +202,24 @@ werden automatisch erneuert; lehnt BMW die Erneuerung ab, einfach neu `anmelden`
 ## Datencontainer
 
 Für Telematikdaten verlangt BMW einen „Container“, der festlegt, welche Datenpunkte
-geliefert werden. Der Client legt beim ersten `status` einen Container namens
-`bmw-cardata-cli Status` an (oder nutzt einen vorhandenen gleichen Namens) und merkt
-sich dessen ID. Welche Datenpunkte abgefragt werden, steht in
-`src/bmw_cardata/descriptors.py`.
+geliefert werden. Der Client nutzt zwei:
+
+- `bmw-cardata-cli Status` mit allen Werten außer den Wartungsdaten, bei jedem `status`.
+- `bmw-cardata-cli Wartung` mit nächstem Service und Hauptuntersuchung, höchstens einmal am
+  Tag je Fahrzeug; die Werte liegen dazwischen in `wartung.json`. Die Home-Assistant-
+  Integration hat diese Datenpunkte getrennt, nachdem sie am 20.10.2026 jeden Abruf ihres
+  Containers mit `CU-400` scheitern ließen. Ein solcher Fehler kostet hier nur die zwei
+  Wartungswerte (Hinweis in der Ausgabe, neuer Versuch am nächsten Tag).
+
+Der Client merkt sich jeden Container mit einem Fingerabdruck der Datenpunkte. Ändern sie
+sich (etwa nach einem Update), legt er einmalig einen neuen an und löscht danach den alten,
+den er selbst gespeichert hatte; das kostet einmal etwa 3 Abrufe. Container anderer
+Installationen mit gleichem Namen bleiben unberührt. Lehnt BMW den neuen Container ab,
+bleibt der alte in Gebrauch, und erst am nächsten Tag folgt ein neuer Versuch.
+
+Meldet BMW einen Container als gelöscht (HTTP 404 oder `CU-105`), wird er einmal neu
+angelegt. Andere Fehler wie HTTP 400 legen keinen neuen an, weil das jedes Mal Abrufe
+kosten würde. Welche Datenpunkte abgefragt werden, steht in `src/bmw_cardata/descriptors.py`.
 
 ## Tests
 

@@ -1,0 +1,35 @@
+BMW CarData für Windows
+=======================
+
+BMW-CarData.exe       Die App mit Fenster: alle Funktionen per Knopfdruck.
+bmw-cardata-cli.exe   Dieselben Funktionen für die Eingabeaufforderung
+                      (z. B. "bmw-cardata-cli.exe status").
+
+Starten
+-------
+Doppelklick auf BMW-CarData.exe. Eine Installation ist nicht nötig.
+
+Windows zeigt beim ersten Start vermutlich "Der Computer wurde durch Windows
+geschützt", weil das Programm nicht digital signiert ist. Dann auf
+"Weitere Informationen" und "Trotzdem ausführen" klicken.
+
+Einrichtung (einmalig)
+----------------------
+1. Im BMW-Portal (My BMW, Fahrzeug, BMW CarData) eine Client-ID erzeugen und
+   "Zugriff auf CarData API anfordern" klicken. Für Live-Daten zusätzlich den
+   Zugriff auf "CarData Stream" anfordern und unter CARDATA STREAMING die
+   gewünschten Datenpunkte anhaken.
+2. In der App die Client-ID eintragen und "Anmelden" klicken. Den angezeigten
+   Link anklicken, den Code bestätigen und bei BMW zustimmen.
+   Ohne Stream-Freigabe vorher "Ohne Live-Daten (nur API)" anhaken.
+
+Danach: "Status" zeigt den Fahrzeugstatus, "Live starten" empfängt Daten in
+Echtzeit (ohne Tageslimit), "Kontingent" zeigt die verbrauchten Abrufe
+(BMW erlaubt 50 pro Tag).
+
+Daten
+-----
+Anmeldung, Verlauf und Zwischenspeicher liegen unter
+%USERPROFILE%\.config\bmw-cardata\  ("Abmelden" löscht die Anmeldung).
+
+Nur lesen: CarData kennt keine Befehle (kein Verriegeln, keine Klimatisierung).

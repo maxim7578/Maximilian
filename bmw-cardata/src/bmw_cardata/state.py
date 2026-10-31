@@ -21,12 +21,13 @@ class State:
     tokens: Tokens
     container_id: str | None = None
     vin: str | None = None  # gemerkt, solange das Konto genau ein Fahrzeug hat
+    container_signature: str | None = None  # Datenpunkte, mit denen der Container angelegt wurde  # gemerkt, solange das Konto genau ein Fahrzeug hat
 
     def with_tokens(self, tokens: Tokens) -> State:
         return replace(self, tokens=tokens)
 
-    def with_container(self, container_id: str | None) -> State:
-        return replace(self, container_id=container_id)
+    def with_container(self, container_id: str | None, signature: str | None = None) -> State:
+        return replace(self, container_id=container_id, container_signature=signature)
 
     def with_vin(self, vin: str | None) -> State:
         return replace(self, vin=vin)
@@ -56,6 +57,7 @@ def load_state(path: Path) -> State:
             tokens=Tokens(**raw["tokens"]),
             container_id=_optional_text(raw.get("container_id")),
             vin=_optional_vin(raw.get("vin")),
+            container_signature=_optional_text(raw.get("container_signature")),
         )
     except (OSError, ValueError, KeyError, TypeError, ConfigError) as err:
         raise StateError(f"Gespeicherte Anmeldung in {path} ist beschädigt.") from err

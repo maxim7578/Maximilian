@@ -8,6 +8,7 @@ from conftest import VIN, VIN2
 
 from bmw_cardata import cli
 from bmw_cardata.history import Entry, append_entry, history_path
+from bmw_cardata.maintenance import maintenance_path
 from bmw_cardata.state import load_state, save_state
 from bmw_cardata.usage import Usage, save_usage, usage_path
 
@@ -24,6 +25,9 @@ def _starte(bmw, pfad, *argumente):
 def angemeldet(tmp_path, make_state):
     pfad = tmp_path / "state.json"
     save_state(pfad, make_state(container_id="behaelter-1"))
+    # Wartungsdaten frisch im Zwischenspeicher: status braucht dafür keinen Abruf
+    frisch = {"fahrzeuge": {VIN: {"versucht": time.time(), "werte": {}}}}
+    maintenance_path(pfad).write_text(json.dumps(frisch))
     return pfad
 
 
@@ -80,7 +84,7 @@ def test_status_des_einzigen_fahrzeugs(bmw, angemeldet):
         "vehicle.vehicle.travelledDistance": {"value": 1000, "unit": "km"}}})
     code, ausgabe, _ = _starte(bmw, angemeldet, "status")
     assert code == 0
-    assert ausgabe == f"Fahrzeug {VIN}\nKilometerstand: 1000 km\n"
+    assert ausgabe == f"Fahrzeug {VIN}\nFahren und Reichweite\n  Kilometerstand: 1000 km\n"
 
 
 def test_status_mit_mehreren_fahrzeugen_verlangt_eine_auswahl(bmw, angemeldet):
@@ -283,3 +287,29 @@ def test_unlesbare_datei_ergibt_eine_fehlermeldung_statt_absturz(bmw, angemeldet
     code, _, fehler = _starte(bmw, angemeldet, "verlauf")
     assert code == 1
     assert fehler.startswith("Dateifehler:")
+
+
+def test_status_zeigt_wartungsdaten_aus_dem_eigenen_container(bmw, tmp_path, make_state):
+    pfad = tmp_path / "state.json"
+    save_state(pfad, make_state(container_id="behaelter-1"))
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    bmw.add("GET", "/customers/containers", body=[])
+    bmw.add("POST", "/customers/containers", status=201, body={"containerId": "wartung-1"})
+    bmw.add("GET", TELEMATIK, body={"telematicData": {"vehicle.status.serviceDistance.next": {"value": 12000, "unit": "km"}}})
+    code, ausgabe, _ = _starte(bmw, pfad, "status", VIN)
+    assert code == 0
+    assert "  Kilometerstand: 1000 km" in ausgabe and "  Nächster Service in: 12000 km" in ausgabe
+    assert bmw.requests[-1].url.params["containerId"] == "wartung-1"
+
+
+def test_status_zeigt_hinweise_und_json_enthält_sie(bmw, tmp_path, make_state):
+    pfad = tmp_path / "state.json"
+    save_state(pfad, make_state(container_id="behaelter-1"))
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    bmw.add("GET", "/customers/containers", status=500)
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    ausgabe = _starte(bmw, pfad, "status", VIN)[1]
+    assert "Hinweis: Wartungsdaten konnten nicht abgerufen werden" in ausgabe
+    maintenance_path(pfad).unlink()
+    daten = json.loads(_starte(bmw, pfad, "status", VIN, "--json")[1])
+    assert "Wartungsdaten" in daten["hinweise"][0]

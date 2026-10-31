@@ -1,9 +1,8 @@
-import stat
 from datetime import timezone
 
 import pytest
 
-from conftest import VIN, VIN2
+from conftest import VIN, VIN2, ist_privat, nur_posix
 
 from bmw_cardata.history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
 
@@ -31,7 +30,7 @@ def test_einträge_werden_angehängt_und_in_reihenfolge_geladen(tmp_path):
 def test_verlauf_ist_nur_für_den_eigenen_benutzer_lesbar(tmp_path):
     pfad = tmp_path / "verlauf.jsonl"
     append_entry(pfad, _eintrag("2026-10-30T10:00:00Z", 1))
-    assert stat.S_IMODE(pfad.stat().st_mode) == 0o600
+    assert ist_privat(pfad)
 
 
 def test_fehlender_verlauf_ist_leer_und_kaputte_zeilen_werden_übersprungen(tmp_path):
@@ -80,8 +79,10 @@ def test_unlesbare_zeit_wird_unverändert_gezeigt():
 def test_csv_export_mit_kopfzeile_und_rohwerten():
     text = history_csv([_eintrag("2026-10-30T10:00:00Z", 42000, **{SOC: {"value": 80, "unit": "%"}})])
     kopf, zeile = text.splitlines()
-    assert kopf.startswith("zeit;fahrgestellnummer;Kilometerstand;Ladestand Hochvoltbatterie;")
-    assert zeile.startswith(f"2026-10-30T10:00:00Z;{VIN};42000;80;")
+    spalten = kopf.split(";")
+    werte = dict(zip(spalten, zeile.split(";")))
+    assert spalten[:3] == ["zeit", "fahrgestellnummer", "Kilometerstand"]
+    assert (werte["fahrgestellnummer"], werte["Kilometerstand"], werte["Ladestand Hochvoltbatterie"]) == (VIN, "42000", "80")
 
 
 def test_csv_entschärft_formeln_aus_textwerten():
@@ -114,14 +115,16 @@ def test_ungültiges_utf8_im_verlauf_bricht_nicht_ab(tmp_path):
     assert len(load_entries(pfad)) == 1
 
 
+@nur_posix
 def test_vorhandene_offene_verlaufsdatei_wird_auf_600_gesetzt(tmp_path):
     pfad = tmp_path / "verlauf.jsonl"
     pfad.write_text("")
     pfad.chmod(0o666)
     append_entry(pfad, _eintrag("2026-10-30T10:00:00Z", 1))
-    assert stat.S_IMODE(pfad.stat().st_mode) == 0o600
+    assert ist_privat(pfad)
 
 
+@nur_posix
 def test_verlauf_folgt_keinem_symbolischen_link(tmp_path):
     ziel = tmp_path / "anderswo.txt"
     ziel.write_text("")
@@ -130,3 +133,7 @@ def test_verlauf_folgt_keinem_symbolischen_link(tmp_path):
     with pytest.raises(OSError):
         append_entry(pfad, _eintrag("2026-10-30T10:00:00Z", 1))
     assert ziel.read_text() == ""
+
+
+def test_csv_kopf_nennt_die_einheit_des_reifendrucks():
+    assert "Reifendruck vorne links (kPa)" in history_csv([]).splitlines()[0].split(";")

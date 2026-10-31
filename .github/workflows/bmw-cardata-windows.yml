@@ -1,0 +1,105 @@
+# Testet bmw-cardata auf Windows und baut die Windows-Programme: BMW-CarData.exe (App)
+# und bmw-cardata-cli.exe (Kommandozeile).
+# Die fertigen .exe-Dateien liegen danach als Artefakt "bmw-cardata-windows" am Lauf.
+name: bmw-cardata Windows
+
+on:
+  push:
+    paths:
+      - "bmw-cardata/**"
+      - ".github/workflows/bmw-cardata-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bmw-cardata-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Tests und Windows-Programme
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: bmw-cardata
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhängigkeiten installieren
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]" "pyinstaller>=6,<7"
+
+      - name: Tests auf Windows
+        run: python -m pytest -q
+
+      - name: App bauen (BMW-CarData.exe)
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name BMW-CarData --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/app.py
+
+      # Eigener Name: Windows unterscheidet bei Dateinamen nicht zwischen Groß- und Klein-
+      # schreibung, "bmw-cardata.exe" würde "BMW-CarData.exe" (die App) überschreiben.
+      - name: Kommandozeile bauen (bmw-cardata-cli.exe)
+        run: python -m PyInstaller --noconfirm --onefile --console --name bmw-cardata-cli --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/cli.py
+
+      - name: Kommandozeile ausprobieren
+        run: |
+          dist\bmw-cardata-cli.exe --help
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          dist\bmw-cardata-cli.exe --state "$env:RUNNER_TEMP\probe\state.json" kontingent
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Selbsttest der App (Fenster kurz öffnen)
+        run: |
+          $bericht = "$env:RUNNER_TEMP\selbsttest.txt"
+          $app = Start-Process -FilePath dist\BMW-CarData.exe -ArgumentList "--selbsttest", "`"$bericht`"" -Wait -PassThru
+          Write-Output "Exit-Code: $($app.ExitCode)"
+          if (Test-Path $bericht) { Get-Content $bericht } else { Write-Output "Kein Bericht geschrieben (Absturz vor dem Python-Start?)" }
+          if ($app.ExitCode -ne 0) { exit 1 }
+
+      - name: Diagnose, falls der Selbsttest scheitert
+        if: failure()
+        run: |
+          Write-Output "--- Python direkt (ohne PyInstaller) ---"
+          python windows/app.py --selbsttest "$env:RUNNER_TEMP\py.txt"
+          Write-Output "Exit-Code: $LASTEXITCODE"
+          Get-Content "$env:RUNNER_TEMP\py.txt" -ErrorAction SilentlyContinue
+          Write-Output "--- Dieselbe App mit Konsolenfenster ---"
+          python -m PyInstaller --noconfirm --onefile --console --name BMW-CarData-Diagnose --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/app.py *> $null
+          dist\BMW-CarData-Diagnose.exe --selbsttest "$env:RUNNER_TEMP\diag.txt"
+          Write-Output "Exit-Code: $LASTEXITCODE"
+          Get-Content "$env:RUNNER_TEMP\diag.txt" -ErrorAction SilentlyContinue
+          Write-Output "--- Startprotokoll der Fenster-App ---"
+          Get-Content (Join-Path ([IO.Path]::GetTempPath()) "bmw-cardata-start.log") -ErrorAction SilentlyContinue
+          Write-Output "--- PyInstaller-Warnungen (Auszug) ---"
+          Get-Content build\BMW-CarData\warn-BMW-CarData.txt -ErrorAction SilentlyContinue | Select-Object -First 40
+
+      - name: App starten und prüfen, dass sie läuft
+        run: |
+          $app = Start-Process -FilePath dist\BMW-CarData.exe -PassThru
+          Start-Sleep -Seconds 15
+          if ($app.HasExited) { Write-Error "Die App hat sich beim Start beendet (Code $($app.ExitCode))"; exit 1 }
+          Get-Process -Name BMW-CarData | Stop-Process -Force
+          Write-Output "Die App läuft."
+
+      - name: Paket zusammenstellen
+        run: Copy-Item windows\LIESMICH.txt dist\
+
+      - name: Programme hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: bmw-cardata-windows
+          path: |
+            bmw-cardata/dist/BMW-CarData.exe
+            bmw-cardata/dist/bmw-cardata-cli.exe
+            bmw-cardata/dist/LIESMICH.txt
+          if-no-files-found: error
+          retention-days: 30
