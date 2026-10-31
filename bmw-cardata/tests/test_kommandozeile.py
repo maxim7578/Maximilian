@@ -1,11 +1,15 @@
 import io
+import json
+import time
 
 import httpx
 import pytest
 from conftest import VIN, VIN2
 
 from bmw_cardata import cli
+from bmw_cardata.history import Entry, append_entry, history_path
 from bmw_cardata.state import load_state, save_state
+from bmw_cardata.usage import Usage, save_usage, usage_path
 
 MAPPINGS = "/customers/vehicles/mappings"
 
@@ -149,3 +153,104 @@ def test_hauptfunktion_beendet_mit_dem_rückgabewert(monkeypatch):
         cli.main()
     assert ende.value.code == 3
 
+
+
+TELEMATIK = f"/customers/vehicles/{VIN}/telematicData"
+KM_DATEN = {"telematicData": {"vehicle.vehicle.travelledDistance": {"value": 1000, "unit": "km"}}}
+
+
+def test_status_merkt_sich_das_einzige_fahrzeug_für_den_nächsten_abruf(bmw, angemeldet):
+    bmw.add("GET", MAPPINGS, body=[{"vin": VIN}])
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    assert _starte(bmw, angemeldet, "status")[0] == 0
+    assert _starte(bmw, angemeldet, "status")[0] == 0
+    pfade = [r.url.path for r in bmw.requests]
+    assert pfade == [MAPPINGS, TELEMATIK, TELEMATIK]
+    assert load_state(angemeldet).vin == VIN
+
+
+def test_fahrzeuge_aktualisiert_das_gemerkte_fahrzeug(bmw, angemeldet):
+    save_state(angemeldet, load_state(angemeldet).with_vin(VIN2))
+    bmw.add("GET", MAPPINGS, body=[{"vin": VIN}])
+    _starte(bmw, angemeldet, "fahrzeuge")
+    assert load_state(angemeldet).vin == VIN
+
+
+def test_kontingent_zählt_die_abrufe_dieses_programms(bmw, angemeldet):
+    bmw.add("GET", MAPPINGS, body=[{"vin": VIN}])
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    _starte(bmw, angemeldet, "status")
+    code, ausgabe, _ = _starte(bmw, angemeldet, "kontingent")
+    assert code == 0
+    assert "Abrufe in den letzten 24 Stunden: 2 von 50" in ausgabe
+    assert "Noch frei: 48" in ausgabe
+    assert len(bmw.requests) == 2
+
+
+def test_kontingent_nennt_den_nächsten_freien_abruf_wenn_alles_verbraucht_ist(bmw, angemeldet):
+    jetzt = time.time()
+    save_usage(usage_path(angemeldet), Usage(tuple(jetzt - 60 + i for i in range(50))))
+    code, ausgabe, _ = _starte(bmw, angemeldet, "kontingent")
+    assert code == 0
+    assert "Noch frei: 0" in ausgabe
+    assert "Nächster Abruf frei ab:" in ausgabe
+
+
+def test_kontingent_ohne_anmeldung_funktioniert(bmw, tmp_path):
+    code, ausgabe, _ = _starte(bmw, tmp_path / "state.json", "kontingent")
+    assert code == 0
+    assert "0 von 50" in ausgabe
+
+
+def test_status_als_json(bmw, angemeldet):
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    code, ausgabe, _ = _starte(bmw, angemeldet, "status", VIN, "--json")
+    assert code == 0
+    daten = json.loads(ausgabe)
+    assert daten["fahrgestellnummer"] == VIN
+    assert daten["werte"]["vehicle.vehicle.travelledDistance"]["value"] == 1000
+    assert daten["abgerufen"].endswith("Z")
+
+
+def test_status_speichern_und_verlauf_anzeigen(bmw, angemeldet):
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    bmw.add("GET", TELEMATIK, body={"telematicData": {
+        "vehicle.vehicle.travelledDistance": {"value": 1080, "unit": "km"}}})
+    _starte(bmw, angemeldet, "status", VIN, "--speichern")
+    code, ausgabe, _ = _starte(bmw, angemeldet, "status", VIN, "--speichern")
+    assert code == 0
+    assert "Im Verlauf gespeichert." in ausgabe
+    code, ausgabe, _ = _starte(bmw, angemeldet, "verlauf")
+    assert code == 0
+    zeilen = ausgabe.splitlines()
+    assert len(zeilen) == 2
+    assert zeilen[1].endswith("Kilometerstand: 1080 km  (+80 km)")
+    assert len(bmw.requests) == 2
+
+
+def test_status_ohne_speichern_legt_keinen_verlauf_an(bmw, angemeldet):
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    _starte(bmw, angemeldet, "status", VIN)
+    assert not history_path(angemeldet).exists()
+
+
+def test_verlauf_mit_anzahl_und_als_csv(bmw, angemeldet):
+    for tag in (1, 2, 3):
+        append_entry(history_path(angemeldet), Entry(f"2026-10-0{tag}T10:00:00Z", VIN, {}))
+    assert len(_starte(bmw, angemeldet, "verlauf", "--anzahl", "2")[1].splitlines()) == 2
+    code, ausgabe, _ = _starte(bmw, angemeldet, "verlauf", "--csv")
+    assert code == 0
+    assert ausgabe.splitlines()[0].startswith("zeit;fahrgestellnummer;")
+    assert len(ausgabe.splitlines()) == 4
+
+
+def test_leerer_verlauf_gibt_einen_hinweis(bmw, tmp_path):
+    code, ausgabe, _ = _starte(bmw, tmp_path / "state.json", "verlauf")
+    assert code == 0
+    assert "status --speichern" in ausgabe
+
+
+@pytest.mark.parametrize("anzahl", ["0", "-3", "abc", "100000"])
+def test_ungültige_anzahl_wird_abgelehnt(bmw, tmp_path, anzahl):
+    with pytest.raises(SystemExit):
+        _starte(bmw, tmp_path / "state.json", "verlauf", "--anzahl", anzahl)

@@ -20,13 +20,19 @@ class Session:
     state: State
 
 
-def open_session(http: httpx.Client, state: State, path: Path, now: float) -> Session:
+def open_session(
+    http: httpx.Client,
+    state: State,
+    path: Path,
+    now: float,
+    on_request: Callable[[], None] | None = None,
+) -> Session:
     """Erneuert abgelaufene Tokens und speichert sie, bevor die API genutzt wird."""
     current = state
     if state.tokens.is_expired(now):
         current = state.with_tokens(refresh_tokens(http, state.client_id, state.tokens, now))
         save_state(path, current)
-    return Session(CarDataApi(http, current.tokens.access_token), current)
+    return Session(CarDataApi(http, current.tokens.access_token, on_request), current)
 
 
 def _matches(container: dict[str, object], wanted: tuple[str, ...]) -> bool:
@@ -68,10 +74,29 @@ def fetch_status(session: Session, vin: str, path: Path) -> dict[str, dict[str, 
     return fresh.api.telematic_data(vin, str(fresh.state.container_id))
 
 
-def resolve_vin(session: Session, vin: str | None, choose: Callable[[list[str]], str]) -> str:
+def _with_state(session: Session, state: State, path: Path) -> Session:
+    save_state(path, state)
+    return Session(session.api, state)
+
+
+def resolve_vin(
+    session: Session, vin: str | None, choose: Callable[[list[str]], str], path: Path
+) -> tuple[Session, str]:
+    """Angegebene, sonst gemerkte Fahrgestellnummer; erst danach die Fahrzeugliste (1 Abruf)."""
     if vin:
-        return vin
+        return session, vin
+    if session.state.vin:
+        return session, session.state.vin
     vins = session.api.vehicles()
     if not vins:
         raise ApiError("Unter diesem Konto ist kein Fahrzeug als Hauptnutzer eingetragen.", 404)
-    return choose(vins)
+    chosen = choose(vins)
+    return _with_state(session, session.state.with_vin(chosen), path), chosen
+
+
+def remember_vehicles(session: Session, vins: list[str], path: Path) -> Session:
+    """Merkt sich das Fahrzeug, wenn das Konto genau eines hat; sonst nichts."""
+    wanted = vins[0] if len(vins) == 1 else None
+    if wanted == session.state.vin:
+        return session
+    return _with_state(session, session.state.with_vin(wanted), path)

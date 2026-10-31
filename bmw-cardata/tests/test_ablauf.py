@@ -3,7 +3,7 @@ from conftest import VIN, VIN2
 
 from bmw_cardata.api import ApiError, CarDataApi
 from bmw_cardata.descriptors import CONTAINER_NAME, CONTAINER_PURPOSE, all_descriptors
-from bmw_cardata.service import Session, ensure_container, fetch_status, open_session, resolve_vin
+from bmw_cardata.service import Session, ensure_container, fetch_status, open_session, remember_vehicles, resolve_vin
 from bmw_cardata.state import load_state
 
 TOKEN_PATH = "/gcdm/oauth/token"
@@ -81,17 +81,59 @@ def test_andere_fehler_beim_status_werden_weitergereicht(bmw, make_state, tmp_pa
         fetch_status(_sitzung(bmw, make_state(container_id="b")), VIN, tmp_path / "s.json")
 
 
-def test_angegebene_fahrgestellnummer_braucht_keinen_abruf(bmw, make_state):
-    assert resolve_vin(_sitzung(bmw, make_state()), VIN, lambda v: v[0]) == VIN
+def test_angegebene_fahrgestellnummer_braucht_keinen_abruf(bmw, make_state, tmp_path):
+    sitzung = _sitzung(bmw, make_state())
+    assert resolve_vin(sitzung, VIN, lambda v: v[0], tmp_path / "s.json") == (sitzung, VIN)
+    assert bmw.requests == []
+    assert not (tmp_path / "s.json").exists()
+
+
+def test_gemerkte_fahrgestellnummer_braucht_keinen_abruf(bmw, make_state, tmp_path):
+    sitzung = _sitzung(bmw, make_state().with_vin(VIN2))
+    assert resolve_vin(sitzung, None, lambda v: v[0], tmp_path / "s.json")[1] == VIN2
     assert bmw.requests == []
 
 
-def test_ohne_fahrgestellnummer_entscheidet_die_auswahl(bmw, make_state):
+def test_ohne_fahrgestellnummer_entscheidet_die_auswahl_und_wird_gemerkt(bmw, make_state, tmp_path):
+    pfad = tmp_path / "s.json"
     bmw.add("GET", "/customers/vehicles/mappings", body=[{"vin": VIN}, {"vin": VIN2}])
-    assert resolve_vin(_sitzung(bmw, make_state()), None, lambda v: v[1]) == VIN2
+    sitzung, vin = resolve_vin(_sitzung(bmw, make_state()), None, lambda v: v[1], pfad)
+    assert vin == VIN2
+    assert sitzung.state.vin == VIN2
+    assert load_state(pfad).vin == VIN2
 
 
-def test_ohne_fahrzeuge_kommt_ein_klarer_fehler(bmw, make_state):
+def test_ohne_fahrzeuge_kommt_ein_klarer_fehler(bmw, make_state, tmp_path):
     bmw.add("GET", "/customers/vehicles/mappings", body=[])
     with pytest.raises(ApiError, match="kein Fahrzeug"):
-        resolve_vin(_sitzung(bmw, make_state()), None, lambda v: v[0])
+        resolve_vin(_sitzung(bmw, make_state()), None, lambda v: v[0], tmp_path / "s.json")
+
+
+def test_fahrzeugliste_merkt_sich_nur_ein_einzelnes_fahrzeug(bmw, make_state, tmp_path):
+    pfad = tmp_path / "s.json"
+    sitzung = remember_vehicles(_sitzung(bmw, make_state()), [VIN], pfad)
+    assert sitzung.state.vin == VIN and load_state(pfad).vin == VIN
+    sitzung = remember_vehicles(sitzung, [VIN, VIN2], pfad)
+    assert sitzung.state.vin is None and load_state(pfad).vin is None
+
+
+def test_unveränderte_fahrzeugliste_schreibt_nichts(bmw, make_state, tmp_path):
+    sitzung = _sitzung(bmw, make_state().with_vin(VIN))
+    assert remember_vehicles(sitzung, [VIN], tmp_path / "s.json") is sitzung
+    assert not (tmp_path / "s.json").exists()
+
+
+def test_gemerkte_fahrgestellnummer_bleibt_beim_container_anlegen_erhalten(bmw, make_state, tmp_path):
+    pfad = tmp_path / "s.json"
+    bmw.add("GET", CONTAINERS, body=[])
+    bmw.add("POST", CONTAINERS, status=201, body={"containerId": "neu"})
+    ensure_container(_sitzung(bmw, make_state().with_vin(VIN)), pfad)
+    assert load_state(pfad).vin == VIN
+
+
+def test_abrufe_werden_über_die_sitzung_gemeldet(bmw, make_state, tmp_path):
+    gezaehlt = []
+    bmw.add("GET", "/customers/vehicles/mappings", body=[])
+    sitzung = open_session(bmw.client(), make_state(), tmp_path / "s.json", 0.0, on_request=lambda: gezaehlt.append(1))
+    sitzung.api.vehicles()
+    assert gezaehlt == [1]

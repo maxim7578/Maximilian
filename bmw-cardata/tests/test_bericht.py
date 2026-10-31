@@ -1,5 +1,7 @@
+import json
+
 from bmw_cardata.descriptors import STATUS_FIELDS, all_descriptors
-from bmw_cardata.report import basic_data_lines, format_value, status_lines
+from bmw_cardata.report import basic_data_lines, format_value, map_link, status_json, status_lines
 
 
 def test_wert_mit_einheit():
@@ -51,3 +53,30 @@ def test_jeder_datenpunkt_kommt_nur_einmal_vor():
     assert len(punkte) == len(set(punkte))
     assert all(p.startswith("vehicle.") for p in punkte)
     assert len(STATUS_FIELDS) >= 10
+
+
+BREITE = "vehicle.cabin.infotainment.navigation.currentLocation.latitude"
+LAENGE = "vehicle.cabin.infotainment.navigation.currentLocation.longitude"
+
+
+def test_position_ergibt_einen_kartenlink():
+    daten = {BREITE: {"value": 48.1772}, LAENGE: {"value": "11.5562"}}
+    assert map_link(daten) == "https://www.openstreetmap.org/?mlat=48.1772&mlon=11.5562#map=17/48.1772/11.5562"
+    assert status_lines(daten)[-1] == f"Karte: {map_link(daten)}"
+
+
+def test_ohne_gültige_position_gibt_es_keinen_kartenlink():
+    assert map_link({BREITE: {"value": 48.1}}) is None
+    assert map_link({BREITE: {"value": 91}, LAENGE: {"value": 11}}) is None
+    assert map_link({BREITE: {"value": "abc"}, LAENGE: {"value": 11}}) is None
+    assert map_link({BREITE: {"value": True}, LAENGE: {"value": 11}}) is None
+
+
+def test_json_ausgabe_enthält_nur_die_abgefragten_datenpunkte():
+    daten = {"vehicle.vehicle.travelledDistance": {"value": 5, "unit": "km"}, "fremd.punkt": {"value": 1}}
+    ergebnis = json.loads(status_json("WBA12345678901234", daten, "2026-10-31T10:00:00Z"))
+    assert ergebnis == {
+        "fahrgestellnummer": "WBA12345678901234",
+        "abgerufen": "2026-10-31T10:00:00Z",
+        "werte": {"vehicle.vehicle.travelledDistance": {"value": 5, "unit": "km"}},
+    }

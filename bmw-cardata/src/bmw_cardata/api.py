@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import httpx
@@ -28,8 +29,11 @@ def _items(payload: Any, *keys: str) -> list[dict[str, Any]]:
 
 
 class CarDataApi:
-    def __init__(self, http: httpx.Client, access_token: str) -> None:
+    def __init__(
+        self, http: httpx.Client, access_token: str, on_request: Callable[[], None] | None = None
+    ) -> None:
         self._http = http
+        self._on_request = on_request  # wird nach jeder Antwort von BMW aufgerufen (Abrufzähler)
         self._headers = {
             "Authorization": f"Bearer {access_token}",
             "x-version": API_VERSION,
@@ -38,10 +42,13 @@ class CarDataApi:
 
     def _request(self, method: str, path: str, **kwargs: Any) -> Any:
         response = self._http.request(method, f"{API_BASE_URL}{path}", headers=self._headers, **kwargs)
+        if self._on_request is not None:
+            self._on_request()
         status = response.status_code
         if status == 429:
             raise RateLimitError(
-                "Tageslimit der BMW CarData API erreicht (50 Abrufe pro Tag). Bitte später erneut versuchen.",
+                "Tageslimit der BMW CarData API erreicht (50 Abrufe pro Tag). Bitte später erneut versuchen; "
+                "'bmw-cardata kontingent' zeigt die eigenen Abrufe.",
                 status,
             )
         if status in (401, 403):

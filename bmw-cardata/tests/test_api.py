@@ -109,3 +109,14 @@ def test_ungültiges_json_wird_erkannt(bmw):
 def test_leere_antwort_ergibt_keine_daten(bmw):
     bmw.add("GET", f"/customers/vehicles/{VIN}/basicData", raw=b"")
     assert _api(bmw).basic_data(VIN) == {}
+
+
+def test_jeder_beantwortete_abruf_wird_gemeldet(bmw):
+    gezaehlt = []
+    bmw.add("GET", MAPPINGS, body=[])
+    bmw.add("GET", TELEMATIK, status=429)
+    api = CarDataApi(bmw.client(), "zugang-123", on_request=lambda: gezaehlt.append(1))
+    api.vehicles()
+    with pytest.raises(RateLimitError, match="kontingent"):
+        api.telematic_data(VIN, "b")
+    assert len(gezaehlt) == 2

@@ -47,3 +47,19 @@ def test_abmelden_löscht_die_datei_und_meldet_ob_etwas_da_war(tmp_path, make_st
     save_state(pfad, make_state())
     assert delete_state(pfad) is True
     assert delete_state(pfad) is False
+
+
+def test_fahrgestellnummer_wird_mitgespeichert(tmp_path, make_state):
+    pfad = tmp_path / "state.json"
+    zustand = make_state().with_vin("WBA12345678901234")
+    save_state(pfad, zustand)
+    assert load_state(pfad).vin == "WBA12345678901234"
+
+
+def test_ältere_datei_ohne_fahrgestellnummer_bleibt_lesbar(tmp_path, make_state):
+    pfad = tmp_path / "state.json"
+    save_state(pfad, make_state())
+    roh = json.loads(pfad.read_text())
+    del roh["vin"]
+    pfad.write_text(json.dumps(roh))
+    assert load_state(pfad).vin is None

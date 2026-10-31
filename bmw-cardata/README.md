@@ -17,8 +17,10 @@ BMW CarData.
   Klimatisierung, kein Ladestart.
 - **Nur EU-Konten.** Das CarData-Portal gibt es nicht in jedem Land.
 - **50 Abrufe pro Tag** pro Konto. `fahrzeuge` und `basisdaten` kosten je 1 Abruf, `status`
-  1 Abruf (2 ohne Fahrgestellnummer); beim ersten `status` kommen einmalig 1 bis 2 Abrufe
-  für den Datencontainer dazu. Danach meldet BMW HTTP 429, der Client zeigt dann „Tageslimit erreicht“.
+  1 Abruf. Nur beim allerersten `status` ohne Fahrgestellnummer kommt 1 Abruf für die
+  Fahrzeugliste dazu (danach ist das Fahrzeug gemerkt) und einmalig 1 bis 2 Abrufe für den
+  Datencontainer. `verlauf` und `kontingent` kosten nichts. Ist das Limit erreicht, meldet BMW
+  HTTP 429, der Client zeigt dann „Tageslimit erreicht“.
 - Werte kommen nur, wenn das Auto Daten gesendet hat. Fehlen Werte, kurz die
   My-BMW-App öffnen oder ein Stück fahren.
 
@@ -52,7 +54,12 @@ bmw-cardata anmelden          # Link öffnen, Code eingeben, bei BMW bestätigen
 bmw-cardata fahrzeuge         # Fahrgestellnummern
 bmw-cardata status            # Status deines einzigen Fahrzeugs
 bmw-cardata status WBA…       # Status eines bestimmten Fahrzeugs
+bmw-cardata status --speichern  # Status zeigen und im lokalen Verlauf ablegen
+bmw-cardata status --json     # Status als JSON, z. B. für eigene Skripte
 bmw-cardata basisdaten WBA…   # Basisdaten, so wie BMW sie liefert
+bmw-cardata verlauf           # die letzten 10 gespeicherten Abrufe (--anzahl N für mehr)
+bmw-cardata verlauf --csv > fahrten.csv   # alle Einträge für Excel/LibreOffice
+bmw-cardata kontingent        # eigene Abrufe der letzten 24 Stunden
 bmw-cardata abmelden          # gespeicherte Anmeldung löschen
 ```
 
@@ -65,8 +72,50 @@ Ladestand Hochvoltbatterie: 80 %
 Elektrische Reichweite: 210 km
 ```
 
-Die Anmeldung (Client-ID, Tokens, ID des Datencontainers) liegt in
-`~/.config/bmw-cardata/state.json`, nur für dich lesbar (Rechte 600). Anderer Ort:
+Hat BMW eine Position geliefert, steht am Ende ein Link zu OpenStreetMap
+(`Karte: https://www.openstreetmap.org/?mlat=…`).
+
+### Fahrzeug merken
+
+Hat dein Konto genau ein Fahrzeug, merkt sich der Client dessen Fahrgestellnummer beim
+ersten `status` und spart danach den Abruf der Fahrzeugliste. `fahrzeuge` frischt die
+gemerkte Nummer auf (bei mehreren Fahrzeugen wird keine gemerkt). Nach einem
+Fahrzeugwechsel also einmal `bmw-cardata fahrzeuge` aufrufen.
+
+### Verlauf
+
+`status --speichern` hängt jeden Abruf an `verlauf.jsonl` an (im selben Ordner wie die
+Anmeldung, Rechte 600, da die Position enthalten sein kann). `verlauf` zeigt die Einträge
+mit den seit dem Eintrag davor gefahrenen Kilometern:
+
+```
+30.10.2026 17:30  Kilometerstand: 42000 km, Ladestand Hochvoltbatterie: 64 %  (+120 km)
+31.10.2026 08:00  Kilometerstand: 42063 km, Ladestand Hochvoltbatterie: 51 %  (+63 km)
+```
+
+`verlauf --csv` gibt alle Einträge mit Semikolon getrennt aus, so öffnet ein deutsches
+Excel sie direkt in Spalten. `abmelden` löscht den Verlauf nicht; zum Löschen die Datei
+`verlauf.jsonl` entfernen.
+
+Für einen regelmäßigen Verlauf eignet sich ein Cron-Eintrag, z. B. zweimal am Tag
+(`crontab -e`; den vollen Pfad liefert `command -v bmw-cardata`):
+
+```
+0 7,19 * * * /voller/pfad/zu/bmw-cardata status --speichern >/dev/null
+```
+
+### Kontingent
+
+`kontingent` zählt die Abrufe dieses Programms in den letzten 24 Stunden und sagt, wie
+viele der 50 noch frei sind. Ist alles verbraucht, nennt es den Zeitpunkt, ab dem der
+älteste Abruf aus dem 24-Stunden-Fenster fällt. Zwei Einschränkungen: Abrufe anderer
+Programme mit derselben Client-ID (z. B. Home Assistant) zählt es nicht mit, und wann
+BMW den Zähler genau zurücksetzt, ist hier nicht bekannt. Die Anzeige ist also eine
+Schätzung von unten.
+
+Die Anmeldung (Client-ID, Tokens, ID des Datencontainers, gemerkte Fahrgestellnummer)
+liegt in `~/.config/bmw-cardata/state.json`, nur für dich lesbar (Rechte 600). Daneben
+liegen `abrufe.json` (Abrufzähler) und, falls genutzt, `verlauf.jsonl`. Anderer Ort:
 `--state PFAD` oder Umgebungsvariable `BMW_CARDATA_STATE`. Abgelaufene Zugangstokens
 werden automatisch erneuert; lehnt BMW die Erneuerung ab, einfach neu `anmelden`.
 
