@@ -19,6 +19,16 @@ class SafetyTest {
     }
 
     @Test
+    fun `Pipe in Anfuehrungszeichen ist kein Trenner`() {
+        assertTrue(Safety.istLesebefehl("dmesg | grep -i -E 'error|fail|warn'"))
+    }
+
+    @Test
+    fun `verweigert unbalancierte Anfuehrungszeichen`() {
+        assertFalse(Safety.istLesebefehl("grep 'offen"))
+    }
+
+    @Test
     fun `verweigert rm`() {
         assertFalse(Safety.istLesebefehl("rm -rf /"))
     }

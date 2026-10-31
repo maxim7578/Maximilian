@@ -19,7 +19,7 @@ object Safety {
         "echo", "find", "readlink", "basename", "dirname", "md5sum", "sha256sum",
     )
 
-    private val VERBOTENE_TOKEN = listOf(">", ">>", "<", "&", ";", "`", "\$(", "\${")
+    private val VERBOTENE_OPERATORZEICHEN = setOf('>', '<', '&', ';', '`', '(', ')')
 
     private val VERBOTENE_OPTIONEN_JE_PROGRAMM = mapOf(
         "sed" to listOf("-i", "--in-place"),
@@ -49,15 +49,45 @@ object Safety {
                     "echten Pfad ersetzen; Umleitungen sind nicht erlaubt.",
             )
         }
-        for (token in VERBOTENE_TOKEN) {
-            if (befehl.contains(token)) {
-                throw UnsichererBefehlException("Operator '$token' ist nicht erlaubt (Nur-Lesen).")
-            }
-        }
-        for (segment in befehl.split("|")) {
+        for (segment in inSegmente(befehl)) {
             pruefeSegment(segment.trim())
         }
         return befehl
+    }
+
+    /**
+     * Teilt den Befehl an Pipes '|' - aber nur ausserhalb von
+     * Anfuehrungszeichen. Verbotene Operatorzeichen ausserhalb von
+     * Anfuehrungszeichen loesen einen Fehler aus.
+     */
+    private fun inSegmente(befehl: String): List<String> {
+        val segmente = mutableListOf<String>()
+        val aktuell = StringBuilder()
+        var inSingle = false
+        var inDouble = false
+        var i = 0
+        while (i < befehl.length) {
+            val zeichen = befehl[i]
+            when {
+                zeichen == '\'' && !inDouble -> { inSingle = !inSingle; aktuell.append(zeichen) }
+                zeichen == '"' && !inSingle -> { inDouble = !inDouble; aktuell.append(zeichen) }
+                inSingle || inDouble -> aktuell.append(zeichen)
+                zeichen == '|' -> { segmente.add(aktuell.toString()); aktuell.clear() }
+                zeichen == '$' && i + 1 < befehl.length && (befehl[i + 1] == '(' || befehl[i + 1] == '{') ->
+                    throw UnsichererBefehlException(
+                        "Kommandosubstitution (\$(...) / \${...}) ist nicht erlaubt.",
+                    )
+                zeichen in VERBOTENE_OPERATORZEICHEN ->
+                    throw UnsichererBefehlException("Operator '$zeichen' ist nicht erlaubt (Nur-Lesen).")
+                else -> aktuell.append(zeichen)
+            }
+            i++
+        }
+        if (inSingle || inDouble) {
+            throw UnsichererBefehlException("Unbalancierte Anfuehrungszeichen.")
+        }
+        segmente.add(aktuell.toString())
+        return segmente
     }
 
     private fun pruefeSegment(segment: String) {

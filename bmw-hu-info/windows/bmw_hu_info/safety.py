@@ -21,8 +21,10 @@ ERLAUBTE_PROGRAMME = frozenset(
     }
 )
 
-# Zeichen/Token, die Schreiben oder Ausbruch ermoeglichen koennten.
-VERBOTENE_TOKEN = (">", ">>", "<", "&", ";", "`", "$(", "${")
+# Operatorzeichen, die ausserhalb von Anfuehrungszeichen verboten sind
+# (Umleitung, Verkettung, Subshell). Nur die Pipe '|' ist als Trenner
+# zwischen Lesebefehlen erlaubt.
+VERBOTENE_OPERATORZEICHEN = (">", "<", "&", ";", "`", "(", ")")
 
 # Gefaehrliche Optionen je Programm. Nur fuer das jeweilige Programm
 # verboten, damit harmlose gleichnamige Optionen (z. B. "grep -i")
@@ -38,6 +40,47 @@ GLOBAL_VERBOTENE_FRAGMENTE = ("system(", "print >", ">>")
 
 class UnsichererBefehlError(ValueError):
     """Wird ausgeloest, wenn ein Befehl nicht als Nur-Lesen gilt."""
+
+
+def _in_segmente(befehl: str) -> list[str]:
+    """Teilt den Befehl an Pipes '|' - aber nur ausserhalb von
+    Anfuehrungszeichen. Verbotene Operatorzeichen ausserhalb von
+    Anfuehrungszeichen loesen einen Fehler aus. So bleiben Pipes innerhalb
+    von Argumenten (z. B. grep 'a|b') erhalten.
+    """
+    segmente: list[str] = []
+    aktuell: list[str] = []
+    in_single = False
+    in_double = False
+    i = 0
+    while i < len(befehl):
+        zeichen = befehl[i]
+        if zeichen == "'" and not in_double:
+            in_single = not in_single
+            aktuell.append(zeichen)
+        elif zeichen == '"' and not in_single:
+            in_double = not in_double
+            aktuell.append(zeichen)
+        elif in_single or in_double:
+            aktuell.append(zeichen)
+        elif zeichen == "|":
+            segmente.append("".join(aktuell))
+            aktuell = []
+        elif zeichen == "$" and i + 1 < len(befehl) and befehl[i + 1] in "({":
+            raise UnsichererBefehlError(
+                "Kommandosubstitution ($(...) / ${...}) ist nicht erlaubt."
+            )
+        elif zeichen in VERBOTENE_OPERATORZEICHEN:
+            raise UnsichererBefehlError(
+                f"Operator '{zeichen}' ist nicht erlaubt (Nur-Lesen)."
+            )
+        else:
+            aktuell.append(zeichen)
+        i += 1
+    if in_single or in_double:
+        raise UnsichererBefehlError("Unbalancierte Anfuehrungszeichen.")
+    segmente.append("".join(aktuell))
+    return segmente
 
 
 def _pruefe_segment(segment: str) -> None:
@@ -86,11 +129,6 @@ def pruefe_befehl(befehl: str) -> str:
             "Platzhalter oder Umleitung gefunden. Bitte <...> durch einen "
             "echten Pfad ersetzen; Umleitungen (>, <) sind nicht erlaubt."
         )
-    for token in VERBOTENE_TOKEN:
-        if token in befehl:
-            raise UnsichererBefehlError(
-                f"Operator '{token}' ist nicht erlaubt (Nur-Lesen)."
-            )
-    for segment in befehl.split("|"):
+    for segment in _in_segmente(befehl):
         _pruefe_segment(segment.strip())
     return befehl

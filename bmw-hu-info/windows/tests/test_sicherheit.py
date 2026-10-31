@@ -22,6 +22,15 @@ class TestErlaubteLesebefehle:
     def test_laesst_journalctl_durch(self):
         assert ist_lesebefehl("journalctl -p err -n 200 --no-pager")
 
+    def test_pipe_in_anfuehrungszeichen_wird_nicht_als_trenner_gewertet(self):
+        # Regression: '|' innerhalb von Anfuehrungszeichen ist Teil des
+        # Arguments, kein Pipe-Trenner.
+        assert ist_lesebefehl("dmesg | grep -i -E 'error|fail|warn'")
+
+    def test_verweigert_unbalancierte_anfuehrungszeichen(self):
+        with pytest.raises(UnsichererBefehlError):
+            pruefe_befehl("grep 'offen")
+
 
 class TestVerweigerteSchreibbefehle:
     def test_verweigert_rm(self):

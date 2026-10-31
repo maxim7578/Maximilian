@@ -105,6 +105,32 @@ cd android
 ./gradlew testDebugUnitTest
 ```
 
+## Ohne Fahrzeug testen (simulierte Headunit)
+
+Damit du beide Apps vorab ausprobieren kannst, gibt es einen kleinen
+SSH-Testserver, der sich wie eine Headunit verhaelt und Beispieldaten
+liefert.
+
+```bash
+cd windows
+python -m pip install -r requirements.txt
+python tools/mock_headunit.py --port 2222 --passwort test
+```
+
+Dann in einem zweiten Fenster die Software dagegen laufen lassen:
+
+```bash
+python -m bmw_hu_info.cli --host 127.0.0.1 --port 2222 --benutzer root --passwort test --headunit NBTEVO
+```
+
+Oder die GUI (`python -m bmw_hu_info`) oeffnen und als IP `127.0.0.1`,
+Port `2222`, Passwort `test` eintragen. Die Android-App kann ueber die
+IP des PCs im selben Netz auf denselben Testserver zugreifen.
+
+> Der Testserver akzeptiert jede Anmeldung (bzw. das gesetzte Passwort)
+> und ist nur zum Ausprobieren gedacht. Die ausgegebenen Werte sind
+> erfunden.
+
 ## Verbindung zum Fahrzeug (Kurzfassung)
 
 1. ENET-Kabel (OBD <-> Ethernet) ans Fahrzeug, am PC Netzwerk auf DHCP oder
@@ -120,6 +146,8 @@ keine fahrzeugspezifischen Zugangsdaten mit.
 
 ## Status
 
-Fruehe Version (0.1.0). Die Diagnose-Logik und die Sicherheitsschicht sind durch
-Tests abgedeckt. Geraete-spezifische Pfade (VIN, Software-/Teilenummer) sind
-Platzhalter und am realen Fahrzeug zu ergaenzen.
+Fruehe Version (0.1.0). Sicherheitsschicht, Katalog und der komplette
+SSH-Weg sind durch Tests abgedeckt (29 Python-Tests, inkl. echtem
+Integrationstest gegen die simulierte Headunit; dazu JUnit-Tests fuer die
+Android-Sicherheitslogik). Geraete-spezifische Pfade (VIN,
+Software-/Teilenummer) sind Platzhalter und am realen Fahrzeug zu ergaenzen.
