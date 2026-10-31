@@ -2,7 +2,8 @@
 
 Kommandozeilen-Client für die **offizielle BMW CarData API**. Er liest Kilometerstand,
 Ladestand, Reichweite, Ladestatus, Tankfüllstand, Türschloss, 12-V-Batterie,
-Service-Fälligkeit und Position deines BMW oder MINI.
+Service-Fälligkeit und Position deines BMW oder MINI, auf Wunsch auch live über den
+Datenstrom von BMW (`bmw-cardata live`).
 
 ## Warum nicht bimmer_connected?
 
@@ -20,7 +21,8 @@ BMW CarData.
   1 Abruf. Nur beim allerersten `status` ohne Fahrgestellnummer kommt 1 Abruf für die
   Fahrzeugliste dazu (danach ist das Fahrzeug gemerkt) und einmalig 1 bis 2 Abrufe für den
   Datencontainer. `verlauf` und `kontingent` kosten nichts. Ist das Limit erreicht, meldet BMW
-  HTTP 429, der Client zeigt dann „Tageslimit erreicht“.
+  HTTP 429, der Client zeigt dann „Tageslimit erreicht“. `live` nutzt den Datenstrom und
+  zählt nicht gegen dieses Limit.
 - Werte kommen nur, wenn das Auto Daten gesendet hat. Fehlen Werte, kurz die
   My-BMW-App öffnen oder ein Stück fahren.
 
@@ -34,8 +36,13 @@ BMW CarData.
    Den Knopf „Gerät authentifizieren“ im Portal **nicht** drücken, das übernimmt der Client.
 4. **„Zugriff auf CarData API anfordern“** klicken und etwa eine Minute warten,
    bis BMW die Freigabe verteilt hat. Sonst gibt es HTTP 403.
+5. Für Live-Daten zusätzlich den Zugriff auf **CarData Stream** anfordern (englisch:
+   „Request access to CarData Stream“) und wieder etwa eine Minute warten.
+6. Unter **CARDATA STREAMING** den Datenstrom konfigurieren (englisch: „Configure data
+   stream“): alle Datenpunkte laden („Load more“) und die gewünschten anhaken. Nur
+   angehakte Datenpunkte schickt das Auto.
 
-Streaming (MQTT) braucht dieser Client nicht.
+Ohne Schritt 5 und 6 funktioniert alles außer `live`; dann mit `anmelden --nur-api` anmelden.
 
 ## Installation
 
@@ -60,6 +67,7 @@ bmw-cardata basisdaten WBA…   # Basisdaten, so wie BMW sie liefert
 bmw-cardata verlauf           # die letzten 10 gespeicherten Abrufe (--anzahl N für mehr)
 bmw-cardata verlauf --csv > fahrten.csv   # alle Einträge für Excel/LibreOffice
 bmw-cardata kontingent        # eigene Abrufe der letzten 24 Stunden
+bmw-cardata live              # Live-Daten empfangen, bis Strg+C
 bmw-cardata abmelden          # gespeicherte Anmeldung löschen
 ```
 
@@ -104,6 +112,28 @@ Für einen regelmäßigen Verlauf eignet sich ein Cron-Eintrag, z. B. zweimal am
 ```
 0 7,19 * * * /voller/pfad/zu/bmw-cardata status --speichern >/dev/null
 ```
+
+### Live-Daten
+
+`live` verbindet sich mit dem Datenstrom von BMW (MQTT über TLS,
+`customer.streaming-cardata.bmwgroup.com:9000`) und zeigt jede Nachricht vom Auto sofort an:
+
+```
+Fahrzeug WBA12345678901234
+15:12:04  Kilometerstand: 42063 km
+15:12:04  Ladestand Hochvoltbatterie: 51 %
+```
+
+- Das Auto sendet, wenn sich etwas ändert: beim Fahren, Laden, Ver- und Entriegeln. Steht
+  es still, kann es lange ruhig bleiben.
+- `live WBA…` zeigt nur ein Fahrzeug, `--json` gibt eine JSON-Zeile pro Nachricht aus,
+  `--speichern` legt jede Nachricht im Verlauf ab.
+- Der Zugang wird vor dem Ablauf automatisch erneuert, nach einem Abbruch verbindet sich
+  der Client von selbst neu (nach 5, 10, 30, dann alle 60 Sekunden).
+- **Nur eine Verbindung pro Konto:** Läuft schon Home Assistant oder ein anderes Programm
+  mit dem Datenstrom, lehnt BMW `live` ab.
+- Wer sich vor dieser Version angemeldet hat, muss sich für `live` einmal neu anmelden,
+  damit BMW die Berechtigung `cardata:streaming:read` erteilt.
 
 ### Kontingent
 

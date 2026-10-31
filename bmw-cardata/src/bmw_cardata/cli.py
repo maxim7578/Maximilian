@@ -1,8 +1,9 @@
-"""Kommandozeile: anmelden | fahrzeuge | basisdaten | status | verlauf | kontingent | abmelden."""
+"""Kommandozeile: anmelden | fahrzeuge | basisdaten | status | live | verlauf | kontingent | abmelden."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import time
 from collections.abc import Callable, Sequence
@@ -13,12 +14,23 @@ from typing import TextIO
 import httpx
 
 from .api import ApiError
-from .auth import AuthError, create_pkce_pair, poll_for_tokens, request_device_code
-from .config import HTTP_TIMEOUT_SECONDS, ConfigError, client_id_from_env, state_path, validate_client_id, validate_vin
+from .auth import AuthError, create_pkce_pair, poll_for_tokens, refresh_tokens, request_device_code
+from .config import (
+    API_ONLY_SCOPE,
+    DEFAULT_SCOPE,
+    HTTP_TIMEOUT_SECONDS,
+    ConfigError,
+    client_id_from_env,
+    state_path,
+    validate_client_id,
+    validate_vin,
+)
 from .history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
 from .report import basic_data_lines, status_json, status_lines
 from .service import Session, fetch_vehicle_status, open_session, remember_vehicles
 from .state import State, StateError, delete_state, load_state, save_state
+from .stream import REFRESH_MARGIN_SECONDS, Credentials, StreamError, message_lines, run_stream, stream_credentials
+from .stream import create_client as create_stream_client
 from .usage import DAILY_LIMIT, load_usage, record_call, usage_path
 
 HttpFactory = Callable[[], httpx.Client]
@@ -47,6 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
     login = commands.add_parser("anmelden", help="Per Gerätecode bei BMW anmelden")
     login.add_argument("--client-id", help="Client-ID aus dem BMW-CarData-Portal")
+    login.add_argument("--nur-api", action="store_true", help="Ohne Datenstrom anmelden (kein 'live')")
     commands.add_parser("fahrzeuge", help="Fahrgestellnummern deiner Fahrzeuge anzeigen")
     basic = commands.add_parser("basisdaten", help="Basisdaten eines Fahrzeugs anzeigen")
     basic.add_argument("vin", help="Fahrgestellnummer")
@@ -54,6 +67,10 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("vin", nargs="?", help="Fahrgestellnummer (ohne Angabe: dein einziges Fahrzeug)")
     status.add_argument("--json", action="store_true", help="Ausgabe als JSON")
     status.add_argument("--speichern", action="store_true", help="Abruf im lokalen Verlauf ablegen")
+    live = commands.add_parser("live", help="Live-Daten vom Auto empfangen, bis Strg+C (ohne Tageslimit)")
+    live.add_argument("vin", nargs="?", help="Nur dieses Fahrzeug (ohne Angabe: alle des Kontos)")
+    live.add_argument("--json", action="store_true", help="Eine JSON-Zeile pro Nachricht")
+    live.add_argument("--speichern", action="store_true", help="Nachrichten im lokalen Verlauf ablegen")
     history = commands.add_parser("verlauf", help="Gespeicherte Abrufe anzeigen (ohne Abruf bei BMW)")
     history.add_argument("--anzahl", type=_line_count, default=10, help="Wie viele Einträge (Standard: 10)")
     history.add_argument("--csv", action="store_true", help="Alle Einträge als CSV ausgeben")
@@ -65,7 +82,7 @@ def build_parser() -> argparse.ArgumentParser:
 def _login(args: argparse.Namespace, path: Path, http: httpx.Client, out: TextIO) -> None:
     client_id = validate_client_id(args.client_id) if args.client_id else client_id_from_env()
     verifier, challenge = create_pkce_pair()
-    device = request_device_code(http, client_id, challenge)
+    device = request_device_code(http, client_id, challenge, API_ONLY_SCOPE if args.nur_api else DEFAULT_SCOPE)
     link = device.verification_uri_complete or device.verification_uri
     print(f"Öffne {link} und bestätige mit dem Code {device.user_code}.", file=out)
     print("Warte auf die Bestätigung …", file=out, flush=True)
@@ -88,19 +105,20 @@ def _status(args: argparse.Namespace, session: Session, path: Path) -> list[str]
     explicit = validate_vin(args.vin) if args.vin else None
     vin, data = fetch_vehicle_status(session, explicit, _only_vehicle, path)
     stamp = _utc_stamp(time.time())
-    saved = _save_history(path, Entry(stamp, vin, data)) if args.speichern else []
+    problem = _save_history(path, Entry(stamp, vin, data)) if args.speichern else None
     if args.json:
         return [status_json(vin, data, stamp)]
+    saved = [problem or "Im Verlauf gespeichert."] if args.speichern else []
     return [f"Fahrzeug {vin}", *status_lines(data), *saved]
 
 
-def _save_history(path: Path, entry: Entry) -> list[str]:
-    """Speichert den Abruf; ein Dateifehler kostet nur den Verlaufseintrag, nicht die Ausgabe."""
+def _save_history(path: Path, entry: Entry) -> str | None:
+    """Speichert einen Eintrag; ein Dateifehler kostet nur den Eintrag. Gibt die Warnung zurück."""
     try:
         append_entry(history_path(path), entry)
     except OSError as error:
-        return [f"Verlauf konnte nicht gespeichert werden: {error.strerror or error}"]
-    return ["Im Verlauf gespeichert."]
+        return f"Verlauf konnte nicht gespeichert werden: {error.strerror or error}"
+    return None
 
 
 def _vehicles(session: Session, path: Path) -> list[str]:
@@ -119,6 +137,58 @@ def _run_with_session(args: argparse.Namespace, path: Path, http: httpx.Client, 
     else:
         lines = _status(args, session, path)
     print("\n".join(lines), file=out)
+
+
+class _LivePrinter:
+    """Gibt Nachrichten aus; nennt das Fahrzeug nur, wenn es wechselt."""
+
+    def __init__(self, args: argparse.Namespace, path: Path, out: TextIO, err: TextIO) -> None:
+        self.only = validate_vin(args.vin) if args.vin else None
+        self.as_json, self.save = args.json, args.speichern
+        self.path, self.out, self.err = path, out, err
+        self.last_vin: str | None = None
+
+    def __call__(self, vin: str, data: dict[str, dict[str, object]]) -> None:
+        if self.only and vin != self.only:
+            return
+        stamp = _utc_stamp(time.time())
+        problem = _save_history(self.path, Entry(stamp, vin, data)) if self.save else None
+        if problem:
+            print(problem, file=self.err)
+        if self.as_json:
+            line = {"fahrgestellnummer": vin, "empfangen": stamp, "werte": data}
+            print(json.dumps(line, ensure_ascii=False), file=self.out, flush=True)
+            return
+        lines = message_lines(data, datetime.now().astimezone())
+        if lines and vin != self.last_vin:
+            lines = [f"Fahrzeug {vin}", *lines]
+            self.last_vin = vin
+        if lines:
+            print("\n".join(lines), file=self.out, flush=True)
+
+
+def _stream_login(http: httpx.Client, path: Path) -> Callable[[bool], Credentials]:
+    """Zugangsdaten für den Datenstrom; erneuert die Tokens, wenn nötig oder verlangt."""
+
+    def provide(force: bool) -> Credentials:
+        state = load_state(path)
+        now = time.time()
+        if force or state.tokens.is_expired(now, margin=REFRESH_MARGIN_SECONDS):
+            state = state.with_tokens(refresh_tokens(http, state.client_id, state.tokens, now))
+            save_state(path, state)
+        return stream_credentials(state.tokens)
+
+    return provide
+
+
+def _live(args: argparse.Namespace, path: Path, http: httpx.Client, out: TextIO, err: TextIO) -> None:
+    login = _stream_login(http, path)
+    client = create_stream_client(login(False).gcid)
+    notify = lambda text: print(text, file=err, flush=True)  # noqa: E731
+    try:
+        run_stream(client, login, _LivePrinter(args, path, out, err), notify)
+    except KeyboardInterrupt:
+        notify("Live-Ansicht beendet.")
 
 
 def _quota_lines(path: Path, now: float) -> list[str]:
@@ -169,10 +239,12 @@ def run(
         with http_factory() as http:
             if args.command == "anmelden":
                 _login(args, path, http, out)
+            elif args.command == "live":
+                _live(args, path, http, out, err)
             else:
                 _run_with_session(args, path, http, out)
         return 0
-    except (ConfigError, AuthError, ApiError, StateError) as error:
+    except (ConfigError, AuthError, ApiError, StateError, StreamError) as error:
         print(f"Fehler: {error}", file=err)
     except httpx.HTTPError as error:
         print(f"Netzwerkfehler: {type(error).__name__}", file=err)

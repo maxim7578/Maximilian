@@ -134,3 +134,25 @@ def test_token_gilt_kurz_vor_ablauf_schon_als_abgelaufen():
     tokens = Tokens("a", "r", expires_at=1000.0)
     assert not tokens.is_expired(now=900.0)
     assert tokens.is_expired(now=950.0)
+
+
+def test_token_antwort_liefert_id_token_und_gcid():
+    tokens = Tokens.from_response({**TOKEN_ANTWORT, "id_token": "idt", "gcid": "g-1"}, now=0.0)
+    assert (tokens.id_token, tokens.gcid) == ("idt", "g-1")
+
+
+def test_erneuerung_ohne_neue_werte_behält_die_alten():
+    alt = Tokens("a", "r-alt", 0.0, "s", "id-alt", "g-alt")
+    neu = Tokens.from_response({"access_token": "a2", "id_token": "id-neu"}, now=5.0, previous=alt)
+    assert (neu.refresh_token, neu.id_token, neu.gcid) == ("r-alt", "id-neu", "g-alt")
+
+
+def test_alte_anmeldedatei_ohne_streamingfelder_bleibt_lesbar():
+    assert Tokens("a", "r", 1.0).id_token == "" and Tokens("a", "r", 1.0).gcid == ""
+
+
+def test_gcid_erscheint_nicht_in_fehlermeldungen(bmw):
+    bmw.add("POST", "/gcdm/oauth/device/code", status=400, body={"error": "x", "gcid": "geheim-123"})
+    with pytest.raises(AuthError) as fehler:
+        request_device_code(bmw.client(), "client-1234-abcd", "challenge")
+    assert "geheim-123" not in str(fehler.value)
