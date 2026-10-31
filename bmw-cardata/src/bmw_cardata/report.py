@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import json
+import unicodedata
 from typing import Any
 
 from .descriptors import LATITUDE, LONGITUDE, STATUS_FIELDS, Field, all_descriptors
 
 _BOOLEANS = {True: "ja", False: "nein", "true": "ja", "false": "nein"}
+
+
+def printable(text: str) -> str:
+    """Entfernt Steuer- und Formatzeichen (z. B. ANSI-Escapes, Richtungswechsel) aus Netzdaten,
+    damit sie das Terminal nicht verändern können."""
+    return "".join(ch for ch in text if not unicodedata.category(ch).startswith("C"))
 
 
 def format_value(entry: dict[str, Any]) -> str | None:
@@ -20,7 +27,8 @@ def format_value(entry: dict[str, Any]) -> str | None:
     else:
         text = str(value)
     unit = entry.get("unit")
-    return f"{text} {unit}" if unit else text
+    shown = f"{text} {unit}" if unit else text
+    return printable(shown)
 
 
 def field_entry(data: dict[str, dict[str, Any]], field: Field) -> dict[str, Any] | None:
@@ -83,4 +91,4 @@ def status_json(vin: str, data: dict[str, dict[str, Any]], fetched_at: str) -> s
     wanted = set(all_descriptors())
     values = {key: entry for key, entry in sorted(data.items()) if key in wanted}
     payload = {"fahrgestellnummer": vin, "abgerufen": fetched_at, "werte": values}
-    return json.dumps(payload, ensure_ascii=False, indent=2)
+    return json.dumps(payload, indent=2)  # maskiert Steuerzeichen aus dem Netz

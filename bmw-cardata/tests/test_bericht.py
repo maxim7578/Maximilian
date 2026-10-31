@@ -80,3 +80,7 @@ def test_json_ausgabe_enthält_nur_die_abgefragten_datenpunkte():
         "abgerufen": "2026-10-31T10:00:00Z",
         "werte": {"vehicle.vehicle.travelledDistance": {"value": 5, "unit": "km"}},
     }
+
+
+def test_steuerzeichen_in_werten_werden_entfernt():
+    assert format_value({"value": "zu\x1b[31m‮", "unit": "\x07km"}) == "zu[31m km"

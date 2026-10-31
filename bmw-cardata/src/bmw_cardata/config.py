@@ -12,8 +12,10 @@ TOKEN_URL = "https://customer.bmwgroup.com/gcdm/oauth/token"
 API_BASE_URL = "https://api-cardata.bmwgroup.com"
 API_VERSION = "v1"
 
-# Nur der lesende API-Zugriff; Streaming (MQTT) nutzt dieser Client nicht.
-DEFAULT_SCOPE = "authenticate_user openid cardata:api:read"
+# Lesender API-Zugriff und der Datenstrom (MQTT); ohne Stream-Freigabe im Portal: API_ONLY_SCOPE.
+STREAMING_SCOPE = "cardata:streaming:read"
+API_ONLY_SCOPE = "authenticate_user openid cardata:api:read"
+DEFAULT_SCOPE = f"{API_ONLY_SCOPE} {STREAMING_SCOPE}"
 
 CLIENT_ID_ENV = "BMW_CARDATA_CLIENT_ID"
 STATE_PATH_ENV = "BMW_CARDATA_STATE"

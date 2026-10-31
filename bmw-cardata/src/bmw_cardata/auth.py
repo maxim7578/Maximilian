@@ -15,7 +15,8 @@ import httpx
 from .config import DEFAULT_SCOPE, DEVICE_CODE_URL, TOKEN_URL
 
 DEVICE_GRANT = "urn:ietf:params:oauth:grant-type:device_code"
-_SECRET_KEYS = frozenset({"access_token", "refresh_token", "id_token"})
+# Nie in Fehlermeldungen: Zugangsdaten und die persönliche Kennung (GCID).
+_SECRET_KEYS = frozenset({"access_token", "refresh_token", "id_token", "gcid"})
 
 
 class AuthError(Exception):
@@ -28,19 +29,33 @@ class Tokens:
     refresh_token: str
     expires_at: float
     scope: str = ""
+    id_token: str = ""  # Passwort für den Datenstrom (MQTT)
+    gcid: str = ""  # Benutzername für den Datenstrom
 
     def is_expired(self, now: float, margin: float = 60.0) -> bool:
         return now >= self.expires_at - margin
 
     @classmethod
-    def from_response(cls, data: dict[str, Any], now: float, fallback_refresh: str = "") -> Tokens:
+    def from_response(cls, data: dict[str, Any], now: float, previous: Tokens | None = None) -> Tokens:
+        """Liest eine Token-Antwort; fehlende Felder übernimmt es aus den bisherigen Tokens."""
         access = data.get("access_token")
-        refresh = data.get("refresh_token") or fallback_refresh
+        refresh = data.get("refresh_token") or (previous.refresh_token if previous else "")
         if not isinstance(access, str) or not access or not isinstance(refresh, str) or not refresh:
             raise AuthError("Die Token-Antwort von BMW ist unvollständig.")
         expires_in = data.get("expires_in")
         lifetime = float(expires_in) if isinstance(expires_in, (int, float)) else 3600.0
-        return cls(access, refresh, now + lifetime, str(data.get("scope") or ""))
+        return cls(
+            access_token=access,
+            refresh_token=refresh,
+            expires_at=now + lifetime,
+            scope=str(data.get("scope") or (previous.scope if previous else "")),
+            id_token=_text(data.get("id_token")) or (previous.id_token if previous else ""),
+            gcid=_text(data.get("gcid")) or (previous.gcid if previous else ""),
+        )
+
+
+def _text(value: Any) -> str:
+    return value if isinstance(value, str) else ""
 
 
 @dataclass(frozen=True)
@@ -151,4 +166,4 @@ def refresh_tokens(
             f"Token-Erneuerung fehlgeschlagen (HTTP {response.status_code}). "
             "Bitte erneut mit 'bmw-cardata anmelden' anmelden."
         )
-    return Tokens.from_response(data, now, fallback_refresh=tokens.refresh_token)
+    return Tokens.from_response(data, now, previous=tokens)
