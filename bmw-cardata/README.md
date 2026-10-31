@@ -196,7 +196,7 @@ geliefert werden. Der Client nutzt zwei:
 Der Client merkt sich jeden Container mit einem Fingerabdruck der Datenpunkte. Ändern sie
 sich (etwa nach einem Update), legt er einmalig einen neuen an und löscht danach den alten,
 den er selbst gespeichert hatte; das kostet einmal etwa 3 Abrufe. Container anderer
-Installationen mit gleichem Namen bleibt unberührt. Lehnt BMW den neuen Container ab,
+Installationen mit gleichem Namen bleiben unberührt. Lehnt BMW den neuen Container ab,
 bleibt der alte in Gebrauch, und erst am nächsten Tag folgt ein neuer Versuch.
 
 Meldet BMW einen Container als gelöscht (HTTP 404 oder `CU-105`), wird er einmal neu
