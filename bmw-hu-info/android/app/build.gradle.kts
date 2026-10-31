@@ -51,6 +51,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
+    // Liefert collectAsStateWithLifecycle (wird in DiagnoseScreen genutzt).
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
     // Gepflegte JSch-Variante fuer SSH (Passwort + privater Schluessel).

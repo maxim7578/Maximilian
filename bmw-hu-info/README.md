@@ -157,8 +157,15 @@ keine fahrzeugspezifischen Zugangsdaten mit.
 
 ## Status
 
-Fruehe Version (0.1.0). Sicherheitsschicht, Katalog und der komplette
-SSH-Weg sind durch Tests abgedeckt (29 Python-Tests, inkl. echtem
-Integrationstest gegen die simulierte Headunit; dazu JUnit-Tests fuer die
-Android-Sicherheitslogik). Geraete-spezifische Pfade (VIN,
-Software-/Teilenummer) sind Platzhalter und am realen Fahrzeug zu ergaenzen.
+Fruehe Version (0.1.0). Verifizierter Stand:
+
+- **Windows (Python):** 29 Tests gruen, inkl. echtem Integrationstest ueber
+  SSH gegen die simulierte Headunit; Live-Durchlauf der CLI geprueft.
+- **Android (Kotlin):** Die Sicherheitslogik (`Safety.kt`) wurde mit dem
+  echten Kotlin-Compiler uebersetzt, 11 JUnit-Tests gruen. Der vollstaendige
+  APK-Build (UI, ViewModel, JSch) steht noch aus - er braucht das Android-SDK
+  und laeuft in Android Studio; in der Build-Umgebung hier war kein SDK
+  verfuegbar.
+
+Geraete-spezifische Pfade (VIN, Software-/Teilenummer) sind Platzhalter; der
+echte Pfad ergibt sich aus der Suche am realen Fahrzeug.
