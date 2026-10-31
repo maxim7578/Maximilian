@@ -15,6 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
 from .. import __version__
+from .alert_dialog import AlertDialog
 from .runner import Event, Job, Runner, _cli_run, build_args, drain, export_csv, start_command
 
 POLL_MS = 100
@@ -34,6 +35,7 @@ class App:
         self.nur_api = tk.BooleanVar(value=False)
         self.vin = tk.StringVar()
         self.live_speichern = tk.BooleanVar(value=False)
+        self.live_warnungen = tk.BooleanVar(value=True)
         self.anzahl = tk.IntVar(value=10)
         self.status = tk.StringVar(value="Bereit.")
         self.buttons: list[ttk.Button] = []
@@ -86,6 +88,8 @@ class App:
             ("Status speichern", lambda: self._start("status", speichern=True)),
             ("Basisdaten", lambda: self._start("basisdaten")),
             ("Kontingent", lambda: self._start("kontingent")),
+            ("Warnungen prüfen", lambda: self._start("warnungen-pruefen")),
+            ("Warnungen einstellen …", self.open_alert_settings),
         )):
             self._button(row, text, command, column)
 
@@ -94,10 +98,12 @@ class App:
         row.pack(fill="x", pady=(6, 0))
         live = ttk.LabelFrame(row, text="Live-Daten (ohne Tageslimit)", padding=6)
         live.pack(side="left", fill="x", expand=True)
-        self._button(live, "Live starten", lambda: self._start("live", speichern=self.live_speichern.get()), 0)
+        self._button(live, "Live starten", lambda: self._start(
+            "live", speichern=self.live_speichern.get(), warnungen=self.live_warnungen.get()), 0)
         self.stop_button = ttk.Button(live, text="Live stoppen", command=self.stop, state="disabled")
         self.stop_button.grid(row=0, column=1, padx=3, pady=3)
-        ttk.Checkbutton(live, text="Nachrichten speichern", variable=self.live_speichern).grid(row=0, column=2, padx=4)
+        ttk.Checkbutton(live, text="Speichern", variable=self.live_speichern).grid(row=0, column=2, padx=4)
+        ttk.Checkbutton(live, text="Warnungen melden", variable=self.live_warnungen).grid(row=0, column=3, padx=4)
         history = ttk.LabelFrame(row, text="Verlauf (ohne Abruf)", padding=6)
         history.pack(side="left", fill="x", expand=True, padx=(6, 0))
         ttk.Spinbox(history, from_=1, to=1000, textvariable=self.anzahl, width=5).grid(row=0, column=0, padx=3)
@@ -108,6 +114,7 @@ class App:
         self.output = ScrolledText(frame, height=18, wrap="word", font=("Consolas", 10), state="disabled")
         self.output.pack(fill="both", expand=True, pady=(6, 0))
         self.output.tag_configure("err", foreground="#a33")
+        self.output.tag_configure("warn", foreground="#b35900", font=("Consolas", 10, "bold"))
         self.output.tag_configure("link", foreground="#0645ad", underline=True)
         self.output.tag_bind("link", "<Button-1>", self._click_link)
         self.output.tag_bind("link", "<Enter>", lambda _e: self.output.configure(cursor="hand2"))
@@ -123,19 +130,27 @@ class App:
         except (tk.TclError, ValueError):
             return 10
 
-    def _start(self, command: str, *, speichern: bool = False, anzahl: int | None = None) -> None:
+    def open_alert_settings(self) -> None:
+        AlertDialog(self.root, self.state, self._start)
+
+    def _start(self, command: str, *, speichern: bool = False, warnungen: bool = False,
+               anzahl: int | None = None, einstellungen: dict[str, str] | None = None) -> bool:
+        """Startet einen Befehl; False, wenn das nicht ging (läuft schon einer, Eingabe ungültig)."""
         if self.job and self.job.running:
-            return
+            self.append("Bitte warten, bis der laufende Befehl fertig ist (Live zuerst stoppen).\n", "err")
+            return False
         try:
             args = build_args(command, vin=self.vin.get(), client_id=self.client_id.get(),
-                              nur_api=self.nur_api.get(), speichern=speichern, anzahl=anzahl)
+                              nur_api=self.nur_api.get(), speichern=speichern, warnungen=warnungen,
+                              anzahl=anzahl, einstellungen=einstellungen)
         except ValueError as error:
             self.append(f"{error}\n", "err")
-            return
-        self.append(f"\n> bmw-cardata {' '.join(args)}\n")
+            return False
+        self.append(f"\n> bmw-cardata {' '.join(args[:2] if args[:2] == ['warnungen', 'einstellen'] else args)}\n")
         self.status.set(f"Läuft: {command} …")
         self._set_busy(True, live=command == "live")
         self.job = start_command(args, self.events, state=self.state, run=self.run)
+        return True
 
     def stop(self) -> None:
         if self.job:
@@ -176,15 +191,25 @@ class App:
     # ---- Ausgabe ------------------------------------------------------------------------
 
     def append(self, text: str, tag: str | None = None) -> None:
+        """Hängt Text an: Links werden anklickbar, Warnungen hervorgehoben (mit Signalton)."""
         self.output.configure(state="normal")
-        position = 0
-        for match in _LINK.finditer(text):
-            self.output.insert("end", text[position:match.start()], tag or ())
-            self.output.insert("end", match.group(0), ("link",))
-            position = match.end()
-        self.output.insert("end", text[position:], tag or ())
+        warned = False
+        for line in text.splitlines(keepends=True):
+            is_warning = line.lstrip().startswith("Warnung:")
+            warned = warned or is_warning
+            self._insert_line(line, "warn" if is_warning else tag)
         self.output.configure(state="disabled")
         self.output.see("end")
+        if warned:
+            self.root.bell()
+
+    def _insert_line(self, line: str, tag: str | None) -> None:
+        position = 0
+        for match in _LINK.finditer(line):
+            self.output.insert("end", line[position:match.start()], tag or ())
+            self.output.insert("end", match.group(0), ("link",))
+            position = match.end()
+        self.output.insert("end", line[position:], tag or ())
 
     def text(self) -> str:
         return self.output.get("1.0", "end-1c")

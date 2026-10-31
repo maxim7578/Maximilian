@@ -51,8 +51,8 @@ Ohne Schritt 5 und 6 funktioniert alles außer `live`; dann mit `anmelden --nur-
 Für Windows gibt es eine App mit Fenster (`BMW-CarData.exe`) und die Kommandozeile
 (`bmw-cardata-cli.exe`), beide ohne Installation lauffähig. Die App bietet alle Funktionen per
 Knopfdruck: Anmelden (der Link zur Bestätigung ist anklickbar), Fahrzeuge, Status,
-Basisdaten, Kontingent, Live-Daten starten und stoppen sowie den Verlauf anzeigen oder als
-CSV für Excel speichern. Sie nutzt intern genau dieselben Befehle wie die Kommandozeile.
+Basisdaten, Kontingent, Warnungen prüfen und einstellen, Live-Daten starten und stoppen
+(mit Warnungen) sowie den Verlauf anzeigen oder als CSV für Excel speichern. Sie nutzt intern genau dieselben Befehle wie die Kommandozeile.
 
 **Herunterladen:** Der Workflow „bmw-cardata Windows“ (GitHub → Actions) testet bei jeder
 Änderung alles unter Windows, baut beide Programme und hängt sie als Artefakt
@@ -86,6 +86,9 @@ bmw-cardata verlauf           # die letzten 10 gespeicherten Abrufe (--anzahl N 
 bmw-cardata verlauf --csv > fahrten.csv   # alle Einträge für Excel/LibreOffice
 bmw-cardata kontingent        # eigene Abrufe der letzten 24 Stunden
 bmw-cardata live              # Live-Daten empfangen, bis Strg+C
+bmw-cardata live --warnungen  # dabei neue Warnungen melden und pushen
+bmw-cardata warnungen pruefen # Status abrufen und neue Warnungen melden (1 Abruf)
+bmw-cardata warnungen einstellen --ntfy-thema neu   # Push aufs Handy einrichten
 bmw-cardata abmelden          # gespeicherte Anmeldung löschen
 ```
 
@@ -183,6 +186,53 @@ Fahrzeug WBA12345678901234
   aktuellen Python-Versionen der Fall).
 - Wer sich vor dieser Version angemeldet hat, muss sich für `live` einmal neu anmelden,
   damit BMW die Berechtigung `cardata:streaming:read` erteilt.
+
+### Warnungen
+
+![Die App mit zwei Warnungen und dem Fenster "Warnungen einstellen"](docs/warnungen.png)
+
+bmw-cardata meldet, wenn am Auto etwas auffällt:
+
+| Warnung | Wann |
+|---|---|
+| Tür, Heckklappe, Motorhaube offen | BMW meldet sie als offen |
+| Fenster, Schiebedach offen | Wert `OPEN` oder `INTERMEDIATE` (teilweise offen) |
+| Nicht verriegelt | Türschloss meldet einen anderen Wert als die eingestellten (Standard `LOCKED`, `SECURED`) |
+| Ladestand niedrig | unter 20 % (einstellbar) |
+| 12-V-Batterie schwach | unter 50 % (einstellbar) |
+| Reifendruck | ein Reifen 0,2 bar oder mehr unter seinem Solldruck (einstellbar) |
+| Laden beendet | Ladestatus wechselt von „lädt“ zu etwas anderem |
+
+Jede Warnung meldet sich einmal, wenn sie auftritt, nicht bei jedem Abruf. Ist sie behoben
+und tritt wieder auf, meldet sie sich erneut. Kommt ein Push nicht an (z. B. kein Netz), wird
+er beim nächsten Mal wiederholt. Werte wie `INVALID` gelten weder als Alarm noch als
+Entwarnung, und eine Ladepause zählt nicht als „Laden beendet“. `status` zeigt alle gerade
+geltenden Warnungen.
+
+- **Sofort:** `bmw-cardata live --warnungen` (in der App: „Warnungen melden“ beim Live-Start).
+- **Nach Zeitplan:** `bmw-cardata warnungen pruefen` (1 Abruf), z. B. per Cron oder
+  Windows-Aufgabenplanung alle zwei Stunden.
+
+**Push aufs Handy** über [ntfy](https://ntfy.sh) (kostenlose App für Android und iOS):
+
+```bash
+bmw-cardata warnungen einstellen --ntfy-thema neu   # erzeugt ein zufälliges Thema
+bmw-cardata warnungen test                          # Test-Push
+```
+
+Das angezeigte Thema in der ntfy-App abonnieren. Wer das Thema kennt, kann die Pushes
+mitlesen, deshalb ist es zufällig und lang; nicht weitergeben. Die Pushes enthalten nur die
+Warnung und die letzten vier Zeichen der Fahrgestellnummer, nie die Position. Eigener
+ntfy-Server: `--ntfy-server https://…`; abschalten: `--ntfy-thema aus`.
+
+Grenzwerte: `warnungen einstellen --ladestand 25 --batterie-12v 40 --reifendruck-toleranz 0.3`.
+Meldet dein Türschloss einen anderen Wert für „verriegelt“ (`status` zeigt ihn), z. B.
+`--verriegelt LOCKED,SECURED,SELECTIVE_LOCKED`. Den Wertebereich des Türschlosses
+dokumentiert BMW nicht; die Warnung nennt deshalb immer den Originalwert.
+
+Den Solldruck der Reifen liefert BMW als eigenen Datenpunkt; ohne ihn gibt es keine
+Reifendruck-Warnung. Einstellungen liegen in `warnungen.json`, der letzte Stand in
+`warnungen-zustand.json` (beide neben der Anmeldung).
 
 ### Kontingent
 
