@@ -49,6 +49,17 @@
         { "id": "sw_version", "titel": "Software-/Teilenummer lesen", "command": "cat <PFAD_ZUR_VERSIONSDATEI>", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Pfad je Headunit unterschiedlich. Am Geraet den korrekten Pfad eintragen." },
         { "id": "vin", "titel": "VIN lesen", "command": "cat <PFAD_ZUR_VIN_DATEI>", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Nur Lesen der am Geraet hinterlegten VIN. Pfad am Geraet eintragen." }
       ]
+    },
+    {
+      "id": "suche",
+      "titel": "VIN / Softwarestand finden (lesend)",
+      "befehle": [
+        { "id": "vin_etc", "titel": "VIN in /etc suchen", "command": "grep -rIsoE 'WB[A-HJ-NPR-Z0-9]{15}' /etc", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Sucht ein 17-stelliges BMW-VIN-Muster. Die Ausgabe zeigt Dateipfad:VIN - dieser Pfad ist der echte Wert fuer die VIN-Lesefunktion." },
+        { "id": "vin_suche", "titel": "VIN im Verzeichnis suchen (Pfad anpassen)", "command": "grep -rIsoE 'WB[A-HJ-NPR-Z0-9]{15}' <SUCHVERZEICHNIS>", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "<SUCHVERZEICHNIS> z. B. durch / oder /opt ersetzen. Grosse Baeume koennen dauern." },
+        { "id": "vin_dateiname", "titel": "Dateien mit 'vin' im Namen", "command": "find /etc /opt /var -maxdepth 5 -type f -iname '*vin*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Nicht vorhandene Verzeichnisse werden ignoriert (Meldung landet in stderr)." },
+        { "id": "version_dateiname", "titel": "Dateien mit 'version' im Namen", "command": "find /etc /opt /var -maxdepth 5 -type f -iname '*version*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "swfl_dateiname", "titel": "Dateien zu Softwarestand (swfl/istep)", "command": "find /etc /opt /var -maxdepth 5 -type f -iname '*swfl*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
+      ]
     }
   ]
 }

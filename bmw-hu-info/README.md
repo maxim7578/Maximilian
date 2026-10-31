@@ -34,6 +34,17 @@ Platzhaltern wie `<PFAD_ZUR_VIN_DATEI>` sind bewusst leer gelassen - die exakten
 Pfade unterscheiden sich je Headunit und muessen am Geraet eingetragen werden.
 Befehle mit Platzhalter werden ausgelassen, bis sie ersetzt sind.
 
+### VIN und Softwarestand finden
+
+Die exakten Dateipfade fuer VIN und Software-/Teilenummer sind je Headunit
+unterschiedlich und hier bewusst nicht geraten. Die Kategorie **"VIN /
+Softwarestand finden"** enthaelt stattdessen lesende Such-Befehle
+(`grep`, `find`), die den echten Pfad auf dem jeweiligen Geraet lokalisieren.
+Die Ausgabe von "VIN in /etc suchen" hat die Form `Pfad:VIN` - der gefundene
+Pfad ist dann der Wert, den man in `<PFAD_ZUR_VIN_DATEI>` eintraegt. Findet
+`/etc` nichts, sucht die Variante mit eigenem `<SUCHVERZEICHNIS>` (z. B. `/`)
+breiter.
+
 ## Windows-Software (Python)
 
 Voraussetzung: Python 3.10+ (unter Windows "Add python to PATH" anhaken).
