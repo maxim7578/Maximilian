@@ -21,6 +21,7 @@ jobs:
   windows:
     name: Tests und Windows-Programme
     runs-on: windows-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: bmw-cardata
@@ -37,10 +38,11 @@ jobs:
       - name: Abhängigkeiten installieren
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]" "pyinstaller>=6,<7"
+          python -m pip install -e ".[dev]" "pyinstaller>=6,<7" "pytest-timeout>=2,<3"
 
+      # Zeitlimit je Test: Ein hängender Test bricht ab und zeigt, wo jeder Thread steckt.
       - name: Tests auf Windows
-        run: python -m pytest -q
+        run: python -m pytest -q --timeout=120
 
       - name: App bauen (BMW-CarData.exe)
         run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name BMW-CarData --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/app.py
