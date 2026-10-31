@@ -80,7 +80,7 @@ def test_status_des_einzigen_fahrzeugs(bmw, angemeldet):
         "vehicle.vehicle.travelledDistance": {"value": 1000, "unit": "km"}}})
     code, ausgabe, _ = _starte(bmw, angemeldet, "status")
     assert code == 0
-    assert ausgabe == f"Fahrzeug {VIN}\nKilometerstand: 1000 km\n"
+    assert ausgabe == f"Fahrzeug {VIN}\nFahren und Reichweite\n  Kilometerstand: 1000 km\n"
 
 
 def test_status_mit_mehreren_fahrzeugen_verlangt_eine_auswahl(bmw, angemeldet):

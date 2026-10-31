@@ -1,9 +1,9 @@
 # bmw-cardata
 
-Kommandozeilen-Client für die **offizielle BMW CarData API**. Er liest Kilometerstand,
-Ladestand, Reichweite, Ladestatus, Tankfüllstand, Türschloss, 12-V-Batterie,
-Service-Fälligkeit und Position deines BMW oder MINI, auf Wunsch auch live über den
-Datenstrom von BMW (`bmw-cardata live`).
+Kommandozeilen-Client für die **offizielle BMW CarData API**. Er liest rund 40 Werte
+deines BMW oder MINI, gruppiert nach Fahren und Reichweite, Laden, Türen/Fenster/Klappen,
+Reifen, Wartung und Position, auf Wunsch auch live über den Datenstrom von BMW
+(`bmw-cardata live`).
 
 ## Warum nicht bimmer_connected?
 
@@ -71,14 +71,40 @@ bmw-cardata live              # Live-Daten empfangen, bis Strg+C
 bmw-cardata abmelden          # gespeicherte Anmeldung löschen
 ```
 
-Beispielausgabe:
+Beispielausgabe (gekürzt):
 
 ```
 Fahrzeug WBA12345678901234
-Kilometerstand: 42000 km  (Stand: 2026-10-30T10:00:00Z)
-Ladestand Hochvoltbatterie: 80 %
-Elektrische Reichweite: 210 km
+Fahren und Reichweite
+  Kilometerstand: 42063 km  (Stand: 2026-10-30T10:00:00Z)
+  Elektrische Reichweite: 214 km
+Laden
+  Ladestand Hochvoltbatterie: 64 %
+Türen, Fenster und Klappen
+  Türschloss: SECURED
+  Fenster hinten Beifahrerseite: teilweise offen
+Reifen
+  Reifendruck vorne links: 2.50 bar (250 kPa)
+Wartung und Bordnetz
+  Nächste Hauptuntersuchung: 2027-05
 ```
+
+### Welche Werte
+
+| Gruppe | Werte |
+|---|---|
+| Fahren und Reichweite | Kilometerstand, Gesamt-, elektrische und Kraftstoffreichweite, Tankfüllstand, Restkraftstoff, in Bewegung |
+| Laden | Ladestand, Ladeziel, Ladestatus, Restladezeit, Ladeleistung, Kabel eingesteckt, Ladeklappe offen, Batteriegesundheit |
+| Türen, Fenster und Klappen | Türschloss, Türen gesamt und einzeln, vier Fenster, Heckklappe offen/verriegelt, Motorhaube, Schiebedach, Licht, Alarmanlage |
+| Reifen | Reifendruck an allen vier Rädern, Reifendiagnose |
+| Wartung und Bordnetz | 12-V-Batterie (Ladung und Spannung), nächster Service, nächste Hauptuntersuchung |
+| Position | Breiten- und Längengrad, Kartenlink |
+
+Was ein Auto wirklich liefert, hängt von Modell und Ausstattung ab; fehlende Werte werden
+nicht angezeigt. Fenster und Schiebedach werden übersetzt (geschlossen, teilweise offen,
+offen, ungültig), Ja/Nein-Werte ebenso; andere Textwerte wie beim Türschloss zeigt der
+Client so, wie BMW sie liefert. Den Reifendruck liefert BMW in kPa, angezeigt wird er
+zusätzlich in bar. Eine Außentemperatur gibt es in CarData nicht.
 
 Hat BMW eine Position geliefert, steht am Ende ein Link zu OpenStreetMap
 (`Karte: https://www.openstreetmap.org/?mlat=…`).
@@ -159,9 +185,13 @@ werden automatisch erneuert; lehnt BMW die Erneuerung ab, einfach neu `anmelden`
 
 Für Telematikdaten verlangt BMW einen „Container“, der festlegt, welche Datenpunkte
 geliefert werden. Der Client legt beim ersten `status` einen Container namens
-`bmw-cardata-cli Status` an (oder nutzt einen vorhandenen gleichen Namens) und merkt
-sich dessen ID. Welche Datenpunkte abgefragt werden, steht in
-`src/bmw_cardata/descriptors.py`.
+`bmw-cardata-cli Status` an und merkt sich dessen ID zusammen mit einem Fingerabdruck der
+Datenpunkte. Ändern sich die Datenpunkte (etwa nach einem Update dieses Clients), legt er
+einmalig einen neuen Container an und löscht seine alten; das kostet einmal etwa 3 der 50
+Tagesabrufe. Welche Datenpunkte abgefragt werden, steht in `src/bmw_cardata/descriptors.py`.
+
+Nutzen zwei Rechner mit unterschiedlichen Versionen dieses Clients dasselbe Konto, legen
+sie den Container abwechselnd neu an. Dann beide auf denselben Stand bringen.
 
 ## Tests
 

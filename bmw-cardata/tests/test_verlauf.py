@@ -80,8 +80,10 @@ def test_unlesbare_zeit_wird_unverändert_gezeigt():
 def test_csv_export_mit_kopfzeile_und_rohwerten():
     text = history_csv([_eintrag("2026-10-30T10:00:00Z", 42000, **{SOC: {"value": 80, "unit": "%"}})])
     kopf, zeile = text.splitlines()
-    assert kopf.startswith("zeit;fahrgestellnummer;Kilometerstand;Ladestand Hochvoltbatterie;")
-    assert zeile.startswith(f"2026-10-30T10:00:00Z;{VIN};42000;80;")
+    spalten = kopf.split(";")
+    werte = dict(zip(spalten, zeile.split(";")))
+    assert spalten[:3] == ["zeit", "fahrgestellnummer", "Kilometerstand"]
+    assert (werte["fahrgestellnummer"], werte["Kilometerstand"], werte["Ladestand Hochvoltbatterie"]) == (VIN, "42000", "80")
 
 
 def test_csv_entschärft_formeln_aus_textwerten():

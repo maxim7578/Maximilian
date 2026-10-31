@@ -1,8 +1,8 @@
 import pytest
 from conftest import VIN, VIN2
 
-from bmw_cardata.api import ApiError, CarDataApi
-from bmw_cardata.descriptors import CONTAINER_NAME, CONTAINER_PURPOSE, all_descriptors
+from bmw_cardata.api import ApiError, CarDataApi, RateLimitError
+from bmw_cardata.descriptors import CONTAINER_NAME, CONTAINER_PURPOSE, all_descriptors, descriptor_signature
 from bmw_cardata.service import (
     Session,
     ensure_container,
@@ -54,16 +54,47 @@ def test_vorhandener_passender_container_wird_wiederverwendet(bmw, make_state, t
     bmw.add("GET", CONTAINERS, body=[fremd, _passender_container()])
     sitzung = ensure_container(_sitzung(bmw, make_state()), pfad)
     assert sitzung.state.container_id == "behaelter-alt"
-    assert load_state(pfad).container_id == "behaelter-alt"
+    assert load_state(pfad).container_signature == descriptor_signature()
     assert [r.method for r in bmw.requests] == ["GET"]
 
 
-def test_container_mit_anderen_datenpunkten_wird_nicht_wiederverwendet(bmw, make_state, tmp_path):
+def test_container_mit_anderen_datenpunkten_wird_ersetzt(bmw, make_state, tmp_path):
     veraltet = {**_passender_container(), "technicalDescriptors": ["vehicle.alt"]}
     bmw.add("GET", CONTAINERS, body=[veraltet])
+    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=204)
     bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
     sitzung = ensure_container(_sitzung(bmw, make_state()), tmp_path / "s.json")
     assert sitzung.state.container_id == "behaelter-neu"
+    assert [r.method for r in bmw.requests] == ["GET", "DELETE", "POST"]
+
+
+def test_gespeicherter_container_mit_alter_signatur_wird_ersetzt(bmw, make_state, tmp_path):
+    pfad = tmp_path / "s.json"
+    alt = make_state().with_container("behaelter-alt", "alte-signatur")
+    ohne_liste = {"containerId": "behaelter-alt", "name": CONTAINER_NAME, "purpose": CONTAINER_PURPOSE}
+    bmw.add("GET", CONTAINERS, body=[ohne_liste, {"containerId": "fremd", "name": "Anderes", "purpose": "x"}])
+    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=204)
+    bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
+    sitzung = ensure_container(_sitzung(bmw, alt), pfad)
+    assert sitzung.state.container_id == "behaelter-neu"
+    assert load_state(pfad).container_signature == descriptor_signature()
+    assert [r.method for r in bmw.requests] == ["GET", "DELETE", "POST"]
+
+
+def test_fehler_beim_löschen_alter_container_halten_nicht_auf(bmw, make_state, tmp_path):
+    veraltet = {**_passender_container(), "technicalDescriptors": ["vehicle.alt"]}
+    bmw.add("GET", CONTAINERS, body=[veraltet])
+    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=500)
+    bmw.add("POST", CONTAINERS, status=201, body={"containerId": "behaelter-neu"})
+    assert ensure_container(_sitzung(bmw, make_state()), tmp_path / "s.json").state.container_id == "behaelter-neu"
+
+
+def test_tageslimit_beim_löschen_wird_gemeldet(bmw, make_state, tmp_path):
+    veraltet = {**_passender_container(), "technicalDescriptors": ["vehicle.alt"]}
+    bmw.add("GET", CONTAINERS, body=[veraltet])
+    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=429)
+    with pytest.raises(RateLimitError):
+        ensure_container(_sitzung(bmw, make_state()), tmp_path / "s.json")
 
 
 def test_status_holt_telematik_mit_gespeichertem_container(bmw, make_state, tmp_path):

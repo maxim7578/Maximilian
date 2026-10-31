@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import Any
 
 import httpx
 
 from .config import API_BASE_URL, API_VERSION, validate_vin
+
+_CONTAINER_ID = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 
 class ApiError(Exception):
@@ -93,6 +96,11 @@ class CarDataApi:
         if not isinstance(container_id, str) or not container_id:
             raise ApiError("BMW hat keine Container-ID zurückgegeben.", 200)
         return container_id
+
+    def delete_container(self, container_id: str) -> None:
+        if not _CONTAINER_ID.fullmatch(container_id):
+            raise ApiError("Ungültige Container-ID.", 400)
+        self._request("DELETE", f"/customers/containers/{container_id}")
 
     def telematic_data(self, vin: str, container_id: str) -> dict[str, dict[str, Any]]:
         payload = self._request(

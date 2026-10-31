@@ -92,3 +92,19 @@ def test_gleichzeitiges_schreiben_nutzt_eigene_zwischendateien(tmp_path, make_st
     save_state(tmp_path / "state.json", make_state())
     assert len(set(namen)) == 2
     assert sorted(p.name for p in tmp_path.iterdir()) == ["state.json"]
+
+
+def test_container_signatur_wird_gespeichert(tmp_path, make_state):
+    pfad = tmp_path / "state.json"
+    save_state(pfad, make_state(container_id="b").with_container("c", "sig-1"))
+    zustand = load_state(pfad)
+    assert (zustand.container_id, zustand.container_signature) == ("c", "sig-1")
+
+
+def test_container_ohne_signatur_aus_älteren_dateien(tmp_path, make_state):
+    pfad = tmp_path / "state.json"
+    save_state(pfad, make_state(container_id="b"))
+    roh = json.loads(pfad.read_text())
+    del roh["container_signature"]
+    pfad.write_text(json.dumps(roh))
+    assert load_state(pfad).container_signature is None

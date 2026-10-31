@@ -11,6 +11,7 @@ import httpx
 import pytest
 
 from bmw_cardata.auth import Tokens
+from bmw_cardata.descriptors import descriptor_signature
 from bmw_cardata.state import State
 
 VIN = "WBA12345678901234"
@@ -51,6 +52,7 @@ def bmw() -> FakeBmw:
 def make_state() -> Callable[..., State]:
     def _make(expires_at: float = 10_000_000_000.0, container_id: str | None = None) -> State:
         tokens = Tokens("zugang-alt", "erneuerung-alt", expires_at, "cardata:api:read")
-        return State("client-1234-abcd", tokens, container_id)
+        signature = descriptor_signature() if container_id else None
+        return State("client-1234-abcd", tokens, container_id, container_signature=signature)
 
     return _make

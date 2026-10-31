@@ -120,3 +120,15 @@ def test_jeder_beantwortete_abruf_wird_gemeldet(bmw):
     with pytest.raises(RateLimitError, match="kontingent"):
         api.telematic_data(VIN, "b")
     assert len(gezaehlt) == 2
+
+
+def test_container_löschen(bmw):
+    bmw.add("DELETE", f"{CONTAINERS}/behaelter-alt", status=204)
+    _api(bmw).delete_container("behaelter-alt")
+    assert bmw.requests[0].method == "DELETE"
+
+
+def test_ungültige_container_id_erreicht_nie_den_server(bmw):
+    with pytest.raises(ApiError):
+        _api(bmw).delete_container("../vehicles")
+    assert bmw.requests == []

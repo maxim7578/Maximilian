@@ -8,10 +8,10 @@ from pathlib import Path
 
 import httpx
 
-from .api import ApiError, CarDataApi
+from .api import ApiError, CarDataApi, RateLimitError
 from .auth import refresh_tokens
 from .config import ConfigError, validate_vin
-from .descriptors import CONTAINER_NAME, CONTAINER_PURPOSE, all_descriptors
+from .descriptors import CONTAINER_NAME, CONTAINER_PURPOSE, all_descriptors, descriptor_signature
 from .state import State, load_state, save_state
 
 # Antworten, nach denen ein gemerktes Fahrzeug nicht mehr abrufbar sein könnte.
@@ -39,31 +39,51 @@ def open_session(
     return Session(CarDataApi(http, current.tokens.access_token, on_request), current)
 
 
-def _matches(container: dict[str, object], wanted: tuple[str, ...]) -> bool:
-    descriptors = container.get("technicalDescriptors")
-    same_set = not isinstance(descriptors, list) or set(descriptors) == set(wanted)
+def _ours(container: dict[str, object]) -> bool:
     return (
         container.get("name") == CONTAINER_NAME
         and container.get("purpose") == CONTAINER_PURPOSE
-        and same_set
         and isinstance(container.get("containerId"), str)
     )
 
 
+def _same_descriptors(container: dict[str, object], wanted: tuple[str, ...]) -> bool:
+    descriptors = container.get("technicalDescriptors")
+    return isinstance(descriptors, list) and set(descriptors) == set(wanted)
+
+
+def _delete_quietly(session: Session, container_id: str) -> None:
+    """Räumt einen veralteten eigenen Container auf; scheitert das, bleibt er eben liegen."""
+    try:
+        session.api.delete_container(container_id)
+    except RateLimitError:
+        raise
+    except ApiError:
+        pass
+
+
 def ensure_container(session: Session, path: Path) -> Session:
-    """Nutzt die gespeicherte Container-ID oder sucht bzw. legt den Container an."""
-    if session.state.container_id:
+    """Nutzt den gespeicherten Container, solange er zu den abgefragten Datenpunkten passt.
+
+    Sonst wird ein eigener Container mit genau diesen Datenpunkten wiederverwendet oder
+    neu angelegt; eigene Container mit anderen (oder unbekannten) Datenpunkten werden
+    gelöscht, damit bei BMW keine veralteten liegen bleiben.
+    """
+    signature = descriptor_signature()
+    if session.state.container_id and session.state.container_signature == signature:
         return session
     wanted = all_descriptors()
-    existing = next((c for c in session.api.containers() if _matches(c, wanted)), None)
+    ours = [c for c in session.api.containers() if _ours(c)]
+    reusable = next((c for c in ours if _same_descriptors(c, wanted)), None)
+    for container in ours:
+        if container is not reusable:
+            _delete_quietly(session, str(container["containerId"]))
     container_id = (
-        str(existing["containerId"])
-        if existing
+        str(reusable["containerId"])
+        if reusable
         else session.api.create_container(CONTAINER_NAME, CONTAINER_PURPOSE, wanted)
     )
-    state = session.state.with_container(container_id)
-    save_state(path, state)
-    return Session(session.api, state)
+    return _with_state(session, session.state.with_container(container_id, signature), path)
 
 
 def fetch_status(
