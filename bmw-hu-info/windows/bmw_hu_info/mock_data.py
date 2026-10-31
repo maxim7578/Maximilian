@@ -91,6 +91,12 @@ ANTWORTEN: dict[str, tuple[str, int]] = {
         "/etc/bmw/vehicle.cfg:WBA8E9C50GK123456\n",
         0,
     ),
+    "cat /etc/bmw/vehicle.cfg": (
+        "# Simulation - Dummy-Werte, keine echte VIN\n"
+        "VIN=WBA8E9C50GK123456\n"
+        "TYPE=ENAVEVO\n",
+        0,
+    ),
     "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*vin*'": (
         "/etc/bmw/vin.cfg\n/opt/bmw/data/vehicle_vin.dat\n",
         0,

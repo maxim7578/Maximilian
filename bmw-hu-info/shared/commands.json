@@ -47,7 +47,8 @@
       "titel": "Headunit (Platzhalter anpassen)",
       "befehle": [
         { "id": "sw_version", "titel": "Software-/Teilenummer lesen", "command": "cat <PFAD_ZUR_VERSIONSDATEI>", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Pfad je Headunit unterschiedlich. Am Geraet den korrekten Pfad eintragen." },
-        { "id": "vin", "titel": "VIN lesen", "command": "cat <PFAD_ZUR_VIN_DATEI>", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Nur Lesen der am Geraet hinterlegten VIN. Pfad am Geraet eintragen." }
+        { "id": "vin", "titel": "VIN lesen", "command": "cat <PFAD_ZUR_VIN_DATEI>", "headunits": ["NBT", "NBTEVO", "MGU"], "hinweis": "Nur Lesen der am Geraet hinterlegten VIN. Pfad am Geraet ermitteln (siehe Kategorie 'VIN / Softwarestand finden') und eintragen." },
+        { "id": "vin_enavevo", "titel": "VIN lesen (ENAVEVO)", "command": "cat /etc/bmw/vehicle.cfg", "headunits": ["ENAVEVO"], "hinweis": "Pfad vom Nutzer am echten ENAVEVO ermittelt. Liest die Datei, in der die VIN hinterlegt ist." }
       ]
     },
     {
