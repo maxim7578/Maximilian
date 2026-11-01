@@ -8,8 +8,33 @@ derived from what the pipeline already writes to `projects/<id>/`.
 ```bash
 python -m backlot open <project-id>   # start server if needed + open browser
 python -m backlot open                # library view (all projects)
-python -m backlot serve --port 4750   # run the server in the foreground
+python -m backlot serve --port 4750   # run the server in the foreground (prints the URL with token)
 ```
+
+## Access token
+
+The server listens on 127.0.0.1 only, but other users of the same machine
+could still reach it. Every request therefore needs a random token:
+
+- `open` and `serve` create one per server start (`secrets.token_urlsafe`)
+  unless `BACKLOT_TOKEN` is set (≥ 16 chars of `A-Z a-z 0-9 . _ ~ -`), and
+  print/open the URL with `?token=…`. `open` passes the token to the spawned
+  server via the environment, never on the command line.
+- The browser trades `?token=` for a cookie `backlot_token_<port>`
+  (HttpOnly, SameSite=Strict, Path=/, 30 days) and is redirected to the same
+  URL without the token. Pages, SSE, `/media` (incl. range requests) and
+  `/thumb` then work with the cookie.
+- Scripts send `Authorization: Bearer <token>` or `X-Backlot-Token: <token>`.
+  The running server's token is in `.backlot/auth/token-<port>` (mode 0600,
+  removed on shutdown); `python -m backlot open` reads it when the server is
+  already running.
+- Everything else gets `401` with a short hint. Only `/api/health` answers
+  without a token (no project data), so scripts can check that the server is
+  up.
+
+After a server restart the old cookie is invalid: run `python -m backlot open`
+again for a fresh link. In code, `backlot.server.create_app(token=...)` always
+requires a token (without one it generates a random one).
 
 ## How it stays live
 

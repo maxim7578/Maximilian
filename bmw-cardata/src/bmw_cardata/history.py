@@ -3,21 +3,25 @@
 from __future__ import annotations
 
 import csv
+import errno
 import io
 import json
 from dataclasses import dataclass
-from datetime import datetime, tzinfo
+from datetime import datetime, timezone, tzinfo
 from pathlib import Path
 from typing import Any
 
 from .descriptors import STATUS_FIELDS, Field
-from .files import append_private
+from .files import append_private, write_private
 from .report import field_entry, format_value
 
 HISTORY_FILE = "verlauf.jsonl"
 HISTORY_LABELS = ("Kilometerstand", "Ladestand Hochvoltbatterie", "Elektrische Reichweite", "Tankfüllstand")
 _MILEAGE = next(field for field in STATUS_FIELDS if field.label == "Kilometerstand")
 _FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+# Alles aus der Navigation (aktuelle Position, Ziel) zählt als Standort.
+LOCATION_PREFIX = "vehicle.cabin.infotainment.navigation."
+_SECONDS_PER_DAY = 86_400
 
 
 @dataclass(frozen=True)
@@ -36,6 +40,55 @@ def append_entry(path: Path, entry: Entry) -> None:
     append_private(path, line)
 
 
+def _lines(text: str) -> list[str]:
+    """Zeilen nur an \\n trennen: splitlines() würde auch an U+2028 u. Ä. in Textwerten trennen."""
+    return text.split("\n")[:-1] if text.endswith("\n") else text.split("\n")
+
+
+def without_location(data: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Die Werte ohne Breiten-/Längengrad und andere Navigationsdaten (neues Dict)."""
+    return {key: value for key, value in data.items() if not key.startswith(LOCATION_PREFIX)}
+
+
+def _stamp(line: str) -> datetime | None:
+    """Zeitpunkt einer Verlaufszeile; None, wenn die Zeile keinen lesbaren hat."""
+    try:
+        raw = json.loads(line)
+        moment = datetime.fromisoformat(raw["zeit"].replace("Z", "+00:00"))
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return None
+    return moment if moment.tzinfo else moment.replace(tzinfo=timezone.utc)
+
+
+def prune_entries(path: Path, keep_days: int, now: float) -> int:
+    """Entfernt Einträge, die älter als keep_days Tage sind (0 = unbegrenzt); gibt deren Zahl zurück.
+
+    Jüngere und unlesbare Zeilen bleiben Zeichen für Zeichen erhalten. Geschrieben wird nur,
+    wenn etwas wegfällt, und dann atomar über eine Zwischendatei mit Rechten 600.
+    """
+    if keep_days <= 0 or not path.exists():
+        return 0
+    if path.is_symlink():  # wie beim Anhängen: keinem Link folgen
+        raise OSError(errno.ELOOP, "Der Verlauf ist ein symbolischer Link", str(path))
+    cutoff = datetime.fromtimestamp(now - keep_days * _SECONDS_PER_DAY, timezone.utc)
+    lines = _lines(path.read_text(encoding="utf-8", errors="surrogateescape"))
+    kept = [line for line in lines if (stamp := _stamp(line)) is None or stamp >= cutoff]
+    removed = len(lines) - len(kept)
+    if removed:
+        write_private(path, "".join(f"{line}\n" for line in kept), errors="surrogateescape")
+    return removed
+
+
+def delete_history(path: Path) -> bool:
+    """Löscht den Verlauf samt liegengebliebener Zwischendateien; True, wenn es ihn gab."""
+    for leftover in path.parent.glob(f".{path.name}.*.tmp"):
+        leftover.unlink(missing_ok=True)
+    if path.exists() or path.is_symlink():
+        path.unlink()
+        return True
+    return False
+
+
 def _parse(line: str) -> Entry | None:
     try:
         raw = json.loads(line)
@@ -51,7 +104,7 @@ def load_entries(path: Path) -> list[Entry]:
     """Alle lesbaren Einträge in gespeicherter Reihenfolge; kaputte Zeilen werden übersprungen."""
     if not path.exists():
         return []
-    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    lines = _lines(path.read_text(encoding="utf-8", errors="replace"))
     return [entry for entry in (_parse(line) for line in lines if line.strip()) if entry is not None]
 
 

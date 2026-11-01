@@ -6,6 +6,9 @@ library plus the changed project board through Playwright.
 
 Example:
     python scripts/backlot_watch_captures.py --projects why-cities-glow rain-on-glass
+
+The board needs the server's token: ``--token``, else ``BACKLOT_TOKEN``, else the
+token file the running server wrote (``.backlot/auth/token-<port>``).
 """
 
 from __future__ import annotations
@@ -22,8 +25,13 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from backlot.auth import auth_headers, resolve_token, url_with_token  # noqa: E402
+
 DEFAULT_BASE_URL = "http://127.0.0.1:4750"
 DEFAULT_CAPTURE_ROOT = REPO_ROOT / "internal" / "evals" / "captures"
 
@@ -94,8 +102,18 @@ def active_stage(state: dict[str, Any]) -> tuple[str | None, str | None]:
     return None, None
 
 
-def fetch_json(base_url: str, path: str) -> dict[str, Any] | list[Any]:
-    with urllib.request.urlopen(f"{base_url.rstrip('/')}{path}", timeout=10) as response:
+def server_token(base_url: str, explicit: str | None = None) -> str | None:
+    """Token per Argument, BACKLOT_TOKEN oder aus der Token-Datei des Servers."""
+    if explicit:
+        return explicit
+    return resolve_token(urlsplit(base_url).port or 80, prefer_file=True)
+
+
+def fetch_json(base_url: str, path: str, token: str | None = None) -> dict[str, Any] | list[Any]:
+    request = urllib.request.Request(
+        f"{base_url.rstrip('/')}{path}", headers=auth_headers(token) if token else {}
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -120,14 +138,17 @@ def capture_url(url: str, output: Path, *, width: int = 1560, height: int = 1150
     )
 
 
-def capture_project(base_url: str, capture_dir: Path, project_id: str, seq: int, state: dict[str, Any]) -> None:
+def capture_project(
+    base_url: str, capture_dir: Path, project_id: str, seq: int, state: dict[str, Any], token: str | None = None
+) -> None:
+    def board_url(path: str) -> str:
+        url = f"{base_url.rstrip('/')}{path}"
+        return url_with_token(url, token) if token else url
+
     stage, status = active_stage(state)
     stem = f"{seq:03d}-{capture_slug(project_id, stage, status)}"
-    capture_url(f"{base_url.rstrip('/')}/?static=1", capture_dir / "library" / f"{stem}.png", height=620)
-    capture_url(
-        f"{base_url.rstrip('/')}/p/{project_id}?static=1",
-        capture_dir / project_id / f"{stem}.png",
-    )
+    capture_url(board_url("/?static=1"), capture_dir / "library" / f"{stem}.png", height=620)
+    capture_url(board_url(f"/p/{project_id}?static=1"), capture_dir / project_id / f"{stem}.png")
 
 
 def watch(
@@ -138,6 +159,7 @@ def watch(
     interval_s: float,
     once: bool = False,
     no_screenshots: bool = False,
+    token: str | None = None,
 ) -> int:
     fingerprints: dict[str, str] = {}
     seq = 0
@@ -147,7 +169,7 @@ def watch(
         changed = False
         for project_id in projects:
             try:
-                state = fetch_json(base_url, f"/api/project/{project_id}/state")
+                state = fetch_json(base_url, f"/api/project/{project_id}/state", token)
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
                 print(f"[watch] {project_id}: state fetch failed: {exc}", file=sys.stderr)
                 continue
@@ -160,7 +182,7 @@ def watch(
             stage, status = active_stage(state)
             print(f"[watch] change {project_id}: {stage or 'unknown'} -> {status or 'unknown'}")
             if not no_screenshots:
-                capture_project(base_url, capture_dir, project_id, seq, state)
+                capture_project(base_url, capture_dir, project_id, seq, state, token)
         if once:
             return 0
         if not changed:
@@ -171,6 +193,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--projects", nargs="+", required=True, help="Project ids to watch")
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
+    parser.add_argument("--token", default=None, help="Server token (default: BACKLOT_TOKEN or token file)")
     parser.add_argument("--interval", type=float, default=20.0, help="Polling interval in seconds")
     parser.add_argument("--out-dir", type=Path, default=None)
     parser.add_argument("--once", action="store_true", help="Poll once and exit")
@@ -188,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         interval_s=args.interval,
         once=args.once,
         no_screenshots=args.no_screenshots,
+        token=server_token(args.base_url, args.token),
     )
 
 

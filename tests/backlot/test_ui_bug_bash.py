@@ -10,6 +10,7 @@ import urllib.request
 
 import pytest
 
+from backlot.auth import TOKEN_ENV, auth_headers, new_token
 from lib.checkpoint import CANONICAL_STAGE_ARTIFACTS, init_project, write_checkpoint
 from lib.pipeline_loader import get_stage_order, load_pipeline
 from scripts import backlot_screenshot_stage
@@ -18,6 +19,10 @@ from tests.contracts.test_phase0_contracts import sample_artifact
 
 pytest.importorskip("playwright.sync_api")
 from playwright.sync_api import sync_playwright  # noqa: E402
+
+# Der Server verlangt ein Token (Befund N12); die Seiten schicken es als Header.
+SERVER_TOKEN = new_token()
+AUTH = {"extra_http_headers": auth_headers(SERVER_TOKEN)}
 
 
 APPROVAL_CASES = [
@@ -139,6 +144,7 @@ def staged_backlot_server():
     port = 4897
     env = dict(os.environ)
     env["OPENMONTAGE_PROJECTS_DIR"] = str(backlot_screenshot_stage.STAGE_DIR)
+    env[TOKEN_ENV] = SERVER_TOKEN
     server = subprocess.Popen(
         [sys.executable, "-m", "backlot", "serve", "--port", str(port)],
         cwd=backlot_screenshot_stage.REPO_ROOT,
@@ -183,7 +189,7 @@ def test_project_pages_fit_mobile_and_tablet_widths(staged_backlot_server):
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
-        page = browser.new_page()
+        page = browser.new_page(**AUTH)
         try:
             for viewport in viewports:
                 page.set_viewport_size(viewport)
@@ -208,7 +214,7 @@ def test_project_pages_fit_mobile_and_tablet_widths(staged_backlot_server):
 def test_static_navigation_invalid_route_and_active_takes(staged_backlot_server):
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1560, "height": 1000})
+        page = browser.new_page(**AUTH, viewport={"width": 1560, "height": 1000})
         try:
             page.goto(staged_backlot_server + "/?static=1", wait_until="networkidle")
             href = page.locator("a.lib-card").first.get_attribute("href")
@@ -242,7 +248,7 @@ def test_every_canonical_gate_promotes_its_artifact_before_approval(
 ):
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = browser.new_page(**AUTH, viewport={"width": 1280, "height": 900})
         try:
             page.goto(
                 staged_backlot_server + f"/p/{project_id}?static=1",
@@ -266,7 +272,7 @@ def test_every_canonical_gate_promotes_its_artifact_before_approval(
 def test_script_gate_keeps_script_visible_and_marks_pending_approval(staged_backlot_server):
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = browser.new_page(**AUTH, viewport={"width": 1280, "height": 900})
         try:
             page.goto(staged_backlot_server + "/p/gate-script?static=1", wait_until="networkidle")
             assert page.locator(".script-card").is_visible()
@@ -278,7 +284,7 @@ def test_script_gate_keeps_script_visible_and_marks_pending_approval(staged_back
 def test_manifest_declared_custom_gate_uses_generic_review_fallback(staged_backlot_server):
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
-        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        page = browser.new_page(**AUTH, viewport={"width": 1280, "height": 900})
         try:
             page.goto(
                 staged_backlot_server + "/p/gate-character-design?static=1",

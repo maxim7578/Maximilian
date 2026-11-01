@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from backlot.auth import TOKEN_ENV, TokenAuthMiddleware, new_token, validate_token
 from backlot.state import PROJECTS_DIR, REPO_ROOT, list_projects, load_board_state, summarize_project
 
 UI_DIR = Path(__file__).resolve().parent / "ui"
@@ -179,12 +180,22 @@ def _media_response(path: Path, media_type: Optional[str] = None) -> FileRespons
     return FileResponse(path, media_type=media_type, headers=MEDIA_HEADERS)
 
 
-def create_app() -> FastAPI:
+def create_app(token: Optional[str] = None) -> FastAPI:
+    """Backlot-App bauen. Jede Anfrage außer /api/health braucht ``token``.
+
+    Ohne Angabe wird ein zufälliges Token erzeugt (``app.state.backlot_token``):
+    Es gibt bewusst keinen Modus ohne Token-Pflicht (Befund N12).
+    """
+    token = new_token() if token is None else validate_token(token)
     app = FastAPI(title="Backlot", docs_url=None, redoc_url=None, lifespan=_lifespan)
+    app.state.backlot_token = token
+    # add_middleware legt nach außen: Erst prüft TrustedHost den Host, dann das Token.
+    app.add_middleware(TokenAuthMiddleware, token=token)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
     # ---- API ----------------------------------------------------------
 
+    # Ohne Token erreichbar (Skripte prüfen damit, ob der Server läuft): keine Projektdaten.
     @app.get("/api/health")
     async def health() -> dict:
         return {"ok": True, "app": "backlot"}
@@ -383,4 +394,11 @@ def _thumbnail_for(source: Path, width: int) -> Optional[Path]:
         return None
 
 
-app = create_app()
+def __getattr__(name: str):
+    # ``backlot.server:app`` erst bei Bedarf bauen, mit dem Token aus BACKLOT_TOKEN
+    # (fehlt es, ein zufälliges). ``python -m backlot serve`` übergibt die App direkt.
+    if name == "app":
+        app = create_app(token=_os.environ.get(TOKEN_ENV) or None)
+        globals()["app"] = app
+        return app
+    raise AttributeError(name)

@@ -1,10 +1,22 @@
-from datetime import timezone
+import json
+from datetime import datetime, timezone
 
 import pytest
 
 from conftest import VIN, VIN2, ist_privat, nur_posix
 
-from bmw_cardata.history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
+from bmw_cardata.descriptors import LATITUDE, LONGITUDE
+from bmw_cardata.history import (
+    Entry,
+    append_entry,
+    delete_history,
+    history_csv,
+    history_lines,
+    history_path,
+    load_entries,
+    prune_entries,
+    without_location,
+)
 
 KM = "vehicle.vehicle.travelledDistance"
 SOC = "vehicle.powertrain.electric.battery.stateOfCharge.displayed"
@@ -137,3 +149,107 @@ def test_verlauf_folgt_keinem_symbolischen_link(tmp_path):
 
 def test_csv_kopf_nennt_die_einheit_des_reifendrucks():
     assert "Reifendruck vorne links (kPa)" in history_csv([]).splitlines()[0].split(";")
+
+
+JETZT = datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc).timestamp()
+
+
+def test_einträge_älter_als_die_frist_werden_entfernt_jüngere_bleiben_unverändert(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    alt, grenze = _eintrag("2025-10-31T11:59:59Z", 1), _eintrag("2025-11-01T12:00:00Z", 2)
+    jung = _eintrag("2026-10-31T10:00:00Z", 3, **{SOC: {"value": 80, "unit": "%"}})
+    for eintrag in (alt, grenze, jung):
+        append_entry(pfad, eintrag)
+    jüngere_zeilen = pfad.read_text(encoding="utf-8").splitlines()[1:]
+    assert prune_entries(pfad, 365, JETZT) == 1
+    assert pfad.read_text(encoding="utf-8").splitlines() == jüngere_zeilen
+    assert load_entries(pfad) == [grenze, jung]
+
+
+def test_aufräumen_hält_die_rechte_600_und_hinterlässt_keine_zwischendatei(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    append_entry(pfad, _eintrag("2020-01-01T00:00:00Z", 1))
+    append_entry(pfad, _eintrag("2026-10-31T10:00:00Z", 2))
+    assert prune_entries(pfad, 30, JETZT) == 1
+    assert ist_privat(pfad)
+    assert sorted(datei.name for datei in tmp_path.iterdir()) == ["verlauf.jsonl"]
+
+
+def test_ohne_abgelaufene_einträge_wird_die_datei_nicht_neu_geschrieben(tmp_path, monkeypatch):
+    import bmw_cardata.history as verlauf
+
+    pfad = tmp_path / "verlauf.jsonl"
+    append_entry(pfad, _eintrag("2026-10-31T10:00:00Z", 1))
+    monkeypatch.setattr(verlauf, "write_private", lambda *args: pytest.fail("darf nicht schreiben"))
+    assert prune_entries(pfad, 30, JETZT) == 0
+
+
+def test_frist_null_bedeutet_unbegrenzt_aufbewahren(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    append_entry(pfad, _eintrag("2001-01-01T00:00:00Z", 1))
+    assert prune_entries(pfad, 0, JETZT) == 0
+    assert len(load_entries(pfad)) == 1
+
+
+def test_aufräumen_ohne_verlauf_tut_nichts(tmp_path):
+    assert prune_entries(tmp_path / "verlauf.jsonl", 365, JETZT) == 0
+    assert not (tmp_path / "verlauf.jsonl").exists()
+
+
+def test_unlesbare_zeilen_bleiben_beim_aufräumen_erhalten(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    append_entry(pfad, _eintrag("2001-01-01T00:00:00Z", 1))
+    with pfad.open("a", encoding="utf-8") as datei:
+        datei.write('kein json\n{"zeit": "gestern"}\n{"zeit": 5}\n')
+    assert prune_entries(pfad, 365, JETZT) == 1
+    assert pfad.read_text(encoding="utf-8").splitlines() == ["kein json", '{"zeit": "gestern"}', '{"zeit": 5}']
+
+
+def test_zeit_ohne_zeitzone_gilt_als_utc(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    pfad.write_text(json.dumps({"zeit": "2001-01-01T00:00:00", "fahrgestellnummer": VIN, "werte": {}}) + "\n")
+    assert prune_entries(pfad, 365, JETZT) == 1
+
+
+def test_ohne_standort_fallen_breiten_und_längengrad_weg():
+    daten = {
+        KM: {"value": 1},
+        LATITUDE: {"value": 48.1},
+        LONGITUDE: {"value": 11.5},
+        "vehicle.cabin.infotainment.navigation.destinationSet.latitude": {"value": 52.5},
+    }
+    assert without_location(daten) == {KM: {"value": 1}}
+    assert LATITUDE in daten  # das Original bleibt unverändert
+
+
+def test_verlauf_löschen_entfernt_datei_und_reste_von_zwischendateien(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    append_entry(pfad, _eintrag("2026-10-31T10:00:00Z", 1))
+    (tmp_path / ".verlauf.jsonl.abc123.tmp").write_text("rest")
+    (tmp_path / "state.json").write_text("{}")
+    assert delete_history(pfad) is True
+    assert sorted(datei.name for datei in tmp_path.iterdir()) == ["state.json"]
+    assert delete_history(pfad) is False
+
+
+def test_aufräumen_erhält_ungültiges_utf8_und_zeilentrenner_im_text(tmp_path):
+    pfad = tmp_path / "verlauf.jsonl"
+    append_entry(pfad, _eintrag("2001-01-01T00:00:00Z", 1))
+    append_entry(pfad, _eintrag("2026-10-31T10:00:00Z", "a\u2028b"))
+    with pfad.open("ab") as datei:
+        datei.write(b"\xff\xfe kaputt\n")
+    rest = pfad.read_bytes().splitlines()[1:]  # Zeilenenden je nach System \n oder \r\n
+    assert prune_entries(pfad, 365, JETZT) == 1
+    assert pfad.read_bytes().splitlines() == rest
+    assert load_entries(pfad)[0].data[KM]["value"] == "a\u2028b"
+
+
+@nur_posix
+def test_aufräumen_folgt_keinem_symbolischen_link(tmp_path):
+    ziel = tmp_path / "anderswo.jsonl"
+    ziel.write_text(json.dumps({"zeit": "2001-01-01T00:00:00Z"}) + "\n")
+    pfad = tmp_path / "verlauf.jsonl"
+    pfad.symlink_to(ziel)
+    with pytest.raises(OSError):
+        prune_entries(pfad, 365, JETZT)
+    assert "2001" in ziel.read_text()

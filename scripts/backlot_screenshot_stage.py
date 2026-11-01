@@ -32,6 +32,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from PIL import Image, ImageDraw, ImageFilter  # noqa: E402
 
+from backlot.auth import TOKEN_ENV, new_token, url_with_token  # noqa: E402
 from lib.checkpoint import init_project, write_checkpoint  # noqa: E402
 from lib.events import emit_event  # noqa: E402
 from tests.contracts.test_phase0_contracts import sample_artifact  # noqa: E402
@@ -329,7 +330,8 @@ SHOTS = [
 
 
 def shoot() -> None:
-    env = dict(os.environ)
+    token = new_token()
+    env = {**os.environ, TOKEN_ENV: token}
     server = subprocess.Popen(
         [sys.executable, "-m", "backlot", "serve", "--port", str(PORT)],
         env=env, cwd=REPO_ROOT,
@@ -349,7 +351,7 @@ def shoot() -> None:
                 ["npx", "playwright", "screenshot",
                  "--viewport-size", f"{w},{h}",
                  "--wait-for-timeout", str(wait_ms),
-                 f"http://127.0.0.1:{PORT}{path}", str(out)],
+                 url_with_token(f"http://127.0.0.1:{PORT}{path}", token), str(out)],
                 check=True, timeout=120, shell=(os.name == "nt"))
             print(f"[shot] {out}")
     finally:

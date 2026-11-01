@@ -16,8 +16,13 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
 
+from backlot import auth as auth_mod
 from backlot import server as server_mod
 from backlot import state as state_mod
+
+TEST_TOKEN = "test-token-" + "x" * 32
+BASE_URL = "http://127.0.0.1:4750"
+COOKIE_NAME = auth_mod.cookie_name(4750)
 
 
 @pytest.fixture
@@ -33,13 +38,27 @@ def projects_root(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def client(projects_root, monkeypatch):
+def app(projects_root, monkeypatch):
     async def no_watch():
         return None
 
     monkeypatch.setattr(server_mod, "_watch_projects", no_watch)
+    return server_mod.create_app(token=TEST_TOKEN)
+
+
+@pytest.fixture
+def client(app):
+    """Angemeldeter Client: hat das Token-Cookie wie ein Browser nach dem Öffnen der URL."""
     # Wie im Browser: Der Server ist nur unter 127.0.0.1/localhost erreichbar.
-    with TestClient(server_mod.create_app(), base_url="http://127.0.0.1:4750") as c:
+    with TestClient(app, base_url=BASE_URL) as c:
+        c.cookies.set(COOKIE_NAME, TEST_TOKEN)
+        yield c
+
+
+@pytest.fixture
+def anon_client(app):
+    """Client ohne Token, z. B. ein anderer lokaler Benutzer."""
+    with TestClient(app, base_url=BASE_URL, follow_redirects=False) as c:
         yield c
 
 
@@ -235,3 +254,199 @@ class TestSicherheit:
         res = client.get("/thumb/film/assets/images/logo.svg")
         assert res.status_code == 200
         assert "sandbox" in res.headers["content-security-policy"]
+
+
+class TestZugriffsschutz:
+    """Befund N12: Ohne Token darf niemand Projekte, Medien oder Seiten lesen."""
+
+    GESCHUETZTE_PFADE = [
+        "/",
+        "/p/film",
+        "/p/film?static=1",
+        "/api/projects",
+        "/api/project/film/state",
+        "/api/project/film/events",
+        "/api/library/events",
+        "/media/film/renders/final.mp4",
+        "/thumb/film/assets/images/sc1.png",
+        "/ui/board.js",
+    ]
+
+    @pytest.fixture
+    def film(self, projects_root):
+        project = _make_project(projects_root, "film")
+        (project / "renders" / "final.mp4").write_bytes(b"0123456789")
+        _write_png(project / "assets" / "images" / "sc1.png")
+        return project
+
+    @pytest.mark.parametrize("pfad", GESCHUETZTE_PFADE)
+    def test_ohne_token_wird_alles_ausser_health_abgelehnt(self, anon_client, film, pfad):
+        res = anon_client.get(pfad)
+        assert res.status_code == 401
+        assert res.headers["content-type"].startswith("text/plain")
+        assert "token" in res.text.lower()
+        assert "Film" not in res.text
+        assert "set-cookie" not in res.headers
+
+    def test_health_antwortet_ohne_token_und_ohne_projektdaten(self, anon_client, film):
+        res = anon_client.get("/api/health")
+        assert res.status_code == 200
+        assert res.json() == {"ok": True, "app": "backlot"}
+        assert "set-cookie" not in res.headers
+
+    def test_gueltiges_token_in_url_setzt_cookie_und_leitet_ohne_token_um(self, anon_client, film):
+        res = anon_client.get(f"/p/film?static=1&token={TEST_TOKEN}")
+        assert res.status_code == 303
+        assert res.headers["location"] == "/p/film?static=1"
+        cookie = res.headers["set-cookie"]
+        assert cookie.startswith(f"{COOKIE_NAME}={TEST_TOKEN};")
+        assert "HttpOnly" in cookie
+        assert "SameSite=Strict" in cookie
+        assert "Path=/" in cookie
+        assert "Domain" not in cookie
+
+    def test_umleitung_ohne_weitere_parameter_und_mit_kodiertem_pfad(self, anon_client, film):
+        res = anon_client.get(f"/?token={TEST_TOKEN}")
+        assert res.status_code == 303
+        assert res.headers["location"] == "/"
+        res = anon_client.get(f"/p/..%2FAGENT_GUIDE.md?token={TEST_TOKEN}&static=1")
+        assert res.status_code == 303
+        assert res.headers["location"] == "/p/..%2FAGENT_GUIDE.md?static=1"
+
+    @pytest.mark.parametrize("falsch", ["falsch", TEST_TOKEN + "x", TEST_TOKEN[:-1], ""])
+    def test_falsches_token_in_url_wird_abgelehnt(self, anon_client, film, falsch):
+        res = anon_client.get(f"/api/projects?token={falsch}")
+        assert res.status_code == 401
+        assert "set-cookie" not in res.headers
+
+    def test_falsches_token_in_url_wird_auch_mit_gueltigem_cookie_abgelehnt(self, client, film):
+        res = client.get("/api/projects?token=falsch", follow_redirects=False)
+        assert res.status_code == 401
+
+    def test_falsches_cookie_wird_abgelehnt(self, anon_client, film):
+        anon_client.cookies.set(COOKIE_NAME, "falsch")
+        assert anon_client.get("/api/projects").status_code == 401
+
+    def test_cookie_eines_anderen_ports_reicht_nicht(self, anon_client, film):
+        anon_client.cookies.set(auth_mod.cookie_name(4751), TEST_TOKEN)
+        assert anon_client.get("/api/projects").status_code == 401
+
+    def test_nach_umleitung_reicht_das_cookie_fuer_api_seiten_und_medien(self, anon_client, film):
+        first = anon_client.get(f"/?token={TEST_TOKEN}")
+        assert first.status_code == 303
+
+        assert anon_client.get("/").status_code == 200
+        assert anon_client.get("/p/film").status_code == 200
+        assert anon_client.get("/ui/board.js").status_code == 200
+        projects = anon_client.get("/api/projects")
+        assert projects.status_code == 200
+        assert projects.json()[0]["project_id"] == "film"
+        assert anon_client.get("/api/project/film/state").status_code == 200
+        thumb = anon_client.get("/thumb/film/assets/images/sc1.png?w=320")
+        assert thumb.status_code == 200
+        assert thumb.headers["content-type"] == "image/jpeg"
+
+        ranged = anon_client.get("/media/film/renders/final.mp4", headers={"Range": "bytes=2-5"})
+        assert ranged.status_code == 206
+        assert ranged.content == b"2345"
+
+    def test_sse_endpunkt_ist_mit_cookie_erreichbar(self, client, film):
+        # Unbekanntes Projekt: Die Anfrage kommt am Token vorbei bis zum Endpunkt (404 statt 401).
+        assert client.get("/api/project/nope/events").status_code == 404
+
+    @pytest.mark.parametrize(
+        "header",
+        [
+            {"Authorization": f"Bearer {TEST_TOKEN}"},
+            {"X-Backlot-Token": TEST_TOKEN},
+        ],
+    )
+    def test_skripte_koennen_sich_per_header_anmelden(self, anon_client, film, header):
+        res = anon_client.get("/api/projects", headers=header)
+        assert res.status_code == 200
+        assert "set-cookie" not in res.headers
+
+    @pytest.mark.parametrize(
+        "header",
+        [
+            {"Authorization": "Bearer falsch"},
+            {"Authorization": f"Basic {TEST_TOKEN}"},
+            {"X-Backlot-Token": "falsch"},
+        ],
+    )
+    def test_falscher_header_wird_abgelehnt(self, anon_client, film, header):
+        assert anon_client.get("/api/projects", headers=header).status_code == 401
+
+    def test_fremder_host_wird_auch_mit_token_abgelehnt(self, anon_client, film):
+        res = anon_client.get(f"/?token={TEST_TOKEN}", headers={"Host": "evil.example:4750"})
+        assert res.status_code == 400
+        assert "set-cookie" not in res.headers
+
+    @pytest.mark.parametrize("token", ["", "kurz"])
+    def test_create_app_lehnt_leeres_oder_zu_kurzes_token_ab(self, projects_root, token):
+        with pytest.raises(ValueError):
+            server_mod.create_app(token=token)
+
+    def test_create_app_ohne_token_erzeugt_ein_zufaelliges(self, projects_root, monkeypatch):
+        async def no_watch():
+            return None
+
+        monkeypatch.setattr(server_mod, "_watch_projects", no_watch)
+        with TestClient(server_mod.create_app(), base_url=BASE_URL) as c:
+            assert c.get("/api/projects").status_code == 401
+            assert c.get("/api/health").status_code == 200
+
+
+class TestEchterServerMitCookie:
+    """Ende-zu-Ende mit uvicorn: SSE-Strom und Range-Anfrage laufen mit dem Cookie."""
+
+    @pytest.fixture
+    def live_server(self, app, projects_root, monkeypatch):
+        import socket
+        import threading
+
+        import uvicorn
+
+        monkeypatch.setattr(server_mod, "SSE_HEARTBEAT_SECONDS", 0.2)
+        project = _make_project(projects_root, "film")
+        (project / "renders" / "final.mp4").write_bytes(b"0123456789")
+
+        sock = socket.socket()
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+        config = uvicorn.Config(app, log_level="warning", timeout_graceful_shutdown=1)
+        server = uvicorn.Server(config)
+        thread = threading.Thread(target=server.run, kwargs={"sockets": [sock]}, daemon=True)
+        thread.start()
+        deadline = time.time() + 10
+        while not server.started and time.time() < deadline:
+            time.sleep(0.05)
+        assert server.started
+        try:
+            yield port
+        finally:
+            server.should_exit = True
+            thread.join(timeout=10)
+            sock.close()
+
+    def test_sse_und_range_mit_cookie_aus_der_token_url(self, live_server):
+        import httpx
+
+        port = live_server
+        base = f"http://127.0.0.1:{port}"
+        with httpx.Client(base_url=base, follow_redirects=True, timeout=5) as http:
+            assert http.get("/api/projects").status_code == 401
+            page = http.get(f"/p/film?token={TEST_TOKEN}")
+            assert page.status_code == 200
+            assert str(page.url) == f"{base}/p/film"
+            assert http.cookies.get(auth_mod.cookie_name(port)) == TEST_TOKEN
+
+            ranged = http.get("/media/film/renders/final.mp4", headers={"Range": "bytes=0-3"})
+            assert ranged.status_code == 206
+            assert ranged.content == b"0123"
+
+            with http.stream("GET", "/api/project/film/events") as stream:
+                assert stream.status_code == 200
+                assert stream.headers["content-type"].startswith("text/event-stream")
+                first = next(stream.iter_lines())
+                assert json.loads(first.removeprefix("data: "))["type"] == "hello"

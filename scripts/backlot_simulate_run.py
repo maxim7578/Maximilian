@@ -150,7 +150,7 @@ def main() -> int:
     time.sleep(wait)
     cp("assets", "completed", {"asset_manifest": manifest}, human_approved=True)
 
-    print(f"[sim] done — board at http://127.0.0.1:4750/p/{pid}")
+    print(f"[sim] done — open the board with: python -m backlot open {pid}")
     if args.cleanup:
         shutil.rmtree(pdir)
         print("[sim] cleaned up")

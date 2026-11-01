@@ -67,6 +67,17 @@ playground/backend_manager/
 
 ---
 
+## 🔐 Security Settings
+
+Outside `APP_ENV=development`/`test` the backend refuses insecure defaults:
+
+* `JWT_SECRET_KEY` must be a random value of at least 32 characters (e.g. `openssl rand -hex 32`); `deploy_to_cos.sh` creates one on the VM and reuses it.
+* The mock OTP (`DEV_MOCK_OTP`, default `123456` in development) is disabled; setting it explicitly in production stops the start-up.
+* `DEBUG` defaults to `false`.
+* CORS is off by default because the bundled UI uses the same origin. Allow other origins explicitly with `CORS_ORIGINS='["https://example.org"]'`.
+
+Run the settings tests with `python -m pytest tests` from this directory.
+
 ## 🔌 REST API Endpoints
 
 ### Authentication
