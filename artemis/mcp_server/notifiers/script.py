@@ -25,6 +25,19 @@ from mcp_server.notifiers.base import BaseNotifier
 logger = logging.getLogger("mcp_server.notifiers.script")
 
 
+def split_template(template: str, windows: bool | None = None) -> list[str]:
+    """Split a command template into arguments without involving a shell.
+
+    POSIX quoting would treat backslashes as escapes and break Windows paths such as
+    ``C:\\Tools\\notify.exe``; on Windows only double quotes group arguments.
+    """
+    if windows is None:
+        windows = os.name == "nt"
+    if not windows:
+        return shlex.split(template)
+    return [token.replace('"', "") for token in shlex.split(template, posix=False)]
+
+
 class ScriptNotifier(BaseNotifier):
     """Notifier that executes a user-defined command or script when an event occurs.
 
@@ -86,7 +99,7 @@ class ScriptNotifier(BaseNotifier):
         # never be parsed by a shell (command injection). Templates that need pipes or
         # redirects can call a script instead.
         try:
-            args = [fill(arg) for arg in shlex.split(cmd_template)]
+            args = [fill(arg) for arg in split_template(cmd_template)]
             if not args:
                 return False
             subprocess.run(

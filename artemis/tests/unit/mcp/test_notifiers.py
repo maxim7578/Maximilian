@@ -264,3 +264,17 @@ def test_script_notifier_uebergibt_platzhalter_als_argument(monkeypatch, tmp_pat
     monkeypatch.setenv("ARTEMIS_NOTIFY_CMD", f"python3 {skript} {ziel} '{{title}}: {{message}}'")
     assert ScriptNotifier().notify("conv-1", "Aufgabe; erledigt $(id)", title="Fertig") is True
     assert ziel.read_text() == "Fertig: Aufgabe; erledigt $(id)"
+
+
+def test_script_notifier_vorlage_mit_windows_pfad():
+    """Unter Windows dürfen Backslashes in Pfaden nicht verschwinden."""
+    from mcp_server.notifiers.script import split_template
+
+    vorlage = r'C:\Tools\notify.exe --title "{title}" --message="{message}"'
+    assert split_template(vorlage, windows=True) == [
+        r"C:\Tools\notify.exe",
+        "--title",
+        "{title}",
+        "--message={message}",
+    ]
+    assert split_template("notify --title '{title}'", windows=False) == ["notify", "--title", "{title}"]
