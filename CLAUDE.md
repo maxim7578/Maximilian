@@ -48,3 +48,16 @@ ist in `.mcp.json` als gehosteter MCP-Server `skyaccess` eingetragen
 (nur lesend) und `request_booking`, das Name, E-Mail und Reisewunsch an
 SkyAccess schickt. `request_booking` nur aufrufen, wenn der Nutzer ausdrücklich
 kontaktiert werden will. Preise in USD; Limit 30 Tool-Aufrufe pro Minute.
+
+## Cybersecurity-Skills
+
+`cybersecurity-skills/` ist eine Kopie von
+[mukul975/Anthropic-Cybersecurity-Skills](https://github.com/mukul975/Anthropic-Cybersecurity-Skills)
+(Community-Projekt, nicht von Anthropic; Apache 2.0) mit 818 Skills. Alle sind
+über Symlinks in `.claude/skills/` aktiv. Die zugehörigen Programme (gitleaks,
+semgrep, trivy usw.) installiert der SessionStart-Hook
+`.claude/hooks/security-tools.sh` in Cloud-Sessions automatisch über
+`scripts/install-security-tools.sh`. Übersicht, empfohlene
+Auswahl und Deaktivieren:
+[`cybersecurity-skills/UEBERSICHT.md`](cybersecurity-skills/UEBERSICHT.md).
+Angriffstechniken nur gegen eigene Systeme oder mit schriftlicher Erlaubnis.
