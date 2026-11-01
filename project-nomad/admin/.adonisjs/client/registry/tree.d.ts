@@ -1,0 +1,222 @@
+/* eslint-disable prettier/prettier */
+import type { routes } from './index.ts'
+
+export interface ApiDefinition {
+  eventStream: typeof routes['event_stream']
+  subscribe: typeof routes['subscribe']
+  unsubscribe: typeof routes['unsubscribe']
+  home: {
+    index: typeof routes['home.index']
+    home: typeof routes['home.home']
+  }
+  chats: {
+    inertia: typeof routes['chats.inertia']
+    index: typeof routes['chats.index']
+    store: typeof routes['chats.store']
+    destroyAll: typeof routes['chats.destroy_all']
+    show: typeof routes['chats.show']
+    update: typeof routes['chats.update']
+    destroy: typeof routes['chats.destroy']
+    addMessage: typeof routes['chats.add_message']
+    suggestions: typeof routes['chats.suggestions']
+  }
+  maps: {
+    index: typeof routes['maps.index']
+    listRegions: typeof routes['maps.list_regions']
+    styles: typeof routes['maps.styles']
+    listCuratedCollections: typeof routes['maps.list_curated_collections']
+    fetchLatestCollections: typeof routes['maps.fetch_latest_collections']
+    downloadBaseAssets: typeof routes['maps.download_base_assets']
+    setupWorldBasemap: typeof routes['maps.setup_world_basemap']
+    downloadRemote: typeof routes['maps.download_remote']
+    downloadRemotePreflight: typeof routes['maps.download_remote_preflight']
+    downloadCollection: typeof routes['maps.download_collection']
+    globalMapInfo: typeof routes['maps.global_map_info']
+    downloadGlobalMap: typeof routes['maps.download_global_map']
+    listCountries: typeof routes['maps.list_countries']
+    listCountryGroups: typeof routes['maps.list_country_groups']
+    extractPreflight: typeof routes['maps.extract_preflight']
+    extractRegion: typeof routes['maps.extract_region']
+    listMarkers: typeof routes['maps.list_markers']
+    createMarker: typeof routes['maps.create_marker']
+    updateMarker: typeof routes['maps.update_marker']
+    deleteMarker: typeof routes['maps.delete_marker']
+    delete: typeof routes['maps.delete']
+  }
+  supplyDepot: {
+    index: typeof routes['supply_depot.index']
+  }
+  easySetup: {
+    index: typeof routes['easy_setup.index']
+    complete: typeof routes['easy_setup.complete']
+    listCuratedCategories: typeof routes['easy_setup.list_curated_categories']
+    refreshManifests: typeof routes['easy_setup.refresh_manifests']
+  }
+  collectionUpdates: {
+    checkForUpdates: typeof routes['collection_updates.check_for_updates']
+    applyUpdate: typeof routes['collection_updates.apply_update']
+    applyAllUpdates: typeof routes['collection_updates.apply_all_updates']
+  }
+  settings: {
+    system: typeof routes['settings.system']
+    legal: typeof routes['settings.legal']
+    maps: typeof routes['settings.maps']
+    models: typeof routes['settings.models']
+    update: typeof routes['settings.update']
+    zim: typeof routes['settings.zim']
+    zimRemote: typeof routes['settings.zim_remote']
+    creatorPacks: typeof routes['settings.creator_packs']
+    benchmark: typeof routes['settings.benchmark']
+    support: typeof routes['settings.support']
+    advanced: typeof routes['settings.advanced']
+    getSetting: typeof routes['settings.get_setting']
+    updateSetting: typeof routes['settings.update_setting']
+  }
+  docs: {
+    show: typeof routes['docs.show']
+    list: typeof routes['docs.list']
+  }
+  downloads: {
+    index: typeof routes['downloads.index']
+    filetype: typeof routes['downloads.filetype']
+    removeJob: typeof routes['downloads.remove_job']
+    cancelJob: typeof routes['downloads.cancel_job']
+    retryJob: typeof routes['downloads.retry_job']
+  }
+  openApi: {
+    spec: typeof routes['open_api.spec']
+    reference: typeof routes['open_api.reference']
+    standalone: typeof routes['open_api.standalone']
+  }
+  ollama: {
+    chat: typeof routes['ollama.chat']
+    availableModels: typeof routes['ollama.available_models']
+    dispatchModelDownload: typeof routes['ollama.dispatch_model_download']
+    deleteModel: typeof routes['ollama.delete_model']
+    installedModels: typeof routes['ollama.installed_models']
+    unloadChatModels: typeof routes['ollama.unload_chat_models']
+    configureRemote: typeof routes['ollama.configure_remote']
+    remoteStatus: typeof routes['ollama.remote_status']
+  }
+  nomadMd: {
+    show: typeof routes['nomad_md.show']
+    update: typeof routes['nomad_md.update']
+  }
+  rag: {
+    upload: typeof routes['rag.upload']
+    getStoredFiles: typeof routes['rag.get_stored_files']
+    getFileWarnings: typeof routes['rag.get_file_warnings']
+    deleteFile: typeof routes['rag.delete_file']
+    embedFile: typeof routes['rag.embed_file']
+    getFileContent: typeof routes['rag.get_file_content']
+    downloadFile: typeof routes['rag.download_file']
+    getActiveJobs: typeof routes['rag.get_active_jobs']
+    getFailedJobs: typeof routes['rag.get_failed_jobs']
+    cleanupFailedJobs: typeof routes['rag.cleanup_failed_jobs']
+    cancelAllJobs: typeof routes['rag.cancel_all_jobs']
+    getJobStatus: typeof routes['rag.get_job_status']
+    scanAndSync: typeof routes['rag.scan_and_sync']
+    reembedAll: typeof routes['rag.reembed_all']
+    resetAndRebuild: typeof routes['rag.reset_and_rebuild']
+    estimateBatch: typeof routes['rag.estimate_batch']
+    policyPromptState: typeof routes['rag.policy_prompt_state']
+    health: typeof routes['rag.health']
+    getKnowledgeCollections: typeof routes['rag.get_knowledge_collections']
+    updateFileCollection: typeof routes['rag.update_file_collection']
+    setFileActive: typeof routes['rag.set_file_active']
+    renameKnowledgeCollection: typeof routes['rag.rename_knowledge_collection']
+    deleteKnowledgeCollection: typeof routes['rag.delete_knowledge_collection']
+    setKnowledgeCollectionActive: typeof routes['rag.set_knowledge_collection_active']
+  }
+  system: {
+    getDebugInfo: typeof routes['system.get_debug_info']
+    getSystemInfo: typeof routes['system.get_system_info']
+    getInternetStatus: typeof routes['system.get_internet_status']
+    getServices: typeof routes['system.get_services']
+    affectService: typeof routes['system.affect_service']
+    installService: typeof routes['system.install_service']
+    forceReinstallService: typeof routes['system.force_reinstall_service']
+    uninstallService: typeof routes['system.uninstall_service']
+    checkServiceUpdates: typeof routes['system.check_service_updates']
+    preflightCheck: typeof routes['system.preflight_check']
+    suggestCustomPort: typeof routes['system.suggest_custom_port']
+    preflightCustomApp: typeof routes['system.preflight_custom_app']
+    createCustomApp: typeof routes['system.create_custom_app']
+    updateCustomApp: typeof routes['system.update_custom_app']
+    updateCustomAppPullLatest: typeof routes['system.update_custom_app_pull_latest']
+    deleteCustomApp: typeof routes['system.delete_custom_app']
+    getCustomApp: typeof routes['system.get_custom_app']
+    createLinkTile: typeof routes['system.create_link_tile']
+    updateLinkTile: typeof routes['system.update_link_tile']
+    deleteLinkTile: typeof routes['system.delete_link_tile']
+    setServiceCustomUrl: typeof routes['system.set_service_custom_url']
+    getServiceLogs: typeof routes['system.get_service_logs']
+    getServiceStats: typeof routes['system.get_service_stats']
+    getAvailableVersions: typeof routes['system.get_available_versions']
+    updateService: typeof routes['system.update_service']
+    setServiceAutoUpdate: typeof routes['system.set_service_auto_update']
+    getAppAutoUpdateStatus: typeof routes['system.get_app_auto_update_status']
+    getContentAutoUpdateStatus: typeof routes['system.get_content_auto_update_status']
+    subscribeToReleaseNotes: typeof routes['system.subscribe_to_release_notes']
+    checkLatestVersion: typeof routes['system.check_latest_version']
+    requestSystemUpdate: typeof routes['system.request_system_update']
+    getSystemUpdateStatus: typeof routes['system.get_system_update_status']
+    getSystemUpdateLogs: typeof routes['system.get_system_update_logs']
+    getAutoUpdateStatus: typeof routes['system.get_auto_update_status']
+  }
+  zim: {
+    list: typeof routes['zim.list']
+    listRemote: typeof routes['zim.list_remote']
+    listCatalogLanguages: typeof routes['zim.list_catalog_languages']
+    listCuratedCategories: typeof routes['zim.list_curated_categories']
+    downloadRemote: typeof routes['zim.download_remote']
+    downloadCategoryTier: typeof routes['zim.download_category_tier']
+    upload: typeof routes['zim.upload']
+    getWikipediaState: typeof routes['zim.get_wikipedia_state']
+    selectWikipedia: typeof routes['zim.select_wikipedia']
+    listCustomLibraries: typeof routes['zim.list_custom_libraries']
+    addCustomLibrary: typeof routes['zim.add_custom_library']
+    removeCustomLibrary: typeof routes['zim.remove_custom_library']
+    browseLibrary: typeof routes['zim.browse_library']
+    rescanLibrary: typeof routes['zim.rescan_library']
+    delete: typeof routes['zim.delete']
+  }
+  creatorPacks: {
+    index: typeof routes['creator_packs.index']
+    install: typeof routes['creator_packs.install']
+    uninstall: typeof routes['creator_packs.uninstall']
+  }
+  benchmark: {
+    run: typeof routes['benchmark.run']
+    runSystem: typeof routes['benchmark.run_system']
+    runAi: typeof routes['benchmark.run_ai']
+    results: typeof routes['benchmark.results']
+    latest: typeof routes['benchmark.latest']
+    show: typeof routes['benchmark.show']
+    submit: typeof routes['benchmark.submit']
+    updateBuilderTag: typeof routes['benchmark.update_builder_tag']
+    comparison: typeof routes['benchmark.comparison']
+    status: typeof routes['benchmark.status']
+    rerunBanner: typeof routes['benchmark.rerun_banner']
+    settings: typeof routes['benchmark.settings']
+    updateSettings: typeof routes['benchmark.update_settings']
+  }
+  drugReference: {
+    index: typeof routes['drug_reference.index']
+    interactions: typeof routes['drug_reference.interactions']
+    show: typeof routes['drug_reference.show']
+    search: typeof routes['drug_reference.search']
+    status: typeof routes['drug_reference.status']
+    interactionsApi: typeof routes['drug_reference.interactions_api']
+    download: typeof routes['drug_reference.download']
+    ingest: typeof routes['drug_reference.ingest']
+    resetIngest: typeof routes['drug_reference.reset_ingest']
+    uninstall: typeof routes['drug_reference.uninstall']
+    ingestLog: typeof routes['drug_reference.ingest_log']
+  }
+  conditions: {
+    index: typeof routes['conditions.index']
+    show: typeof routes['conditions.show']
+    drugsApi: typeof routes['conditions.drugs_api']
+  }
+}

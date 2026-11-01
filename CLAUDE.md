@@ -58,7 +58,8 @@ kontaktiert werden will. Preise in USD; Limit 30 Tool-Aufrufe pro Minute.
 
 `project-nomad/` ist eine Kopie von
 [Crosstalk-Solutions/project-nomad](https://github.com/Crosstalk-Solutions/project-nomad)
-(v1.35.1, Apache 2.0, mit eigenen Paket-Updates in `admin/`): ein Offline-Server für Wikipedia/Kiwix, Karten,
+(v1.35.1, Apache 2.0; `admin/` mit eigenen Paket-Updates und auf AdonisJS 7,
+Node.js 24, Vite 8 und Inertia 3 migriert): ein Offline-Server für Wikipedia/Kiwix, Karten,
 Lernkurse und lokale KI (Ollama), verwaltet über eine AdonisJS-Weboberfläche.
 Aufbau, Stand und Sicherheitshinweise:
 [`project-nomad/UEBERSICHT.md`](project-nomad/UEBERSICHT.md). Das Command Center

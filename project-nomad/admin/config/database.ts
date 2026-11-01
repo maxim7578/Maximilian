@@ -24,6 +24,14 @@ const dbConfig = defineConfig({
         naturalSort: true,
         paths: ['database/migrations'],
       },
+      /**
+       * Lucid 22 can generate "database/schema.ts" after every migration run.
+       * NOMAD's models declare their columns themselves, so skip it instead of
+       * writing a file on every container start.
+       */
+      schemaGeneration: {
+        enabled: false,
+      },
     },
   },
 })

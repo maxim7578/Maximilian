@@ -2,6 +2,18 @@ import app from '@adonisjs/core/services/app'
 import { HttpContext, ExceptionHandler } from '@adonisjs/core/http'
 import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
 
+/**
+ * Inertia 5 serializes page props itself and cannot handle error objects with
+ * circular references (for example axios errors). The error pages only show
+ * the message, so pass a plain object instead of the raw error.
+ */
+function toPageError(error: unknown): { name: string; message: string } {
+  if (error instanceof Error) {
+    return { name: error.name, message: error.message }
+  }
+  return { name: 'Error', message: String(error) }
+}
+
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
    * In debug mode, the exception handler will display verbose errors
@@ -21,8 +33,10 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * to return the HTML contents to send as a response.
    */
   protected statusPages: Record<StatusPageRange, StatusPageRenderer> = {
-    '404': (error, { inertia }) => inertia.render('errors/not_found', { error }),
-    '500..599': (error, { inertia }) => inertia.render('errors/server_error', { error }),
+    '404': (error, { inertia }) =>
+      inertia.render('errors/not_found', { error: toPageError(error) }),
+    '500..599': (error, { inertia }) =>
+      inertia.render('errors/server_error', { error: toPageError(error) }),
   }
 
   /**

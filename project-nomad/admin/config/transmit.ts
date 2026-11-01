@@ -1,6 +1,6 @@
 import env from '#start/env'
 import { defineConfig } from '@adonisjs/transmit'
-import { redis } from '@adonisjs/transmit/transports'
+import { redis } from '@adonisjs/transmit/transports/redis'
 
 export default defineConfig({
   pingInterval: '30s',

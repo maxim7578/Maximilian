@@ -1,9 +1,6 @@
-/// <reference path="../../adonisrc.ts" />
-/// <reference path="../../config/inertia.ts" />
-
-import '../css/app.css'
+import './css/app.css'
 import { createRoot } from 'react-dom/client'
-import { createInertiaApp } from '@inertiajs/react'
+import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
 import ModalsProvider from '~/providers/ModalProvider'
 import { TransmitProvider } from 'react-adonis-transmit'
@@ -12,7 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import NotificationsProvider from '~/providers/NotificationProvider'
 import { ThemeProvider } from '~/providers/ThemeProvider'
-import { UsePageProps } from '../../types/system'
+import { UsePageProps } from '../types/system'
 
 const appName = import.meta.env.VITE_APP_NAME || 'Project NOMAD'
 const queryClient = new QueryClient()
@@ -30,8 +27,12 @@ createInertiaApp({
 
   title: (title) => `${title} - ${appName}`,
 
-  resolve: (name) => {
-    return resolvePageComponent(`../pages/${name}.tsx`, import.meta.glob('../pages/**/*.tsx'))
+  resolve: async (name) => {
+    const page = await resolvePageComponent(
+      `./pages/${name}.tsx`,
+      import.meta.glob<{ default: ResolvedComponent }>('./pages/**/*.tsx')
+    )
+    return page.default
   },
 
   setup({ el, App, props }) {

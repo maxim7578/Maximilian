@@ -6,7 +6,14 @@
     "jsx": "react-jsx",
     "paths": {
       "~/*": ["./*"],
-    },
+      "@generated/*": ["../.adonisjs/client/*"]
+    }
   },
-  "include": ["./**/*.ts", "./**/*.tsx", "components/markdoc/nodes/heading.markdoc.js"],
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "components/markdoc/nodes/heading.markdoc.js",
+    "../.adonisjs/client/**/*.ts",
+    "../.adonisjs/server/**/*.ts"
+  ]
 }

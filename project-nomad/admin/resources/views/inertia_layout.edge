@@ -9,7 +9,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/favicon-180x180.png">
 
-  <title inertia>Project NOMAD</title>
+  <title data-inertia>Project NOMAD</title>
 
   <script>
     (function() {
@@ -25,7 +25,7 @@
   @stack('dumper')
   @viteReactRefresh()
   @inertiaHead()
-  @vite(['inertia/app/app.tsx', `inertia/pages/${page.component}.tsx`])
+  @vite(['inertia/app.tsx', `inertia/pages/${page.component}.tsx`])
 </head>
 
 <body class="min-h-screen w-screen font-sans">

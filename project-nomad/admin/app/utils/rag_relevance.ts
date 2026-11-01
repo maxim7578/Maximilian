@@ -13,7 +13,7 @@ import { parseMinRelevance } from './misc.js'
  * request — which is why ContextWindowService's "memoized for the process
  * lifetime" memo isn't, and why its invalidate() never had a caller to matter to.
  *
- * Belt and braces, mirroring the assistant-name cache in config/inertia.ts: the
+ * Belt and braces, mirroring the assistant-name cache in utils/assistant_name.ts: the
  * TTL bounds how stale this can get if an invalidation is ever missed, and
  * SystemService.updateSetting calls invalidateMinRelevanceCache() so the common
  * case takes effect immediately.
