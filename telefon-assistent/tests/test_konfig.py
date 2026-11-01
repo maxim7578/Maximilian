@@ -35,3 +35,12 @@ def test_eingehend_standardmaessig_aus(tmp_path):
 def test_ungueltige_werte(kennwort):
     with pytest.raises(KonfigFehler):
         werte_aus_umgebung({**ENV, "FRITZBOX_KENNWORT": kennwort})
+
+
+def test_fritzbox_nur_an_der_ip_erkannt(tmp_path):
+    """Ein gefälschter Absendername darf nicht reichen, um als FRITZ!Box zu gelten."""
+    erzeugen(VORLAGEN, tmp_path, werte_aus_umgebung(ENV))
+    pjsip = (tmp_path / "pjsip.conf").read_text(encoding="utf-8")
+    endpunkt = pjsip.split("[fritzbox]\ntype = endpoint", 1)[1].split("\n[", 1)[0]
+    assert "identify_by = ip" in endpunkt
+

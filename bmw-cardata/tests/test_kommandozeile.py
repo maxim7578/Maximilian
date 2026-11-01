@@ -313,3 +313,9 @@ def test_status_zeigt_hinweise_und_json_enthält_sie(bmw, tmp_path, make_state):
     maintenance_path(pfad).unlink()
     daten = json.loads(_starte(bmw, pfad, "status", VIN, "--json")[1])
     assert "Wartungsdaten" in daten["hinweise"][0]
+
+
+def test_fahrzeuge_ohne_steuerzeichen(bmw, angemeldet):
+    bmw.add("GET", MAPPINGS, body=[{"vin": VIN + "\x1b[2J", "mappingType": "PRIMARY"}])
+    _, ausgabe, _ = _starte(bmw, angemeldet, "fahrzeuge")
+    assert "\x1b" not in ausgabe

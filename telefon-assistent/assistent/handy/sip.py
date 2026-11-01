@@ -207,6 +207,10 @@ class RtpStrom(asyncio.DatagramProtocol):
             self._sender = threading.Thread(target=self._senden_im_takt, args=(sock,), daemon=True)
             self._sender.start()
 
+    def neues_ziel(self, ip: str, port: int) -> None:
+        """Neue Medienadresse der Gegenstelle, z. B. aus einem re-INVITE (Halten, Weiterleiten)."""
+        self.ziel = (ip, port)
+
     def datagram_received(self, daten: bytes, adresse) -> None:
         if len(daten) < 12 or daten[0] >> 6 != 2 or self.ziel is None:
             return  # vor dem Abheben (z. B. Freizeichen als "early media") nicht zuhören
@@ -217,8 +221,10 @@ class RtpStrom(asyncio.DatagramProtocol):
         if daten[0] & 0x10 and len(daten) >= start + 4:  # Erweiterungskopf
             start += 4 + 4 * int.from_bytes(daten[start + 2:start + 4], "big")
         ende = len(daten) - (daten[-1] if daten[0] & 0x20 else 0)
-        if self.ziel and adresse != self.ziel:
-            self.ziel = adresse  # symmetrisches RTP: dorthin antworten, woher es kommt
+        if adresse[0] != self.ziel[0]:
+            return  # nur die Gegenstelle aus dem SDP, sonst könnte jedes Gerät im WLAN mithören
+        if adresse != self.ziel:
+            self.ziel = adresse  # symmetrisches RTP: Portwechsel derselben Gegenstelle mitmachen
         try:
             self.eingang.put_nowait(audio.dekodieren(daten[start:ende], nutzlast))
         except asyncio.QueueFull:
@@ -519,6 +525,10 @@ class Telefon(asyncio.DatagramProtocol):
     def datagram_received(self, daten: bytes, adresse) -> None:
         if not daten.strip():
             return  # Keep-alive
+        if self.server and adresse[0] != self.server:
+            # Nur die FRITZ!Box darf anrufen oder antworten; sonst könnte jedes Gerät im
+            # WLAN Gespräche mit der KI starten und Anrufernummern fälschen.
+            return
         try:
             nachricht = Nachricht.parsen(daten)
         except Exception:
@@ -571,7 +581,14 @@ class Telefon(asyncio.DatagramProtocol):
         elif methode == "ACK":
             pass
         elif methode == "INVITE" and gespraech:
-            # Sitzungsauffrischung (re-INVITE): mit unserer Medienbeschreibung bestätigen
+            # Sitzungsauffrischung (re-INVITE): neue Medienadresse übernehmen und mit
+            # unserer Medienbeschreibung bestätigen
+            if anfrage.rumpf:
+                try:
+                    fern_ip, fern_port, _ = sdp_lesen(anfrage.rumpf)
+                    gespraech.rtp.neues_ziel(fern_ip, fern_port)
+                except SipFehler:
+                    pass  # ohne gültiges SDP bleibt die bisherige Adresse
             sdp = sdp_bauen(self.lokale_ip, gespraech.rtp.port, [gespraech.rtp.nutzlast])
             self._senden(self._antwort_auf(anfrage, 200, "OK", [("Contact", self._kontakt)], sdp), adresse)
         elif methode == "INVITE":

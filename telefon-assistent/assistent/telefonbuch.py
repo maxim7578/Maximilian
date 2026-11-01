@@ -22,6 +22,11 @@ _GESPERRT = (
     r"^00",  # Auslandsgespräche (nicht in der Flatrate)
 )
 
+# Zusätzlich gilt eine Positivliste, damit neue oder vergessene Sonderbereiche
+# (Call-by-Call 010xx, 012x, 018x, 019x usw.) nicht durchrutschen: erlaubt sind nur
+# Ortsnetze (02–09), Mobilfunk (015–017) und Ortsnummern ohne Vorwahl.
+_ERLAUBT = r"^(0[2-9]|01[5-7]|[2-9])"
+
 
 class NummernFehler(Exception):
     pass
@@ -46,12 +51,12 @@ def normalisieren(nummer: str) -> str:
 def pruefen(nummer: str) -> str:
     """Normalisiert und lehnt gesperrte Nummern ab."""
     n = normalisieren(nummer)
-    for muster in _GESPERRT:
-        if re.match(muster, n):
-            raise NummernFehler(
-                f"Die Nummer {n} wird aus Sicherheitsgründen nicht gewählt "
-                "(Notruf, Sonder-, Service- oder Auslandsnummer)."
-            )
+    gesperrt = any(re.match(muster, n) for muster in _GESPERRT)
+    if gesperrt or not re.match(_ERLAUBT, n):
+        raise NummernFehler(
+            f"Die Nummer {n} wird aus Sicherheitsgründen nicht gewählt "
+            "(Notruf, Sonder-, Service-, Call-by-Call- oder Auslandsnummer)."
+        )
     if not n.startswith("0") and len(n) < 6:
         raise NummernFehler(f"Die Nummer {n} ist zu kurz.")
     return n

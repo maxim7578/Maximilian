@@ -27,7 +27,7 @@ from .config import (
 )
 from .history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
 from .maintenance import maintenance_path, maintenance_values
-from .report import basic_data_lines, status_json, status_lines
+from .report import basic_data_lines, printable, status_json, status_lines
 from .service import Session, fetch_vehicle_status, open_session, remember_vehicles
 from .state import State, StateError, delete_state, load_state, save_state
 from .stream import REFRESH_MARGIN_SECONDS, Credentials, StreamError, message_lines, run_stream, stream_credentials
@@ -137,7 +137,7 @@ def _save_history(path: Path, entry: Entry) -> str | None:
 def _vehicles(session: Session, path: Path) -> list[str]:
     vins = session.api.vehicles()
     remember_vehicles(session, vins, path)
-    return vins or ["Keine Fahrzeuge gefunden."]
+    return [printable(vin) for vin in vins] or ["Keine Fahrzeuge gefunden."]
 
 
 def _run_with_session(args: argparse.Namespace, path: Path, http: httpx.Client, out: TextIO) -> None:

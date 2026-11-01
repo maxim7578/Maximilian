@@ -16,12 +16,26 @@
 
 import logging
 import os
+import shlex
 import subprocess
 from typing import Any
 
 from mcp_server.notifiers.base import BaseNotifier
 
 logger = logging.getLogger("mcp_server.notifiers.script")
+
+
+def split_template(template: str, windows: bool | None = None) -> list[str]:
+    """Split a command template into arguments without involving a shell.
+
+    POSIX quoting would treat backslashes as escapes and break Windows paths such as
+    ``C:\\Tools\\notify.exe``; on Windows only double quotes group arguments.
+    """
+    if windows is None:
+        windows = os.name == "nt"
+    if not windows:
+        return shlex.split(template)
+    return [token.replace('"', "") for token in shlex.split(template, posix=False)]
 
 
 class ScriptNotifier(BaseNotifier):
@@ -67,23 +81,35 @@ class ScriptNotifier(BaseNotifier):
         trace_id = (payload or {}).get("trace_id", "")
         formatted_title = title or f"Artemis Task {event_type.capitalize()}"
 
-        # Replace template placeholders safely
+        values = {
+            "{title}": str(formatted_title),
+            "{message}": str(message),
+            "{conversation_id}": str(conversation_id),
+            "{event_type}": str(event_type),
+            "{trace_id}": str(trace_id),
+        }
+
+        def fill(arg: str) -> str:
+            for placeholder, value in values.items():
+                arg = arg.replace(placeholder, value)
+            return arg
+
+        # Split the template into arguments first, then fill in the placeholders and run
+        # without a shell. The message can come from on-screen device content, so it must
+        # never be parsed by a shell (command injection). Templates that need pipes or
+        # redirects can call a script instead.
         try:
-            cmd = (
-                cmd_template.replace("{title}", str(formatted_title))
-                .replace("{message}", str(message))
-                .replace("{conversation_id}", str(conversation_id))
-                .replace("{event_type}", str(event_type))
-                .replace("{trace_id}", str(trace_id))
-            )
+            args = [fill(arg) for arg in split_template(cmd_template)]
+            if not args:
+                return False
             subprocess.run(
-                cmd,
-                shell=True,
+                args,
+                shell=False,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 timeout=10,
             )
-            logger.info(f"Custom script notification command executed: {cmd[:60]}...")
+            logger.info(f"Custom script notification command executed: {args[0]}")
             return True
         except Exception as e:
             logger.warning(f"Failed to execute custom script notification: {e}")

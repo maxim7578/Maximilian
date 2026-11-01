@@ -51,3 +51,42 @@ async def test_takt_bleibt_echtzeit_auch_wenn_die_schleife_blockiert():
     rtp.schliessen()
     empfaenger.close()
     assert abs(anzahl - dauer / 0.02) <= 3
+
+
+@pytest.mark.asyncio
+async def test_pakete_von_fremder_ip_werden_verworfen():
+    """Ein anderes Gerät im WLAN darf den Ton weder umleiten noch einspeisen."""
+    rtp = RtpStrom()
+    rtp.verbinden("192.168.178.1", 7078, audio.PCMA)
+    rtp.datagram_received(paket(5000), ("192.168.178.66", 7078))
+    assert rtp.eingang.empty()
+    assert rtp.ziel == ("192.168.178.1", 7078)
+    rtp.schliessen()
+
+
+@pytest.mark.asyncio
+async def test_portwechsel_der_gegenstelle_wird_mitgemacht():
+    """Symmetrisches RTP: Die FRITZ!Box darf den Port wechseln (z. B. nach Halten), nur nicht die IP."""
+    rtp = RtpStrom()
+    rtp.verbinden("192.168.178.1", 7078, audio.PCMA)
+    rtp.datagram_received(paket(5000), ("192.168.178.1", 7080))
+    assert rtp.ziel == ("192.168.178.1", 7080)
+    rtp.datagram_received(paket(5000), ("192.168.178.1", 9999))
+    assert rtp.ziel == ("192.168.178.1", 9999)
+    assert rtp.eingang.qsize() == 2
+    rtp.schliessen()
+
+
+@pytest.mark.asyncio
+async def test_neues_ziel_aus_re_invite():
+    """Nach einem re-INVITE mit neuer Medienadresse gilt die neue Gegenstelle, Ton geht weiter."""
+    rtp = RtpStrom()
+    rtp.verbinden("192.168.178.1", 7078, audio.PCMA)
+    rtp.datagram_received(paket(5000), ("192.168.178.1", 7078))
+    rtp.neues_ziel("192.168.178.2", 8000)
+    assert rtp.ziel == ("192.168.178.2", 8000)
+    assert rtp.eingang.qsize() == 1  # schon empfangener Ton bleibt erhalten
+    rtp.datagram_received(paket(5000), ("192.168.178.1", 7078))
+    rtp.datagram_received(paket(5000), ("192.168.178.2", 8000))
+    assert rtp.eingang.qsize() == 2
+    rtp.schliessen()
