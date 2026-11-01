@@ -26,7 +26,9 @@ DEV_ENVIRONMENTS = {"development", "dev", "test", "local"}
 class Settings(BaseSettings):
     # Application & Server Settings
     APP_NAME: str = "Artemis Backend Manager"
-    APP_ENV: str = "development"
+    # Default to production so that forgetting APP_ENV never enables the mock OTP or
+    # the public JWT secret; set APP_ENV=development explicitly for local work.
+    APP_ENV: str = "production"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     DEBUG: bool = True

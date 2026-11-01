@@ -103,7 +103,7 @@ Run the settings tests with `python -m pytest tests` from this directory.
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `PORT` | `8000` | HTTP port to listen on |
-| `APP_ENV` | `development` | Environment mode (`development` / `production`) |
+| `APP_ENV` | `production` | Environment mode (`development` / `production`); set `development` explicitly for local work |
 | `JWT_SECRET_KEY` | `artemis-...` | Secret key for signing JWT session tokens |
 | `DOCKER_SOCKET_PATH` | `unix://var/run/docker.sock` | Path to host Docker daemon socket |
 | `DOCKER_NETWORK` | `artemis-net` | Shared bridge network for dynamic container routing |

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from .descriptors import STATUS_FIELDS, Field
-from .files import append_private, write_private
+from .files import append_private, locked, write_private
 from .report import field_entry, format_value
 
 HISTORY_FILE = "verlauf.jsonl"
@@ -37,7 +37,8 @@ def history_path(state_file: Path) -> Path:
 
 def append_entry(path: Path, entry: Entry) -> None:
     line = json.dumps({"zeit": entry.time, "fahrgestellnummer": entry.vin, "werte": entry.data}, ensure_ascii=False)
-    append_private(path, line)
+    with locked(path):  # sonst könnte ein gleichzeitiges Aufräumen die Zeile überschreiben
+        append_private(path, line)
 
 
 def _lines(text: str) -> list[str]:
@@ -63,30 +64,42 @@ def _stamp(line: str) -> datetime | None:
 def prune_entries(path: Path, keep_days: int, now: float) -> int:
     """Entfernt Einträge, die älter als keep_days Tage sind (0 = unbegrenzt); gibt deren Zahl zurück.
 
-    Jüngere und unlesbare Zeilen bleiben Zeichen für Zeichen erhalten. Geschrieben wird nur,
-    wenn etwas wegfällt, und dann atomar über eine Zwischendatei mit Rechten 600.
+    Jüngere und unlesbare Zeilen (auch solche ohne lesbaren Zeitstempel) bleiben Zeichen für
+    Zeichen erhalten. Geschrieben wird nur, wenn etwas wegfällt, und dann atomar über eine
+    Zwischendatei mit Rechten 600. Lesen und Ersetzen geschehen unter der Verlaufssperre, damit
+    weder ein gleichzeitig angehängter Eintrag verloren geht noch ein gelöschter Verlauf zurückkehrt.
     """
-    if keep_days <= 0 or not path.exists():
+    if keep_days <= 0 or not (path.exists() or path.is_symlink()):
         return 0
-    if path.is_symlink():  # wie beim Anhängen: keinem Link folgen
-        raise OSError(errno.ELOOP, "Der Verlauf ist ein symbolischer Link", str(path))
-    cutoff = datetime.fromtimestamp(now - keep_days * _SECONDS_PER_DAY, timezone.utc)
-    lines = _lines(path.read_text(encoding="utf-8", errors="surrogateescape"))
-    kept = [line for line in lines if (stamp := _stamp(line)) is None or stamp >= cutoff]
-    removed = len(lines) - len(kept)
-    if removed:
-        write_private(path, "".join(f"{line}\n" for line in kept), errors="surrogateescape")
-    return removed
+    with locked(path):
+        if path.is_symlink():  # wie beim Anhängen: keinem Link folgen
+            raise OSError(errno.ELOOP, "Der Verlauf ist ein symbolischer Link", str(path))
+        if not path.exists():  # inzwischen gelöscht
+            return 0
+        cutoff = datetime.fromtimestamp(now - keep_days * _SECONDS_PER_DAY, timezone.utc)
+        lines = _lines(path.read_text(encoding="utf-8", errors="surrogateescape"))
+        kept = [line for line in lines if (stamp := _stamp(line)) is None or stamp >= cutoff]
+        removed = len(lines) - len(kept)
+        if removed:
+            write_private(path, "".join(f"{line}\n" for line in kept), errors="surrogateescape")
+        return removed
 
 
 def delete_history(path: Path) -> bool:
-    """Löscht den Verlauf samt liegengebliebener Zwischendateien; True, wenn es ihn gab."""
-    for leftover in path.parent.glob(f".{path.name}.*.tmp"):
-        leftover.unlink(missing_ok=True)
-    if path.exists() or path.is_symlink():
-        path.unlink()
-        return True
-    return False
+    """Löscht den Verlauf samt liegengebliebener Zwischendateien; True, wenn es ihn gab.
+
+    Unter der Verlaufssperre, damit ein gleichzeitiges Aufräumen ihn nicht wiederherstellt;
+    die Sperrdatei verschwindet danach ebenfalls.
+    """
+    if not path.parent.is_dir():
+        return False
+    with locked(path):
+        for leftover in path.parent.glob(f".{path.name}.*.tmp"):
+            leftover.unlink(missing_ok=True)
+        if path.exists() or path.is_symlink():
+            path.unlink()
+            return True
+        return False
 
 
 def _parse(line: str) -> Entry | None:

@@ -158,7 +158,9 @@ Excel sie direkt in Spalten.
 
 - **Aufbewahrungsfrist:** Bei jedem Speichern werden Einträge entfernt, die älter als
   365 Tage sind (atomar über eine Zwischendatei, Rechte 600; jüngere Einträge bleiben
-  unverändert). Andere Frist: `--aufbewahrung TAGE` (bei `status` und `live`) oder die
+  unverändert). Zeilen ohne lesbaren Zeitstempel (z. B. von Hand bearbeitete) bleiben
+  bewusst unverändert und damit unbegrenzt erhalten; solche Zeilen bei Bedarf selbst
+  entfernen oder den Verlauf löschen. Andere Frist: `--aufbewahrung TAGE` (bei `status` und `live`) oder die
   Umgebungsvariable `BMW_CARDATA_HISTORY_DAYS`; die Option hat Vorrang. `0` heißt
   unbegrenzt aufbewahren, höchstens sind 3650 Tage möglich. Bei `live --speichern` wird
   höchstens einmal pro Stunde aufgeräumt.
@@ -167,6 +169,11 @@ Excel sie direkt in Spalten.
   nicht im Verlauf. Angezeigt wird die Position weiterhin.
 - **Löschen:** `verlauf --loeschen` löscht `verlauf.jsonl` endgültig. `abmelden` lässt den
   Verlauf bewusst stehen (es weist aber darauf hin).
+- **Gleichzeitige Läufe:** Anhängen, Aufräumen und Löschen sperren den Verlauf über die
+  Datei `.verlauf.jsonl.lock` daneben (Rechte 600, wird danach wieder entfernt). So gehen
+  bei gleichzeitigem `status --speichern` (z. B. per Cron) und `live --speichern` keine
+  Einträge verloren, und ein gelöschter Verlauf kehrt nicht zurück. Ist die Sperre länger
+  als 10 Sekunden belegt, bricht der Vorgang mit einer Meldung ab.
 
 ```bash
 export BMW_CARDATA_HISTORY_DAYS=90     # nur die letzten 90 Tage behalten

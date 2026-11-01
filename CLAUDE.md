@@ -33,11 +33,14 @@ Emulator und einen LLM-Schlüssel (z. B. `GEMINI_API_KEY`) in der Umgebung oder 
 
 REA ([morluto/rea](https://github.com/morluto/rea)) ist in `.mcp.json` als
 MCP-Server `rea` eingetragen (`rea-agents` 6.8.0 aus `mcp/rea/` mit festem
-Lockfile, beim ersten Start per `npm ci` installiert; rund 230 Tools wie
+Lockfile, beim ersten Start per `npm ci --ignore-scripts` installiert, also ohne
+nachgeladene, nicht im Lockfile geprüfte Binärdateien; rund 230 Tools wie
 `binary_session`, `open_binary`, `analyze_web_bundle`). Vor der Auswahl einer
 Operation `binary_session` mit `{}` aufrufen; `result.tool_availability` zeigt,
 was in der aktuellen Umgebung geht. Engines wie Ghidra, JADX, Hopper oder Frida
-sind in Cloud-Sessions nicht installiert. Zum Aktualisieren die Version in
+sind in Cloud-Sessions nicht installiert; Fridas Node-Anbindung fehlt wegen
+`--ignore-scripts` auch lokal (bei Bedarf in `mcp/rea/` einmal bewusst
+`npm rebuild frida` ausführen). Zum Aktualisieren die Version in
 `mcp/rea/package.json` anheben und dort `npm install --ignore-scripts` ausführen
 (aktualisiert das Lockfile), dann beides committen.
 
