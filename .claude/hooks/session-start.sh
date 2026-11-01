@@ -26,6 +26,10 @@ fi
 
 GSTACK_DIR="$HOME/.claude/skills/gstack"
 GSTACK_REPO="https://github.com/garrytan/gstack.git"
+# Fester Stand (v1.91.369.0) statt jeweils des neuesten Commits: ./setup läuft mit allen
+# Rechten der Session, ein kompromittiertes gstack würde sonst sofort mitlaufen.
+# Aktualisieren: neuen Commit prüfen und hier eintragen (oder /gstack-upgrade nutzen).
+GSTACK_COMMIT="02da1a05e07cbc2ecbc2f2eb8dfbaf8ad1007edd"
 MARKER="$HOME/.cache/gstack-session-start/setup.sha"
 LOG="$HOME/.cache/gstack-session-start/setup.log"
 PREINSTALLED_CHROMIUM="/opt/pw-browsers/chromium"
@@ -43,8 +47,11 @@ if [ -x "$PREINSTALLED_CHROMIUM" ]; then
 fi
 
 if [ ! -d "$GSTACK_DIR/.git" ]; then
-  mkdir -p "$(dirname "$GSTACK_DIR")"
-  git clone --quiet --single-branch --depth 1 "$GSTACK_REPO" "$GSTACK_DIR"
+  mkdir -p "$GSTACK_DIR"
+  git -C "$GSTACK_DIR" init --quiet
+  git -C "$GSTACK_DIR" remote add origin "$GSTACK_REPO"
+  git -C "$GSTACK_DIR" fetch --quiet --depth 1 origin "$GSTACK_COMMIT"
+  git -C "$GSTACK_DIR" checkout --quiet FETCH_HEAD
 fi
 
 # ./setup nur ausführen, wenn sich der gstack-Stand oder die Setup-Optionen seit dem
@@ -85,7 +92,8 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 GRAPHIFY_LOG="$HOME/.cache/gstack-session-start/graphify.log"
 if ! command -v graphify > /dev/null 2>&1; then
-  if ! uv tool install --quiet graphifyy > "$GRAPHIFY_LOG" 2>&1; then
+  # Feste Version, damit nicht jede neue (womöglich kompromittierte) Version automatisch läuft.
+  if ! uv tool install --quiet "graphifyy==0.9.99" > "$GRAPHIFY_LOG" 2>&1; then
     echo "graphify-Installation ist fehlgeschlagen, Log: $GRAPHIFY_LOG" >&2
     exit 0
   fi
