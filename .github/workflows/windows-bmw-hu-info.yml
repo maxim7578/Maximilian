@@ -11,6 +11,9 @@ on:
       - ".github/workflows/windows-bmw-hu-info.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-exe:
     runs-on: windows-latest
@@ -38,9 +41,17 @@ jobs:
       - name: EXE bauen
         run: pyinstaller --noconsole --onefile --name BMW-HU-Info --add-data "..\shared\commands.json;shared" bmw_hu_info\__main__.py
 
-      - name: EXE hochladen
+      - name: EXE hochladen (Artefakt)
         uses: actions/upload-artifact@v4
         with:
           name: bmw-hu-info-windows-exe
           path: bmw-hu-info/windows/dist/BMW-HU-Info.exe
           if-no-files-found: error
+
+      - name: Release mit .exe veroeffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: bmw-hu-info-windows-latest
+          name: BMW HU Info - Windows (neuester Build)
+          body: "Automatisch gebaute Windows-.exe der BMW-HU-Info-Diagnosesoftware (Debug/Test, unsigniert)."
+          files: bmw-hu-info/windows/dist/BMW-HU-Info.exe
