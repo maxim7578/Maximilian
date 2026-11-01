@@ -18,6 +18,9 @@ android {
     }
     buildTypes {
         release {
+            // Release-Build (nicht debugbar). Signiert vorerst mit dem Testschlüssel,
+            // bis ein eigener Schlüssel als GitHub-Secret hinterlegt ist.
+            signingConfig signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

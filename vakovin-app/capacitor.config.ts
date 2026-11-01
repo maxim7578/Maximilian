@@ -17,6 +17,8 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: false,
+    // Kein Zugriff per Chrome-DevTools/USB auf die WebView.
+    webContentsDebuggingEnabled: false,
   },
 };
 

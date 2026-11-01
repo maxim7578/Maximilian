@@ -51,14 +51,14 @@ jobs:
       - name: Android-Projekt synchronisieren
         run: bun run build:android
 
-      - name: APK bauen (Debug-Signatur)
+      - name: APK bauen (Release, nicht debugbar)
         working-directory: vakovin-app/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: APK umbenennen
-        run: cp android/app/build/outputs/apk/debug/app-debug.apk VaKoViN.apk
+        run: cp android/app/build/outputs/apk/release/app-release.apk VaKoViN.apk
 
       - name: APK als Artefakt hochladen
         uses: actions/upload-artifact@v4
