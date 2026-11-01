@@ -2,6 +2,7 @@
  * hero: Stage (draw dealt Counter, swapped: the setup is a guide, not one field, and the conversation is the strongest material) · nav: edge-aligned (draw dealt a search-led bar, swapped: one page, nothing to search) · footer: colophon block · imagery: product sample in hero and bericht, built (the bot lives in a private Telegram chat, nothing to capture) · signature: the bot asking „Soll ich anrufen?“ before every call, built in the hero
  * axes: dark/roman-serif/warm · posture: restrained · lumen: night · contrast: pass · fold: pass · v2.0.0 */
 /* Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4 · weakest: H, hero chat and bericht are both chat wells; the bericht moved left, set larger, and the call path diagram stands between them */
+/* Hallmark · hero-review: skipped (built before the hero check, a process slip) · finish-review: subagent · fix · 8 findings · 7 resolved 1 open (links point at the session branch claude/gracious-sagan-dus97i, as README does) */
 /* Hallmark · waive 38iii · the verb telefoniert in rose, once, in the hero head · Lumen names the rose verb as its signature move */
 /* Hallmark · waive 47c · blueprint grid only inside the call path well, under real nodes · Lumen texture behind the telefon path diagram */
 /* Hallmark · dismissed 58 · the 91-word window holds the real Termux setup command, about 20 shell tokens counted as words */
@@ -68,7 +69,9 @@ code.readout { color: var(--color-ink); }
 .hero__text .actions { margin-top: var(--space-xs); }
 
 /* the built chat */
-.chat { margin: 0; min-height: 560px; display: flex; flex-direction: column; justify-content: flex-end; padding: var(--space-2xl); box-shadow: var(--shadow-card); }
+.chat { margin: 0; min-height: 540px; display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-xl); padding: var(--space-2xl); box-shadow: var(--shadow-card); }
+.chat__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-md); padding-bottom: var(--space-md); border-bottom: var(--rule-hair) solid var(--color-rule); }
+.chat__name { font: 400 var(--text-xl)/1.1 var(--font-display); }
 .chat__list { display: grid; gap: var(--space-md); margin: 0; padding: 0; list-style: none; }
 .msg { max-width: 34rem; padding: var(--space-md) var(--space-lg); border-radius: var(--radius-card); background: var(--color-paper-3); font-size: var(--text-lg); line-height: 1.45; }
 .msg--me { justify-self: end; background: var(--color-paper); border: var(--rule-hair) solid var(--color-rule-2); }
@@ -103,7 +106,7 @@ code.readout { color: var(--color-ink); }
 .node--side .node__name { color: var(--color-ink-2); }
 .node--side::before { content: ""; position: absolute; bottom: 100%; left: 50%; height: var(--space-xl); border-left: var(--rule-hair) dashed var(--color-rule-2); }
 .path__cap { grid-column: 3 / -1; grid-row: 2 / 4; align-self: end; display: grid; gap: var(--space-xs); padding-top: var(--space-md); border-top: var(--rule-hair) solid var(--color-rule); color: var(--color-muted); font-size: var(--text-sm); }
-.path__cap .readout { font-size: var(--text-md); color: var(--color-ink); }
+.path__cap .quote { font-size: var(--text-lg); color: var(--color-ink); }
 
 /* stage two: split, the visual on the left */
 .split { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-areas: "visual text"; gap: var(--space-3xl); align-items: center; }
@@ -111,26 +114,29 @@ code.readout { color: var(--color-ink); }
 .report { grid-area: visual; margin: 0; min-height: 440px; display: grid; align-content: center; gap: var(--space-lg); padding: var(--space-2xl) var(--space-3xl); font-size: var(--text-xl); line-height: 1.4; }
 .report__title { font-weight: 500; }
 .report__rows { display: grid; gap: var(--space-xs); margin: 0; padding-top: var(--space-md); border-top: var(--rule-hair) solid var(--color-rule); }
-.report__rows > div { display: flex; justify-content: space-between; gap: var(--space-md); }
-.report__rows dt { font-size: var(--text-md); color: var(--color-muted); }
+.report__rows > div { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: var(--space-md); font-size: var(--text-md); }
+.report__rows dt { color: var(--color-muted); }
 .report__rows dd { margin: 0; }
-.live { color: var(--color-live); }
 .facts { display: grid; gap: var(--space-md); margin: var(--space-xs) 0 0; }
 .facts > div { display: grid; gap: var(--space-3xs); padding-top: var(--space-md); border-top: var(--rule-hair) solid var(--color-rule); }
 .facts dt { font-size: var(--text-sm); color: var(--color-muted); }
 .facts dd { margin: 0; }
 
-/* stage three: statement */
-.statement { display: grid; gap: var(--space-lg); }
-.statement .lead { max-width: 44ch; }
+/* stage three: the incoming note */
+.incoming { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 6fr); gap: var(--space-3xl); align-items: center; }
+.incoming__head { display: grid; gap: var(--space-lg); }
+.incoming__head .lead { max-width: 44ch; }
+.note { margin: 0; min-height: 360px; display: grid; align-content: center; gap: var(--space-md); padding: var(--space-2xl); font-size: var(--text-xl); line-height: 1.4; }
+.note__title { font-weight: 500; }
 
 /* costs: table */
-.costs { padding-block: var(--section-gap-l) var(--section-gap); }
+.costs { padding-block: 0 var(--section-gap); }
 .table { width: 100%; border-collapse: collapse; }
 .table th, .table td { padding: var(--space-lg) var(--space-md) var(--space-lg) 0; border-bottom: var(--rule-hair) solid var(--color-rule); text-align: left; vertical-align: baseline; }
 .table thead th { padding-block: 0 var(--space-sm); font-size: var(--text-sm); font-weight: 400; color: var(--color-muted); white-space: nowrap; }
 .table tbody th { font: 400 var(--text-title)/1.1 var(--font-display); width: 28%; }
 .table td { color: var(--color-ink-2); }
+.table thead th.num-col { text-align: right; padding-right: 0; }
 .table td:last-child { font-family: var(--font-outlier); font-size: var(--text-xs); color: var(--color-ink); text-align: right; padding-right: 0; white-space: nowrap; }
 
 /* setup: switcher in a band */
@@ -172,15 +178,16 @@ code.readout { color: var(--color-ink); }
 
 @media (max-width: 60rem) {
   .nav__links li:not(:last-child) { display: none; }
-  .hero__grid, .split, .setup__grid, .faq__grid, .headblock--split { grid-template-columns: minmax(0, 1fr); min-height: 0; }
-  .hero__grid, .split, .setup__grid { gap: var(--space-xl); }
+  .hero__grid, .split, .setup__grid, .faq__grid, .headblock--split, .incoming { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .hero__grid, .split, .setup__grid, .incoming { gap: var(--space-xl); }
+  .note { min-height: 0; padding: var(--space-xl) var(--space-lg); }
   .split { grid-template-areas: "text" "visual"; }
   .chat { min-height: 0; padding: var(--space-lg); }
   .report { min-height: 0; padding: var(--space-xl) var(--space-lg); }
   .path { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-lg); padding: var(--space-xl) var(--space-lg); }
   .path__main .node, .node--side:nth-child(1), .node--side:nth-child(2) { grid-row: auto; grid-column: 1; }
   .path__main .node:not(:last-child)::after { top: 100%; left: 50%; width: 0; height: var(--space-lg); border-top: 0; border-left: var(--rule-hair) solid var(--color-accent); }
-  .node--side { margin-left: var(--space-xl); }
+  .path__main .node:nth-child(1) { order: 1; } .path__main .node:nth-child(2) { order: 2; } .node--side { order: 3; margin-left: var(--space-xl); border-style: dashed; } .path__main .node:nth-child(n+3) { order: 4; } .path__cap { order: 5; }
   .node--side::before { display: none; }
   .path__cap { grid-column: 1; grid-row: auto; }
   .row { grid-template-columns: minmax(0, 1fr); }
