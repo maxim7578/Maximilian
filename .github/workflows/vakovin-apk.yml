@@ -38,8 +38,10 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Android SDK einrichten
-        uses: android-actions/setup-android@v3
+      # Das Android SDK ist auf ubuntu-latest vorinstalliert (ANDROID_HOME);
+      # fehlende Plattformen lädt Gradle selbst nach.
+      - name: Android SDK prüfen
+        run: echo "ANDROID_HOME=$ANDROID_HOME" && ls "$ANDROID_HOME/platforms"
 
       - name: Abhängigkeiten installieren
         run: bun install --frozen-lockfile
