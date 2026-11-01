@@ -12,7 +12,7 @@ import threading
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QIcon
+from PySide6.QtGui import QFont, QIcon, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -141,12 +141,28 @@ class App(QWidget):
         root.setContentsMargins(22, 20, 22, 20)
         root.setSpacing(12)
 
+        kopf = QHBoxLayout()
+        kopf.setSpacing(12)
+        emblem = _asset("emblem.png")
+        if emblem.exists():
+            logo = QLabel()
+            logo.setPixmap(
+                QPixmap(str(emblem)).scaled(
+                    56, 56, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                )
+            )
+            kopf.addWidget(logo)
+        texte = QVBoxLayout()
+        texte.setSpacing(0)
         titel = QLabel("Vako-HU")
         titel.setObjectName("title")
         sub = QLabel("Diagnose - nur Lesen - BMW-Headunits")
         sub.setObjectName("sub")
-        root.addWidget(titel)
-        root.addWidget(sub)
+        texte.addWidget(titel)
+        texte.addWidget(sub)
+        kopf.addLayout(texte)
+        kopf.addStretch(1)
+        root.addLayout(kopf)
 
         # Verbindungsfelder
         gitter = QGridLayout()
