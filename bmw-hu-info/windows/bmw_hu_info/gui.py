@@ -23,7 +23,7 @@ class App(ttk.Frame):
 
     def __init__(self, master: tk.Tk) -> None:
         super().__init__(master, padding=8)
-        self.master.title("BMW HU Info - Diagnose (nur Lesen)")
+        self.master.title("Vako-HU - Diagnose (nur Lesen) - BMW-Headunits")
         self.master.geometry("900x640")
         self._katalog = lade_katalog()
         self._baue_verbindungsleiste()
@@ -96,6 +96,9 @@ class App(ttk.Frame):
         ttk.Button(
             knopfleiste, text="Fehlerspeicher auswerten", command=self._analysiere
         ).pack(side="left", padx=(0, 6))
+        ttk.Button(
+            knopfleiste, text="Bericht speichern", command=self._speichern
+        ).pack(side="left", padx=(0, 6))
         ttk.Button(knopfleiste, text="Ausgabe leeren", command=self._leeren).pack(
             side="left"
         )
@@ -135,6 +138,26 @@ class App(ttk.Frame):
 
     def _leeren(self) -> None:
         self.ausgabe.delete("1.0", tk.END)
+
+    def _speichern(self) -> None:
+        inhalt = self.ausgabe.get("1.0", tk.END).strip()
+        if not inhalt:
+            messagebox.showinfo("Hinweis", "Keine Ausgabe zum Speichern.")
+            return
+        pfad = filedialog.asksaveasfilename(
+            title="Bericht speichern",
+            defaultextension=".txt",
+            filetypes=[("Textdatei", "*.txt"), ("Alle Dateien", "*.*")],
+            initialfile="vako-hu-bericht.txt",
+        )
+        if not pfad:
+            return
+        try:
+            with open(pfad, "w", encoding="utf-8") as datei:
+                datei.write(inhalt + "\n")
+            messagebox.showinfo("Gespeichert", f"Bericht gespeichert:\n{pfad}")
+        except OSError as fehler:
+            messagebox.showerror("Fehler", f"Speichern fehlgeschlagen:\n{fehler}")
 
     def _schreibe(self, text: str) -> None:
         self.ausgabe.insert(tk.END, text + "\n")

@@ -137,6 +137,26 @@ ANTWORTEN: dict[str, tuple[str, int]] = {
         "/etc/bmw/fsc/installed_fsc.list\n/opt/bmw/fsc/enavevo_fsc.bin\n",
         0,
     ),
+    "cat /proc/asound/cards": (
+        " 0 [bmwcodec     ]: BMW-Audio - BMW HiFi Codec\n",
+        0,
+    ),
+    "cat /sys/class/graphics/fb0/modes": ("U:1280x480p-60\n", 0),
+    "cat /sys/class/graphics/fb0/virtual_size": ("1280,480\n", 0),
+    "lsusb": (
+        "Bus 001 Device 002: ID 05e3:0608 Genesys Logic USB Hub\n"
+        "Bus 001 Device 003: ID 1234:5678 BMW USB-Hub\n",
+        0,
+    ),
+    "cat /proc/net/dev": (
+        "Inter-|   Receive                |  Transmit\n"
+        " eth0: 184320    1420    0    0       98304     880    0    0\n",
+        0,
+    ),
+    "cat /proc/cmdline": (
+        "console=ttyS0,115200 root=/dev/mmcblk0p2 ro bmw.variant=ENAVEVO\n",
+        0,
+    ),
 }
 
 # Fallback, wenn der Befehl erlaubt, aber nicht vorbereitet ist.

@@ -58,3 +58,22 @@ def test_schreibbefehl_wird_vom_client_blockiert(headunit):
     with HeadunitClient(_daten(headunit)) as client:
         with pytest.raises(UnsichererBefehlError):
             client.ausfuehren("rm -rf /")
+
+
+def test_cli_export_schreibt_bericht(headunit, tmp_path):
+    from bmw_hu_info.cli import main
+
+    ziel = tmp_path / "bericht.txt"
+    code = main(
+        [
+            "--host", "127.0.0.1",
+            "--port", str(headunit.port),
+            "--passwort", "test",
+            "--headunit", "ENAVEVO",
+            "--export", str(ziel),
+        ]
+    )
+    assert code == 0
+    inhalt = ziel.read_text(encoding="utf-8")
+    assert "Soundkarten" in inhalt
+    assert "bmw-nbtevo" in inhalt

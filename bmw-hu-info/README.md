@@ -1,4 +1,6 @@
-# BMW HU Info
+# Vako-HU
+
+(frueher "BMW HU Info"; interne Paket-/Verzeichnisnamen bleiben `bmw_hu_info`.)
 
 Lesender SSH-Diagnose-Client fuer BMW-Headunits (**NBT, NBTEVO, ENAVEVO, MGU**)
 in zwei Varianten:
@@ -91,7 +93,7 @@ python -m pytest
 
 ```bash
 python -m pip install pyinstaller
-pyinstaller --noconsole --onefile --name BMW-HU-Info ^
+pyinstaller --noconsole --onefile --name Vako-HU ^
   --add-data "..\shared\commands.json;shared" bmw_hu_info\__main__.py
 ```
 

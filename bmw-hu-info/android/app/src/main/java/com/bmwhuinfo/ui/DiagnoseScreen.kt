@@ -37,7 +37,7 @@ fun DiagnoseScreen(viewModel: DiagnoseViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("BMW HU Info - Diagnose (nur Lesen)")
+        Text("Vako-HU - Diagnose (nur Lesen) - BMW-Headunits")
 
         OutlinedTextField(
             value = zustand.host,

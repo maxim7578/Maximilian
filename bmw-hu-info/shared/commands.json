@@ -36,6 +36,24 @@
       ]
     },
     {
+      "id": "audio_display",
+      "titel": "Audio / Display",
+      "befehle": [
+        { "id": "asound", "titel": "Soundkarten", "command": "cat /proc/asound/cards", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "fb_modes", "titel": "Framebuffer-Modi", "command": "cat /sys/class/graphics/fb0/modes", "headunits": ["NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Zeigt unterstuetzte Aufloesungen des Displays." },
+        { "id": "fb_size", "titel": "Display-Aufloesung (virtuell)", "command": "cat /sys/class/graphics/fb0/virtual_size", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "usb", "titel": "USB-Geraete", "command": "lsusb", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] }
+      ]
+    },
+    {
+      "id": "netzwerk_detail",
+      "titel": "Netzwerk (Details)",
+      "befehle": [
+        { "id": "net_dev", "titel": "Schnittstellen-Statistik", "command": "cat /proc/net/dev", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "cmdline", "titel": "Kernel-Bootparameter", "command": "cat /proc/cmdline", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
+      ]
+    },
+    {
       "id": "netzwerk",
       "titel": "Netzwerk",
       "befehle": [

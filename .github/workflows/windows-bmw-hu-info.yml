@@ -39,19 +39,19 @@ jobs:
         run: python -m pytest -q
 
       - name: EXE bauen
-        run: pyinstaller --noconsole --onefile --name BMW-HU-Info --add-data "..\shared\commands.json;shared" run_gui.py
+        run: pyinstaller --noconsole --onefile --name Vako-HU --add-data "..\shared\commands.json;shared" run_gui.py
 
       - name: EXE hochladen (Artefakt)
         uses: actions/upload-artifact@v4
         with:
-          name: bmw-hu-info-windows-exe
-          path: bmw-hu-info/windows/dist/BMW-HU-Info.exe
+          name: vako-hu-windows-exe
+          path: bmw-hu-info/windows/dist/Vako-HU.exe
           if-no-files-found: error
 
       - name: Release mit .exe veroeffentlichen
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: bmw-hu-info-windows-latest
-          name: BMW HU Info - Windows (neuester Build)
-          body: "Automatisch gebaute Windows-.exe der BMW-HU-Info-Diagnosesoftware (Debug/Test, unsigniert)."
-          files: bmw-hu-info/windows/dist/BMW-HU-Info.exe
+          tag_name: vako-hu-windows-latest
+          name: Vako-HU - Windows (neuester Build)
+          body: "Automatisch gebaute Windows-.exe der Vako-HU-Diagnosesoftware fuer BMW-Headunits (Debug/Test, unsigniert, nur Lesen)."
+          files: bmw-hu-info/windows/dist/Vako-HU.exe

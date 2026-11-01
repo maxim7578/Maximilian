@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from .catalog import Katalog, lade_katalog
 from .fehler_analyse import analysiere
@@ -34,6 +35,12 @@ def _argumente(argv: list[str] | None) -> argparse.Namespace:
         action="store_true",
         help="Fehlerspeicher auslesen und zusammenfassen",
     )
+    parser.add_argument(
+        "--export",
+        default=None,
+        metavar="DATEI",
+        help="Ausgabe zusaetzlich als Textdatei speichern",
+    )
     return parser.parse_args(argv)
 
 
@@ -52,21 +59,28 @@ def _drucke_liste(katalog: Katalog) -> None:
             print(f"  {befehl.id}: {befehl.titel}{markierung}")
 
 
-def _fuehre_alle_aus(katalog: Katalog, client: HeadunitClient) -> None:
+def _fuehre_alle_aus(katalog: Katalog, client: HeadunitClient) -> str:
+    zeilen: list[str] = []
+
+    def ausgeben(text: str) -> None:
+        print(text)
+        zeilen.append(text)
+
     for kategorie in katalog.kategorien:
-        print(f"\n===== {kategorie.titel} =====")
+        ausgeben(f"\n===== {kategorie.titel} =====")
         for befehl in kategorie.befehle:
             if befehl.hat_platzhalter:
-                print(f"\n# {befehl.titel}: uebersprungen (Platzhalter)")
+                ausgeben(f"\n# {befehl.titel}: uebersprungen (Platzhalter)")
                 continue
-            print(f"\n# {befehl.titel}  ($ {befehl.command})")
+            ausgeben(f"\n# {befehl.titel}  ($ {befehl.command})")
             ergebnis = client.ausfuehren(befehl.command)
-            print(ergebnis.ausgabe.rstrip() or "(keine Ausgabe)")
+            ausgeben(ergebnis.ausgabe.rstrip() or "(keine Ausgabe)")
             if ergebnis.fehlerausgabe.strip():
-                print(f"[stderr] {ergebnis.fehlerausgabe.rstrip()}")
+                ausgeben(f"[stderr] {ergebnis.fehlerausgabe.rstrip()}")
+    return "\n".join(zeilen)
 
 
-def _analysiere_fehlerspeicher(katalog: Katalog, client: HeadunitClient) -> None:
+def _analysiere_fehlerspeicher(katalog: Katalog, client: HeadunitClient) -> str:
     gesammelt = []
     for kategorie in katalog.kategorien:
         if kategorie.id != "fehlerspeicher":
@@ -75,8 +89,9 @@ def _analysiere_fehlerspeicher(katalog: Katalog, client: HeadunitClient) -> None
             if befehl.hat_platzhalter:
                 continue
             gesammelt.append(client.ausfuehren(befehl.command).ausgabe)
-    bericht = analysiere("\n".join(gesammelt))
-    print(bericht.als_text())
+    text = analysiere("\n".join(gesammelt)).als_text()
+    print(text)
+    return text
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -97,12 +112,20 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with HeadunitClient(daten) as client:
             if args.analyse:
-                _analysiere_fehlerspeicher(katalog, client)
+                bericht = _analysiere_fehlerspeicher(katalog, client)
             else:
-                _fuehre_alle_aus(katalog, client)
+                bericht = _fuehre_alle_aus(katalog, client)
     except SSHVerbindungsError as fehler:
         print(f"Fehler: {fehler}", file=sys.stderr)
         return 1
+
+    if args.export:
+        try:
+            Path(args.export).write_text(bericht, encoding="utf-8")
+            print(f"\nBericht gespeichert: {args.export}")
+        except OSError as fehler:
+            print(f"Export fehlgeschlagen: {fehler}", file=sys.stderr)
+            return 1
     return 0
 
 
