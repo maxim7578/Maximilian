@@ -113,6 +113,30 @@ ANTWORTEN: dict[str, tuple[str, int]] = {
         "/etc/bmw/swfl_istep.cfg\n/persistency/istep.info\n",
         0,
     ),
+    "cat /sys/class/thermal/thermal_zone0/temp": ("48230\n", 0),
+    "cat /proc/loadavg": ("0.21 0.18 0.15 1/142 1337\n", 0),
+    "ps aux --sort=-%cpu": (
+        "USER  PID %CPU %MEM COMMAND\n"
+        "root  412 12.3  8.1 /opt/bmw/hmi\n"
+        "root  511  3.4  2.0 /opt/bmw/connd\n",
+        0,
+    ),
+    "ps aux --sort=-%mem": (
+        "USER  PID %CPU %MEM COMMAND\n"
+        "root  412 12.3  8.1 /opt/bmw/hmi\n"
+        "root  390  1.1  5.5 /opt/bmw/navd\n",
+        0,
+    ),
+    "lsmod": (
+        "Module                  Size  Used by\n"
+        "bmw_can                24576  2\n"
+        "snd_soc_bmw            40960  1\n",
+        0,
+    ),
+    "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*fsc*'": (
+        "/etc/bmw/fsc/installed_fsc.list\n/opt/bmw/fsc/enavevo_fsc.bin\n",
+        0,
+    ),
 }
 
 # Fallback, wenn der Befehl erlaubt, aber nicht vorbereitet ist.

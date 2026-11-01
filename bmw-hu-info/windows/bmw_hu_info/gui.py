@@ -12,6 +12,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from .catalog import Befehl, lade_katalog
+from .fehler_analyse import analysiere
 from .ssh_client import HeadunitClient, SSHVerbindungsError, Verbindungsdaten
 
 HEADUNITS = ["NBT", "NBTEVO", "ENAVEVO", "MGU"]
@@ -92,6 +93,9 @@ class App(ttk.Frame):
         ttk.Button(knopfleiste, text="Alle lesen", command=self._fuehre_alle_aus).pack(
             side="left", padx=6
         )
+        ttk.Button(
+            knopfleiste, text="Fehlerspeicher auswerten", command=self._analysiere
+        ).pack(side="left", padx=(0, 6))
         ttk.Button(knopfleiste, text="Ausgabe leeren", command=self._leeren).pack(
             side="left"
         )
@@ -148,6 +152,36 @@ class App(ttk.Frame):
     def _fuehre_alle_aus(self) -> None:
         befehle = [b for b in self._sichtbar if b is not None]
         self._starte(befehle)
+
+    def _analysiere(self) -> None:
+        daten = self._verbindungsdaten()
+        if not daten.host:
+            messagebox.showwarning("Hinweis", "Bitte eine IP eingeben.")
+            return
+        katalog = self._katalog.fuer_headunit(self.headunit.get())
+        befehle = [
+            b
+            for k in katalog.kategorien
+            if k.id == "fehlerspeicher"
+            for b in k.befehle
+            if not b.hat_platzhalter
+        ]
+        threading.Thread(
+            target=self._arbeit_analyse, args=(daten, befehle), daemon=True
+        ).start()
+
+    def _arbeit_analyse(
+        self, daten: Verbindungsdaten, befehle: list[Befehl]
+    ) -> None:
+        try:
+            with HeadunitClient(daten) as client:
+                self._schreibe(f"\n>>> Fehlerspeicher auswerten ({daten.host})")
+                teile = [client.ausfuehren(b.command).ausgabe for b in befehle]
+            self._schreibe(analysiere("\n".join(teile)).als_text())
+        except SSHVerbindungsError as fehler:
+            self._schreibe(f"[FEHLER] {fehler}")
+        except Exception as fehler:  # noqa: BLE001 - GUI soll nie abstuerzen
+            self._schreibe(f"[UNERWARTETER FEHLER] {fehler}")
 
     def _starte(self, befehle: list[Befehl]) -> None:
         daten = self._verbindungsdaten()

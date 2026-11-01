@@ -12,11 +12,19 @@ in zwei Varianten:
 
 Es liest ausschliesslich Informationen aus:
 
-- System- und Hardware-Infos (Kernel, OS-Version, CPU, Speicher, Laufwerke)
+- System- und Hardware-Infos (Kernel, OS-Version, CPU, Speicher, Laufwerke,
+  Temperatur, Systemlast)
+- Prozesse (Top nach CPU/Speicher, geladene Kernel-Module)
 - Netzwerkdaten der Headunit
-- Fehlerspeicher / Logs (`dmesg`, `journalctl`)
+- Fehlerspeicher / Logs (`dmesg`, `journalctl`) inkl. **Auswertung**
+  (zaehlt Fehler/Warnungen, gruppiert die haeufigsten Meldungen)
+- **FSC-Status (nur anzeigen):** zeigt, welche FSC-/Freischaltungsdateien
+  bereits auf dem Geraet liegen bzw. installiert sind
 - auf Wunsch geraete-spezifische Dateien (z. B. VIN, Software-/Teilenummer) ueber
   konfigurierbare Platzhalter
+
+Ausdruecklich **nicht** enthalten: Erzeugen oder Pruefen (Validieren) von
+FSC-Codes. Die FSC-Funktion zeigt nur an, was bereits installiert ist.
 
 **Nur-Lesen ist per Konstruktion erzwungen:** Eine Sicherheitsschicht
 (`safety.py` bzw. `Safety.kt`) laesst nur eine feste Positivliste lesender

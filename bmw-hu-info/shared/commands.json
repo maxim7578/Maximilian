@@ -21,7 +21,18 @@
         { "id": "meminfo", "titel": "Arbeitsspeicher", "command": "cat /proc/meminfo", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
         { "id": "speicher", "titel": "Belegung Datentraeger", "command": "df -h", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
         { "id": "ram_frei", "titel": "Freier Speicher", "command": "free -m", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
-        { "id": "mounts", "titel": "Eingehaengte Dateisysteme", "command": "mount", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
+        { "id": "mounts", "titel": "Eingehaengte Dateisysteme", "command": "mount", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "temperatur", "titel": "Temperatur (thermal_zone0)", "command": "cat /sys/class/thermal/thermal_zone0/temp", "headunits": ["NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Wert in Milli-Grad Celsius (z. B. 48230 = 48,23 C). Zone evtl. anpassen." },
+        { "id": "loadavg", "titel": "Systemlast", "command": "cat /proc/loadavg", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
+      ]
+    },
+    {
+      "id": "prozesse",
+      "titel": "Prozesse",
+      "befehle": [
+        { "id": "ps_cpu", "titel": "Top-Prozesse nach CPU", "command": "ps aux --sort=-%cpu", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "ps_mem", "titel": "Top-Prozesse nach Speicher", "command": "ps aux --sort=-%mem", "headunits": ["NBTEVO", "ENAVEVO", "MGU"] },
+        { "id": "module", "titel": "Geladene Kernel-Module", "command": "lsmod", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
       ]
     },
     {
@@ -61,6 +72,14 @@
         { "id": "version_dateiname", "titel": "Dateien mit 'version' im Namen", "command": "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*version*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
         { "id": "swfl_dateiname", "titel": "Dateien zu Softwarestand (swfl)", "command": "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*swfl*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] },
         { "id": "istep_dateiname", "titel": "Dateien zu I-Stufe (istep)", "command": "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*istep*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"] }
+      ]
+    },
+    {
+      "id": "fsc_status",
+      "titel": "FSC-Status (nur anzeigen)",
+      "befehle": [
+        { "id": "fsc_dateien", "titel": "FSC-Dateien finden", "command": "find /etc /opt /var /mnt /data /persistency -maxdepth 6 -type f -iname '*fsc*'", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Zeigt nur, welche FSC-/Freischaltungsdateien bereits auf dem Geraet liegen. Reine Anzeige, keine Pruefung oder Erzeugung von Codes." },
+        { "id": "fsc_liste", "titel": "Installierte FSC anzeigen (Pfad anpassen)", "command": "cat <PFAD_ZUR_FSC_LISTE>", "headunits": ["NBT", "NBTEVO", "ENAVEVO", "MGU"], "hinweis": "Liest die bereits installierte FSC-Liste (welche Funktionen freigeschaltet sind). Pfad mit 'FSC-Dateien finden' ermitteln. Keine Validierung oder Generierung." }
       ]
     }
   ]

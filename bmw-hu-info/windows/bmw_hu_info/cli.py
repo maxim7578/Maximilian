@@ -6,6 +6,7 @@ import argparse
 import sys
 
 from .catalog import Katalog, lade_katalog
+from .fehler_analyse import analysiere
 from .ssh_client import HeadunitClient, SSHVerbindungsError, Verbindungsdaten
 
 
@@ -27,6 +28,11 @@ def _argumente(argv: list[str] | None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--liste", action="store_true", help="Nur Befehle auflisten"
+    )
+    parser.add_argument(
+        "--analyse",
+        action="store_true",
+        help="Fehlerspeicher auslesen und zusammenfassen",
     )
     return parser.parse_args(argv)
 
@@ -60,6 +66,19 @@ def _fuehre_alle_aus(katalog: Katalog, client: HeadunitClient) -> None:
                 print(f"[stderr] {ergebnis.fehlerausgabe.rstrip()}")
 
 
+def _analysiere_fehlerspeicher(katalog: Katalog, client: HeadunitClient) -> None:
+    gesammelt = []
+    for kategorie in katalog.kategorien:
+        if kategorie.id != "fehlerspeicher":
+            continue
+        for befehl in kategorie.befehle:
+            if befehl.hat_platzhalter:
+                continue
+            gesammelt.append(client.ausfuehren(befehl.command).ausgabe)
+    bericht = analysiere("\n".join(gesammelt))
+    print(bericht.als_text())
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _argumente(argv)
     katalog = _katalog_fuer(args)
@@ -77,7 +96,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     try:
         with HeadunitClient(daten) as client:
-            _fuehre_alle_aus(katalog, client)
+            if args.analyse:
+                _analysiere_fehlerspeicher(katalog, client)
+            else:
+                _fuehre_alle_aus(katalog, client)
     except SSHVerbindungsError as fehler:
         print(f"Fehler: {fehler}", file=sys.stderr)
         return 1
