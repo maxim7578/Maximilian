@@ -11,13 +11,25 @@ from assistent.telefonbuch import Kontakte, NummernFehler, normalisieren, pruefe
         ("0221 / 98 76 5", "022198765"),
         ("+43 1 234567", "00431234567"),
         ("0171 1234567", "01711234567"),
+        ("+49 (0)30 123456", "030123456"),  # "(0)" nach der Ländervorwahl entfällt
+        ("+49(0)30 123456", "030123456"),
+        ("0049 (0) 30 123456", "030123456"),
+        ("+49 ( 0 ) 221 98765", "022198765"),
+        ("+43 (0)1 234567", "00431234567"),
     ],
 )
 def test_normalisieren(eingabe, erwartet):
     assert normalisieren(eingabe) == erwartet
 
 
-@pytest.mark.parametrize("nummer", ["110", "112", "0900 123456", "0137 123", "11833", "0180 5 123", "+43 1 234567"])
+@pytest.mark.parametrize(
+    "nummer",
+    [
+        "110", "112", "0900 123456", "0137 123", "11833", "0180 5 123", "+43 1 234567",
+        "+49 (0)900 123456",  # Mehrwertdienst trotz "(0)"
+        "0138 123456", "0700 1234567", "01212 123456", "0199 123456", "116116",
+    ],
+)
 def test_gesperrte_nummern(nummer):
     with pytest.raises(NummernFehler):
         pruefen(nummer)
@@ -52,6 +64,9 @@ def test_teure_vorwahlen_gesperrt(nummer):
         ("0160 1234567", "01601234567"),
         ("0800 1234567", "08001234567"),
         ("234567", "234567"),  # Ortsnummer ohne Vorwahl
+        # Ortsnummern ohne Vorwahl, die zufällig wie Sonderrufnummern ohne 0 anfangen
+        ("900123", "900123"),
+        ("700 1234", "7001234"),
     ],
 )
 def test_normale_nummern_erlaubt(nummer, erwartet):

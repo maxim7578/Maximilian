@@ -382,6 +382,8 @@ class Telefon(asyncio.DatagramProtocol):
         self.angemeldet = False
         self.letzter_fehler = ""
         self.bei_eingehendem_anruf: EingehendRueckruf | None = None
+        # Fragt vor dem Annehmen, ob die Nummer noch angenommen werden darf (Mengenlimit).
+        self.eingehend_zulassen: Callable[[str], bool] | None = None
         self._transport: asyncio.DatagramTransport | None = None
         self._offen: dict[str, tuple[asyncio.Future, Callable | None, asyncio.Event]] = {}
         self._gespraeche: dict[str, Telefonat] = {}
@@ -586,7 +588,10 @@ class Telefon(asyncio.DatagramProtocol):
             if anfrage.rumpf:
                 try:
                     fern_ip, fern_port, _ = sdp_lesen(anfrage.rumpf)
-                    gespraech.rtp.neues_ziel(fern_ip, fern_port)
+                    if self._medien_von_server(fern_ip):
+                        gespraech.rtp.neues_ziel(fern_ip, fern_port)
+                    else:
+                        logger.warning(f"re-INVITE mit fremder Medienadresse {fern_ip} – ignoriert.")
                 except SipFehler:
                     pass  # ohne gültiges SDP bleibt die bisherige Adresse
             sdp = sdp_bauen(self.lokale_ip, gespraech.rtp.port, [gespraech.rtp.nutzlast])
@@ -599,6 +604,17 @@ class Telefon(asyncio.DatagramProtocol):
             self._senden(self._antwort_auf(anfrage, 405, "Method Not Allowed"), adresse)
 
     # ---------- Eingehende Anrufe ----------
+
+    def _medien_von_server(self, medien_ip: str) -> bool:
+        """Ton nur von der FRITZ!Box selbst annehmen.
+
+        Die FRITZ!Box leitet die Sprache bei Telefonaten über ihre LAN-IP (sie ist das
+        Gegenüber, auch bei Anrufen aus dem Festnetz). Ein INVITE mit gefälschter
+        Absender-IP der FRITZ!Box und "c=" auf ein anderes Gerät würde sonst angenommen,
+        und der RTP-Filter ließe dann den Ton dieses Geräts durch.
+        Hinweis: mit einer echten FRITZ!Box nicht live getestet.
+        """
+        return medien_ip == self.server
 
     async def _eingehender_anruf(self, invite: Nachricht, adresse) -> None:
         call_id = invite.get("call-id")
@@ -618,8 +634,15 @@ class Telefon(asyncio.DatagramProtocol):
             self._senden(self._antwort_auf(invite, 488, "Not Acceptable Here", to_tag=lokal_tag), adresse)
             return
         nutzlast = next((n for n in (audio.PCMA, audio.PCMU) if n in angebot), None)
-        if nutzlast is None:
+        if nutzlast is None or not self._medien_von_server(fern_ip):
+            if nutzlast is not None:
+                logger.warning(f"Eingehender Anruf mit fremder Medienadresse {fern_ip} – abgelehnt.")
             self._senden(self._antwort_auf(invite, 488, "Not Acceptable Here", to_tag=lokal_tag), adresse)
+            return
+        if self.eingehend_zulassen is not None and not self.eingehend_zulassen(nummer_aus(invite.get("from"))):
+            # Mengenlimit erreicht: wie bei abgeschalteter Annahme nur "klingeln".
+            self._eingehend_offen[call_id] = invite
+            self._senden(self._antwort_auf(invite, 180, "Ringing", to_tag=lokal_tag), adresse)
             return
         self._eingehend_offen[call_id] = invite
         self._senden(self._antwort_auf(invite, 180, "Ringing", to_tag=lokal_tag), adresse)

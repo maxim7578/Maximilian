@@ -19,6 +19,22 @@ def _optional(name: str, standard: str = "") -> str:
     return os.getenv(name, standard).strip()
 
 
+def _anzahl(name: str, standard: int) -> int:
+    """Ganze Zahl ab 0 (0 = keine Grenze)."""
+    wert = _optional(name) or str(standard)
+    if not wert.isdigit():
+        raise EinstellungsFehler(f"{name} muss eine ganze Zahl ab 0 sein (0 = keine Grenze).")
+    return int(wert)
+
+
+def _nutzer_ids(name: str) -> frozenset[int]:
+    """Kommagetrennte Telegram-User-IDs, z. B. "123456789, 987654321"."""
+    teile = [teil.strip() for teil in _optional(name).split(",") if teil.strip()]
+    if not all(teil.isdigit() for teil in teile):
+        raise EinstellungsFehler(f"{name}: bitte nur Telegram-User-IDs (Zahlen) mit Komma getrennt eintragen.")
+    return frozenset(int(teil) for teil in teile)
+
+
 @dataclass(frozen=True)
 class Einstellungen:
     telegram_token: str
@@ -37,6 +53,11 @@ class Einstellungen:
     ari_kennwort: str
     app_port: int
     daten_ordner: str
+    # Wenn gesetzt, dürfen nur diese Telegram-Nutzer den Bot steuern (Pflicht bei Gruppen-Chats).
+    telegram_erlaubte_nutzer: frozenset[int] = frozenset()
+    # Mengenlimit für eingehende KI-Gespräche (0 = keine Grenze)
+    eingehend_pro_nummer_tag: int = 3
+    eingehend_pro_stunde: int = 10
 
     @classmethod
     def laden(cls) -> "Einstellungen":
@@ -58,4 +79,7 @@ class Einstellungen:
             ari_kennwort=_optional("ARI_KENNWORT"),  # nur PC-Version; dort prüft konfig.py
             app_port=int(_optional("APP_PORT", "8765")),
             daten_ordner=_optional("DATEN_ORDNER", "/daten"),
+            telegram_erlaubte_nutzer=_nutzer_ids("TELEGRAM_ERLAUBTE_NUTZER"),
+            eingehend_pro_nummer_tag=_anzahl("EINGEHEND_MAX_PRO_NUMMER_TAG", 3),
+            eingehend_pro_stunde=_anzahl("EINGEHEND_MAX_PRO_STUNDE", 10),
         )

@@ -8,6 +8,7 @@ from fastapi import WebSocket
 from loguru import logger
 
 from . import texte
+from .anruflimit import Anruflimit
 from .ari import Ari
 from .auftrag import Anruf, jetzt
 from .einstellungen import Einstellungen
@@ -27,6 +28,7 @@ class Anrufverwaltung:
         self.melden = melden
         self.aktuell: Anruf | None = None
         self._piper_ordner = Path(einst.daten_ordner) / "piper"
+        self.limit = Anruflimit(einst.eingehend_pro_nummer_tag, einst.eingehend_pro_stunde)
 
     @property
     def beschaeftigt(self) -> bool:
@@ -117,13 +119,27 @@ class Anrufverwaltung:
         )
         await self._bericht_senden("raus", f"📋 Bericht – Anruf bei {anruf.ziel}", details, ergebnis)
 
+    async def _eingehend_zulassen(self, nummer: str) -> bool:
+        """Mengenlimit: Über der Grenze spricht die KI nicht, es wird gleich aufgelegt.
+
+        Hinweis: Asterisk hat den Anruf dann schon angenommen (die Nummer kommt erst mit
+        der Websocket-Verbindung); der Anrufer hört kurz Stille, dann wird aufgelegt.
+        """
+        entscheidung = self.limit.pruefen(nummer)
+        if entscheidung.meldung:
+            await self.melden(entscheidung.meldung)
+        return entscheidung.erlaubt
+
     async def eingehend_verbunden(self, websocket: WebSocket) -> None:
         ergebnis = await gespraech_fuehren(
             websocket,
             systemtext=texte.gespraech_rein(self.einst.inhaber, jetzt()),
             selbst_beginnen=True,
+            zulassen=self._eingehend_zulassen,
             **self._gespraechs_optionen(),
         )
+        if ergebnis.abgelehnt:
+            return
         details = (
             f"Anrufer-Nummer: {ergebnis.anrufer or 'unterdrückt'}\n"
             f"Notiz des Assistenten: {ergebnis.ergebnis or 'keine'}"

@@ -1,14 +1,17 @@
 """Ablauf im Telegram-Bot und in der Anrufverwaltung – mit Ersatzteilen statt Telegram/Groq/Asterisk."""
 
 import asyncio
+from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
 
 from assistent import anrufe as anrufe_modul
 from assistent.anrufe import Anrufverwaltung
+from assistent.anruflimit import Anruflimit
 from assistent.auftrag import Anruf
 from assistent.einstellungen import Einstellungen
+from assistent.gespraech import Gespraechsergebnis
 from assistent.ki import Auftrag
 from assistent.telegram_bot import TelegramBot
 
@@ -58,9 +61,13 @@ class ErsatzNachricht:
         self.antworten.append((text, reply_markup))
 
 
-def update(chat_id=42, text=""):
+def update(chat_id=42, text="", art="private", nutzer_id=42):
     nachricht = ErsatzNachricht(text)
-    return SimpleNamespace(effective_chat=SimpleNamespace(id=chat_id), effective_message=nachricht), nachricht
+    return SimpleNamespace(
+        effective_chat=SimpleNamespace(id=chat_id, type=art),
+        effective_user=SimpleNamespace(id=nutzer_id) if nutzer_id is not None else None,
+        effective_message=nachricht,
+    ), nachricht
 
 
 @pytest.mark.asyncio
@@ -127,3 +134,93 @@ async def test_niemand_nimmt_ab(tmp_path, monkeypatch):
     assert ari.gewaehlt == ["0221123456"]
     assert meldungen and "niemand abgenommen" in meldungen[0]
     assert not verwaltung.beschaeftigt
+
+
+# ---------- Berechtigung je Person (TELEGRAM_ERLAUBTE_NUTZER) ----------
+
+
+@pytest.mark.asyncio
+async def test_gruppe_ohne_erlaubte_nutzer_wird_abgelehnt(tmp_path):
+    """In einer Gruppe dürfte sonst jedes Mitglied Anrufe auslösen."""
+    bot = TelegramBot(einstellungen(tmp_path, chat_id=-100), ErsatzKI([]))
+    upd, nachricht = update(chat_id=-100, art="supergroup", nutzer_id=7, text="Ruf 0221 123456 an")
+    await bot._textnachricht(upd, None)
+    assert len(nachricht.antworten) == 1 and "TELEGRAM_ERLAUBTE_NUTZER" in nachricht.antworten[0][0]
+    upd, nachricht = update(chat_id=-100, art="group", nutzer_id=7, text="nochmal")
+    await bot._textnachricht(upd, None)
+    assert nachricht.antworten == [], "Hinweis nur einmal, nicht bei jeder Nachricht"
+
+
+@pytest.mark.asyncio
+async def test_gruppe_mit_erlaubten_nutzern(tmp_path):
+    ki = ErsatzKI([Auftrag(typ="rueckfrage", rueckfrage="Wen soll ich anrufen?")])
+    einst = replace(einstellungen(tmp_path, chat_id=-100), telegram_erlaubte_nutzer=frozenset({7}))
+    bot = TelegramBot(einst, ki)
+    upd, nachricht = update(chat_id=-100, art="group", nutzer_id=8, text="Ruf an")
+    await bot._textnachricht(upd, None)
+    assert nachricht.antworten == [] and ki.texte == []
+    upd, nachricht = update(chat_id=-100, art="group", nutzer_id=7, text="Ruf an")
+    await bot._textnachricht(upd, None)
+    assert "Wen soll ich anrufen?" in nachricht.antworten[-1][0]
+
+
+@pytest.mark.asyncio
+async def test_privater_chat_mit_erlaubten_nutzern_prueft_die_person(tmp_path):
+    einst = replace(einstellungen(tmp_path), telegram_erlaubte_nutzer=frozenset({7}))
+    bot = TelegramBot(einst, ErsatzKI([]))
+    upd, nachricht = update(chat_id=42, nutzer_id=42, text="Ruf 0221 123456 an")
+    await bot._textnachricht(upd, None)
+    assert nachricht.antworten == []
+
+
+@pytest.mark.asyncio
+async def test_ohne_absender_abgelehnt(tmp_path):
+    einst = replace(einstellungen(tmp_path, chat_id=-100), telegram_erlaubte_nutzer=frozenset({7}))
+    bot = TelegramBot(einst, ErsatzKI([]))
+    upd, nachricht = update(chat_id=-100, art="channel", nutzer_id=None, text="Ruf an")
+    await bot._textnachricht(upd, None)
+    assert nachricht.antworten == []
+
+
+# ---------- Mengenlimit für eingehende Anrufe (PC-Version) ----------
+
+
+@pytest.mark.asyncio
+async def test_eingehende_anrufe_ueber_dem_limit(tmp_path, monkeypatch):
+    meldungen, gespraeche = [], []
+    uhr = [0.0]
+
+    async def melden(text):
+        meldungen.append(text)
+
+    async def schein_gespraech(websocket, *, zulassen, selbst_beginnen, **_):
+        assert selbst_beginnen
+        erlaubt = await zulassen("0221555")
+        gespraeche.append(erlaubt)
+        return Gespraechsergebnis(anrufer="0221555", abgelehnt=not erlaubt, ergebnis="Rückruf erbeten")
+
+    class KI:
+        async def bericht_schreiben(self, *args):
+            return "Bericht"
+
+    monkeypatch.setattr(anrufe_modul, "gespraech_fuehren", schein_gespraech)
+    verwaltung = Anrufverwaltung(einstellungen(tmp_path), ErsatzAri(), KI(), melden)
+    verwaltung.limit = Anruflimit(pro_nummer_tag=1, pro_stunde=10, uhr=lambda: uhr[0])
+
+    await verwaltung.eingehend_verbunden(None)
+    assert gespraeche == [True] and any("Anruf von 0221555" in m for m in meldungen)
+
+    meldungen.clear()
+    await verwaltung.eingehend_verbunden(None)
+    assert gespraeche == [True, False]
+    assert len(meldungen) == 1 and "nicht angenommen" in meldungen[0], meldungen
+
+    uhr[0] += 25 * 3600
+    await verwaltung.eingehend_verbunden(None)
+    assert gespraeche == [True, False, True]
+
+
+def test_limit_aus_den_einstellungen(tmp_path):
+    einst = replace(einstellungen(tmp_path), eingehend_pro_nummer_tag=4, eingehend_pro_stunde=7)
+    verwaltung = Anrufverwaltung(einst, ErsatzAri(), None, None)
+    assert (verwaltung.limit.pro_nummer_tag, verwaltung.limit.pro_stunde) == (4, 7)

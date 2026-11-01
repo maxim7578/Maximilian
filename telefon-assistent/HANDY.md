@@ -141,6 +141,9 @@ nicht erreichbar war. Nach fünf Minuten probiert der Assistent Microsoft automa
 Zu langsam oder zu schnell? In `.env` z. B. `MICROSOFT_TEMPO=+15%` (schneller) oder `-5%` eintragen.
 
 **Eingehende Anrufe annehmen:** In `.env` `EINGEHENDE_ANRUFE=an` setzen und neu starten.
+Mengenlimit: höchstens `EINGEHEND_MAX_PRO_NUMMER_TAG` Gespräche (Standard 3) je Nummer in 24 Stunden und
+`EINGEHEND_MAX_PRO_STUNDE` (Standard 10) pro Stunde insgesamt; darüber klingelt es nur, und du bekommst
+eine kurze Meldung in Telegram (0 = keine Grenze).
 
 ## Wenn etwas nicht klappt
 
