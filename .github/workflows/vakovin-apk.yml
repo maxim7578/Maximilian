@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: vakovin-apk-${{ github.ref }}
@@ -67,3 +67,16 @@ jobs:
           name: VaKoViN-apk
           path: vakovin-app/VaKoViN.apk
           if-no-files-found: error
+
+      # Die APK zusätzlich in den Branch legen, damit sie direkt als Datei
+      # im Repository liegt (vakovin-app/release/VaKoViN.apk).
+      - name: APK in den Branch legen
+        if: github.event_name == 'push'
+        run: |
+          mkdir -p release
+          cp VaKoViN.apk release/VaKoViN.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/VaKoViN.apk
+          git commit -m "build: VaKoViN.apk aus Lauf ${{ github.run_number }} [skip ci]" || exit 0
+          git push origin HEAD:${{ github.ref_name }}
