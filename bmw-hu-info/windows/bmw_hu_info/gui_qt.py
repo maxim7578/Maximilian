@@ -44,6 +44,12 @@ def _asset(name: str) -> Path:
         return Path(getattr(sys, "_MEIPASS")) / "assets" / name
     return Path(__file__).resolve().parent.parent / "assets" / name
 
+
+def _port(text: str) -> int:
+    """Port sicher parsen; bei ungueltiger Eingabe Standard 22."""
+    text = (text or "").strip()
+    return int(text) if text.isdigit() and 0 < int(text) < 65536 else 22
+
 QSS = """
 #bg {
   background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
@@ -121,6 +127,7 @@ class App(QWidget):
         self.resize(1000, 680)
         self._katalog = lade_katalog()
         self._sichtbar: list[Befehl | None] = []
+        self._laeuft = False
 
         self.sig_append.connect(self._append)
         self.sig_status.connect(self._status)
@@ -258,7 +265,7 @@ class App(QWidget):
     def _verbindungsdaten(self) -> Verbindungsdaten:
         return Verbindungsdaten(
             host=self.host.text().strip(),
-            port=int(self.port.text() or 22),
+            port=_port(self.port.text()),
             benutzer=self.benutzer.text().strip() or "root",
             passwort=self.passwort.text() or None,
             schluesseldatei=self.schluessel.text().strip() or None,
@@ -282,7 +289,7 @@ class App(QWidget):
         self._setze_pill(ok)
 
     def _busy(self, busy: bool) -> None:
-        self.setEnabled(not busy)
+        self._laeuft = busy
 
     # -- Aktionen ---------------------------------------------------------
     def _waehle_schluessel(self) -> None:
@@ -292,13 +299,17 @@ class App(QWidget):
 
     def _teste_verbindung(self) -> None:
         daten = self._verbindungsdaten()
-        if not daten.host:
+        if not daten.host or self._laeuft:
             return
+        self.sig_busy.emit(True)
         self._status("Verbinde ...", True)
 
         def arbeit() -> None:
-            status = teste_verbindung(daten)
-            self.sig_status.emit(status.meldung, status.verbunden)
+            try:
+                status = teste_verbindung(daten)
+                self.sig_status.emit(status.meldung, status.verbunden)
+            finally:
+                self.sig_busy.emit(False)
 
         threading.Thread(target=arbeit, daemon=True).start()
 
@@ -312,8 +323,9 @@ class App(QWidget):
 
     def _starte(self, befehle: list[Befehl]) -> None:
         daten = self._verbindungsdaten()
-        if not daten.host:
+        if not daten.host or self._laeuft:
             return
+        self.sig_busy.emit(True)
         self._status("Verbinde ...", True)
 
         def arbeit() -> None:
@@ -338,12 +350,14 @@ class App(QWidget):
             except Exception as fehler:  # noqa: BLE001
                 self.sig_status.emit("Nicht verbunden", False)
                 self.sig_append.emit(f"[UNERWARTETER FEHLER] {fehler}")
+            finally:
+                self.sig_busy.emit(False)
 
         threading.Thread(target=arbeit, daemon=True).start()
 
     def _auswerten(self) -> None:
         daten = self._verbindungsdaten()
-        if not daten.host:
+        if not daten.host or self._laeuft:
             return
         katalog = self._katalog.fuer_headunit(self.headunit.currentText())
         befehle = [
@@ -353,6 +367,7 @@ class App(QWidget):
             for b in k.befehle
             if not b.hat_platzhalter
         ]
+        self.sig_busy.emit(True)
         self._status("Verbinde ...", True)
 
         def arbeit() -> None:
@@ -364,6 +379,8 @@ class App(QWidget):
             except SSHVerbindungsError as fehler:
                 self.sig_status.emit("Nicht verbunden", False)
                 self.sig_append.emit(f"[FEHLER] {fehler}")
+            finally:
+                self.sig_busy.emit(False)
 
         threading.Thread(target=arbeit, daemon=True).start()
 

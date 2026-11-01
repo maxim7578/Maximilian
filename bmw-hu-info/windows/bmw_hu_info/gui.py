@@ -140,9 +140,11 @@ class App(ttk.Frame):
                 self._sichtbar.append(befehl)
 
     def _verbindungsdaten(self) -> Verbindungsdaten:
+        porttext = (self.port.get() or "").strip()
+        port = int(porttext) if porttext.isdigit() and 0 < int(porttext) < 65536 else 22
         return Verbindungsdaten(
             host=self.host.get().strip(),
-            port=int(self.port.get() or 22),
+            port=port,
             benutzer=self.benutzer.get().strip() or "root",
             passwort=self.passwort.get() or None,
             schluesseldatei=self.schluessel.get().strip() or None,
