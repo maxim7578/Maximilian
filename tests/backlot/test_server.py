@@ -38,7 +38,8 @@ def client(projects_root, monkeypatch):
         return None
 
     monkeypatch.setattr(server_mod, "_watch_projects", no_watch)
-    with TestClient(server_mod.create_app()) as c:
+    # Wie im Browser: Der Server ist nur unter 127.0.0.1/localhost erreichbar.
+    with TestClient(server_mod.create_app(), base_url="http://127.0.0.1:4750") as c:
         yield c
 
 
@@ -203,3 +204,34 @@ class TestFindingsFixes:
         fake_video.write_bytes(b"\x00" * 4096)
         res = client.get("/thumb/vid/renders/final.mp4")
         assert res.status_code == 404  # never the raw video bytes (F-03)
+
+
+class TestSicherheit:
+    """Befunde M6/M7 aus docs/sicherheitspruefung-2026-11-01.md."""
+
+    def test_fremder_host_wird_abgelehnt(self, client, projects_root):
+        # DNS-Rebinding: Eine fremde Webseite zeigt mit ihrer Domain auf 127.0.0.1.
+        _make_project(projects_root, "film")
+        res = client.get("/api/projects", headers={"Host": "evil.example:4750"})
+        assert res.status_code == 400
+
+    @pytest.mark.parametrize("host", ["127.0.0.1:4750", "localhost:4750"])
+    def test_lokaler_host_ist_erlaubt(self, client, projects_root, host):
+        res = client.get("/api/health", headers={"Host": host})
+        assert res.status_code == 200
+
+    @pytest.mark.parametrize("name", ["seite.html", "bild.svg", "final.mp4"])
+    def test_medien_koennen_kein_skript_ausfuehren(self, client, projects_root, name):
+        project = _make_project(projects_root, "film")
+        (project / "renders" / name).write_text("<script>alert(1)</script>", encoding="utf-8")
+        res = client.get(f"/media/film/renders/{name}")
+        assert res.status_code == 200
+        assert "sandbox" in res.headers["content-security-policy"]
+        assert res.headers["x-content-type-options"] == "nosniff"
+
+    def test_vorschaubild_kann_kein_skript_ausfuehren(self, client, projects_root):
+        project = _make_project(projects_root, "film")
+        (project / "assets" / "images" / "logo.svg").write_text("<svg><script>alert(1)</script></svg>", encoding="utf-8")
+        res = client.get("/thumb/film/assets/images/logo.svg")
+        assert res.status_code == 200
+        assert "sandbox" in res.headers["content-security-policy"]

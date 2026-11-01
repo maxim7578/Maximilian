@@ -17,6 +17,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from backlot.state import PROJECTS_DIR, REPO_ROOT, list_projects, load_board_state, summarize_project
 
@@ -162,8 +163,25 @@ async def _lifespan(app: FastAPI):
             await task
 
 
+# Der Server lauscht nur auf 127.0.0.1. Ohne Host-Prüfung könnte eine fremde Webseite
+# per DNS-Rebinding (ihre Domain zeigt auf 127.0.0.1) trotzdem alle Projekte auslesen.
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+
+# Projektdateien können aus dem Netz oder von einem LLM stammen. Öffnet jemand eine
+# .html- oder .svg-Datei direkt, darf darin kein Skript im Ursprung des Boards laufen.
+MEDIA_HEADERS = {
+    "Content-Security-Policy": "sandbox; default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
+    "X-Content-Type-Options": "nosniff",
+}
+
+
+def _media_response(path: Path, media_type: Optional[str] = None) -> FileResponse:
+    return FileResponse(path, media_type=media_type, headers=MEDIA_HEADERS)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Backlot", docs_url=None, redoc_url=None, lifespan=_lifespan)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
     # ---- API ----------------------------------------------------------
 
@@ -258,8 +276,8 @@ def create_app() -> FastAPI:
             # non-thumbable images are safe to serve as-is.
             if target.suffix.lower() in {".mp4", ".webm", ".mov"}:
                 raise HTTPException(status_code=404, detail="no poster frame available")
-            return FileResponse(target)
-        return FileResponse(cached, media_type="image/jpeg")
+            return _media_response(target)
+        return _media_response(cached, media_type="image/jpeg")
 
     # ---- Media (range requests handled by FileResponse) ---------------
 
@@ -273,7 +291,7 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=403, detail="path escapes project")
         if not target.is_file():
             raise HTTPException(status_code=404, detail="media not found")
-        return FileResponse(target)
+        return _media_response(target)
 
     # ---- UI ------------------------------------------------------------
 
