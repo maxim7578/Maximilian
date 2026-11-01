@@ -18,7 +18,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -81,6 +83,22 @@ fun DiagnoseScreen(viewModel: DiagnoseViewModel) {
                     label = { Text(hu) },
                 )
             }
+        }
+
+        // Verbindungsstatus
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "●",
+                color = if (zustand.verbunden) Color(0xFF1B7F1B) else Color(0xFFB00020),
+            )
+            Text(text = zustand.status)
+            OutlinedButton(
+                onClick = { viewModel.testeVerbindung() },
+                enabled = !zustand.laeuft,
+            ) { Text("Verbindung testen") }
         }
 
         val alleBefehle = katalog.kategorien.flatMap { it.befehle }

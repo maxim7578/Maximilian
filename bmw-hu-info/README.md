@@ -152,14 +152,22 @@ IP des PCs im selben Netz auf denselben Testserver zugreifen.
 > und ist nur zum Ausprobieren gedacht. Die ausgegebenen Werte sind
 > erfunden.
 
-## Verbindung zum Fahrzeug (Kurzfassung)
+## Verbindung zum Fahrzeug ueber ENET
 
-1. ENET-Kabel (OBD <-> Ethernet) ans Fahrzeug, am PC Netzwerk auf DHCP oder
-   passende APIPA-Adresse (169.254.x.x) stellen. Bei der Android-App ueber WLAN
-   bzw. USB-Ethernet-Adapter ins selbe Netz.
-2. IP der Headunit eintragen, Benutzer und Passwort **oder** privaten Schluessel
-   angeben.
-3. Headunit-Typ waehlen und "Alle lesen" oder einen einzelnen Eintrag antippen.
+1. **ENET-Kabel** (OBD-II <-> Ethernet/RJ45) ans Fahrzeug anschliessen, das
+   andere Ende an den PC (oder per USB-Ethernet-Adapter ans Handy).
+2. **Netzwerk am PC:** entweder auf DHCP/automatisch lassen (die Headunit
+   vergibt dann eine 169.254.x.x-Adresse) oder eine feste IP im selben Subnetz
+   wie die Headunit setzen.
+3. **IP der Headunit** in der Software eintragen, dazu Benutzer und Passwort
+   **oder** privaten SSH-Schluessel.
+4. **"Verbindung testen"** druecken: Die Statusanzeige zeigt
+   - gruen = verbunden,
+   - rot = nicht erreichbar (ENET-Kabel/IP pruefen) bzw. erreichbar, aber
+     Anmeldung fehlgeschlagen.
+5. Headunit-Typ waehlen und "Alle lesen" oder einen einzelnen Eintrag starten.
+
+Per Kommandozeile pruefen: `python -m bmw_hu_info.cli --host <IP> --passwort <PW> --test`
 
 Welche IP, welcher Benutzer und welche Authentifizierung gelten, haengt vom
 Fahrzeug und der Headunit ab - diese Daten gibst du selbst ein, das Tool bringt

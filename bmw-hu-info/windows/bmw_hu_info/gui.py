@@ -12,6 +12,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from .catalog import Befehl, lade_katalog
+from .connectivity import teste_verbindung
 from .fehler_analyse import analysiere
 from .ssh_client import HeadunitClient, SSHVerbindungsError, Verbindungsdaten
 
@@ -71,6 +72,23 @@ class App(ttk.Frame):
         )
         auswahl.grid(row=2, column=1, sticky="w")
         auswahl.bind("<<ComboboxSelected>>", lambda _e: self._fuelle_befehle())
+
+        ttk.Button(
+            rahmen, text="Verbindung testen", command=self._teste_verbindung
+        ).grid(row=2, column=2, columnspan=2, sticky="w", padx=6)
+
+        # Verbindungsstatus-Anzeige
+        self.status_text = tk.StringVar(value="● Nicht verbunden")
+        self.status_label = tk.Label(
+            rahmen, textvariable=self.status_text, fg="#b00020", anchor="w"
+        )
+        self.status_label.grid(row=3, column=0, columnspan=6, sticky="ew", pady=(4, 0))
+
+    def _setze_status(self, text: str, farbe: str) -> None:
+        """Aktualisiert die Statusanzeige (thread-sicher)."""
+        self.status_label.after(
+            0, lambda: (self.status_text.set(text), self.status_label.config(fg=farbe))
+        )
 
     def _baue_hauptbereich(self) -> None:
         self.liste = tk.Listbox(self, width=36, exportselection=False)
@@ -198,19 +216,38 @@ class App(ttk.Frame):
     ) -> None:
         try:
             with HeadunitClient(daten) as client:
+                self._setze_status(f"● Verbunden mit {daten.host}", "#1b7f1b")
                 self._schreibe(f"\n>>> Fehlerspeicher auswerten ({daten.host})")
                 teile = [client.ausfuehren(b.command).ausgabe for b in befehle]
             self._schreibe(analysiere("\n".join(teile)).als_text())
         except SSHVerbindungsError as fehler:
+            self._setze_status("● Nicht verbunden", "#b00020")
             self._schreibe(f"[FEHLER] {fehler}")
         except Exception as fehler:  # noqa: BLE001 - GUI soll nie abstuerzen
+            self._setze_status("● Nicht verbunden", "#b00020")
             self._schreibe(f"[UNERWARTETER FEHLER] {fehler}")
+
+    def _teste_verbindung(self) -> None:
+        daten = self._verbindungsdaten()
+        if not daten.host:
+            messagebox.showwarning("Hinweis", "Bitte eine IP eingeben.")
+            return
+        self._setze_status("● Verbinde ...", "#a06000")
+        threading.Thread(target=self._arbeit_test, args=(daten,), daemon=True).start()
+
+    def _arbeit_test(self, daten: Verbindungsdaten) -> None:
+        status = teste_verbindung(daten)
+        if status.verbunden:
+            self._setze_status(f"● {status.meldung}", "#1b7f1b")
+        else:
+            self._setze_status(f"● Nicht verbunden - {status.meldung}", "#b00020")
 
     def _starte(self, befehle: list[Befehl]) -> None:
         daten = self._verbindungsdaten()
         if not daten.host:
             messagebox.showwarning("Hinweis", "Bitte eine IP eingeben.")
             return
+        self._setze_status("● Verbinde ...", "#a06000")
         threading.Thread(
             target=self._arbeit, args=(daten, befehle), daemon=True
         ).start()
@@ -218,6 +255,7 @@ class App(ttk.Frame):
     def _arbeit(self, daten: Verbindungsdaten, befehle: list[Befehl]) -> None:
         try:
             with HeadunitClient(daten) as client:
+                self._setze_status(f"● Verbunden mit {daten.host}", "#1b7f1b")
                 self._schreibe(f"\n>>> Verbunden mit {daten.host}\n")
                 for befehl in befehle:
                     if befehl.hat_platzhalter:
@@ -232,8 +270,10 @@ class App(ttk.Frame):
                     if ergebnis.fehlerausgabe.strip():
                         self._schreibe(f"[stderr] {ergebnis.fehlerausgabe.rstrip()}")
         except SSHVerbindungsError as fehler:
+            self._setze_status("● Nicht verbunden", "#b00020")
             self._schreibe(f"[FEHLER] {fehler}")
         except Exception as fehler:  # noqa: BLE001 - GUI soll nie abstuerzen
+            self._setze_status("● Nicht verbunden", "#b00020")
             self._schreibe(f"[UNERWARTETER FEHLER] {fehler}")
 
 

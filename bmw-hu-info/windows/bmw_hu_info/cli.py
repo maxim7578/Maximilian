@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from .catalog import Katalog, lade_katalog
+from .connectivity import teste_verbindung
 from .fehler_analyse import analysiere
 from .ssh_client import HeadunitClient, SSHVerbindungsError, Verbindungsdaten
 
@@ -40,6 +41,11 @@ def _argumente(argv: list[str] | None) -> argparse.Namespace:
         default=None,
         metavar="DATEI",
         help="Ausgabe zusaetzlich als Textdatei speichern",
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Nur die Verbindung (ENET + SSH) pruefen",
     )
     return parser.parse_args(argv)
 
@@ -109,6 +115,12 @@ def main(argv: list[str] | None = None) -> int:
         passwort=args.passwort,
         schluesseldatei=args.schluessel,
     )
+
+    if args.test:
+        status = teste_verbindung(daten)
+        print(("VERBUNDEN: " if status.verbunden else "NICHT VERBUNDEN: ") + status.meldung)
+        return 0 if status.verbunden else 1
+
     try:
         with HeadunitClient(daten) as client:
             if args.analyse:

@@ -26,6 +26,8 @@ data class DiagnoseZustand(
     val headunit: String = "NBTEVO",
     val laeuft: Boolean = false,
     val ausgabe: String = "",
+    val verbunden: Boolean = false,
+    val status: String = "Nicht verbunden",
 ) {
     companion object {
         val HEADUNITS = listOf("NBT", "NBTEVO", "ENAVEVO", "MGU")
@@ -49,28 +51,78 @@ class DiagnoseViewModel(app: Application) : AndroidViewModel(app) {
     fun setHeadunit(wert: String) = _zustand.update { it.copy(headunit = wert) }
     fun ausgabeLeeren() = _zustand.update { it.copy(ausgabe = "") }
 
-    fun fuehreAus(befehle: List<Befehl>) {
+    fun testeVerbindung() {
         val z = _zustand.value
         if (z.host.isBlank() || z.laeuft) return
-        val daten = Verbindungsdaten(
-            host = z.host.trim(),
-            port = z.port.toIntOrNull() ?: 22,
-            benutzer = z.benutzer.ifBlank { "root" },
-            passwort = z.passwort.ifBlank { null },
-            privaterSchluessel = z.privaterSchluessel.ifBlank { null },
-        )
+        val daten = verbindungsdaten(z)
         viewModelScope.launch {
-            _zustand.update { it.copy(laeuft = true) }
-            val text = withContext(Dispatchers.IO) { arbeit(daten, befehle) }
-            _zustand.update { it.copy(laeuft = false, ausgabe = it.ausgabe + text) }
+            _zustand.update { it.copy(laeuft = true, status = "Verbinde ...") }
+            val (ok, meldung) = withContext(Dispatchers.IO) { pruefe(daten) }
+            _zustand.update {
+                it.copy(laeuft = false, verbunden = ok, status = meldung)
+            }
         }
     }
 
-    private fun arbeit(daten: Verbindungsdaten, befehle: List<Befehl>): String {
+    private fun pruefe(daten: Verbindungsdaten): Pair<Boolean, String> {
+        try {
+            java.net.Socket().use { sock ->
+                sock.connect(
+                    java.net.InetSocketAddress(daten.host, daten.port),
+                    daten.zeitlimitMs,
+                )
+            }
+        } catch (_: Exception) {
+            return false to
+                "${daten.host}:${daten.port} nicht erreichbar (ENET-Kabel/IP pruefen)."
+        }
+        return try {
+            HeadunitClient(daten).use { client ->
+                client.verbinden()
+                val name = client.ausfuehren("hostname").ausgabe.trim()
+                true to "Verbunden mit ${name.ifEmpty { daten.host }}."
+            }
+        } catch (fehler: SSHVerbindungException) {
+            false to "Erreichbar, aber SSH/Anmeldung fehlgeschlagen: ${fehler.message}"
+        }
+    }
+
+    private fun verbindungsdaten(z: DiagnoseZustand) = Verbindungsdaten(
+        host = z.host.trim(),
+        port = z.port.toIntOrNull() ?: 22,
+        benutzer = z.benutzer.ifBlank { "root" },
+        passwort = z.passwort.ifBlank { null },
+        privaterSchluessel = z.privaterSchluessel.ifBlank { null },
+    )
+
+    fun fuehreAus(befehle: List<Befehl>) {
+        val z = _zustand.value
+        if (z.host.isBlank() || z.laeuft) return
+        val daten = verbindungsdaten(z)
+        viewModelScope.launch {
+            _zustand.update { it.copy(laeuft = true) }
+            val (text, ok) = withContext(Dispatchers.IO) { arbeit(daten, befehle) }
+            _zustand.update {
+                it.copy(
+                    laeuft = false,
+                    ausgabe = it.ausgabe + text,
+                    verbunden = ok,
+                    status = if (ok) "Verbunden mit ${daten.host}." else "Nicht verbunden",
+                )
+            }
+        }
+    }
+
+    private fun arbeit(
+        daten: Verbindungsdaten,
+        befehle: List<Befehl>,
+    ): Pair<String, Boolean> {
         val puffer = StringBuilder()
+        var ok = false
         try {
             HeadunitClient(daten).use { client ->
                 client.verbinden()
+                ok = true
                 puffer.appendLine("\n>>> Verbunden mit ${daten.host}\n")
                 for (befehl in befehle) {
                     if (befehl.hatPlatzhalter) {
@@ -90,6 +142,6 @@ class DiagnoseViewModel(app: Application) : AndroidViewModel(app) {
         } catch (fehler: Exception) {
             puffer.appendLine("[UNERWARTETER FEHLER] ${fehler.message}")
         }
-        return puffer.toString()
+        return puffer.toString() to ok
     }
 }
