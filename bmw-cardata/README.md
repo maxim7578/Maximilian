@@ -54,11 +54,12 @@ Knopfdruck: Anmelden (der Link zur Bestätigung ist anklickbar), Fahrzeuge, Stat
 Basisdaten, Kontingent, Warnungen prüfen und einstellen, Live-Daten starten und stoppen
 (mit Warnungen) sowie den Verlauf anzeigen oder als CSV für Excel speichern. Sie nutzt intern genau dieselben Befehle wie die Kommandozeile.
 
-**Herunterladen:** Der Workflow „bmw-cardata Windows“ (GitHub → Actions) testet bei jeder
-Änderung alles unter Windows, baut beide Programme und hängt sie als Artefakt
-`bmw-cardata-windows` an den Lauf. Windows warnt beim ersten Start, weil die Programme
-nicht signiert sind („Weitere Informationen“ → „Trotzdem ausführen“). Mehr in
-[`windows/LIESMICH.txt`](windows/LIESMICH.txt).
+**Herunterladen:** [Vorabversion mit den Windows-Programmen](https://github.com/maxim7578/Maximilian/releases/tag/bmw-cardata-windows)
+(direkt `BMW-CarData.exe` anklicken, keine Anmeldung nötig). Der Workflow
+„bmw-cardata Windows“ testet bei jeder Änderung alles unter Windows, baut beide Programme
+und ersetzt sie dort durch den neuesten geprüften Stand. Windows warnt beim ersten Start,
+weil die Programme nicht signiert sind („Weitere Informationen“ → „Trotzdem ausführen“).
+Mehr in [`windows/LIESMICH.txt`](windows/LIESMICH.txt).
 
 Aus dem Quellcode startet die App mit `bmw-cardata-app` (nach `pip install .`).
 
