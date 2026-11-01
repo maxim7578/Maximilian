@@ -1,0 +1,67 @@
+# Baut die Android-App von VaKoViN (vakovin-app/) als APK.
+# Die fertige Datei liegt danach als Artefakt "VaKoViN-apk" am Lauf
+# (Actions -> Lauf öffnen -> unten "Artifacts").
+name: VaKoViN Android-APK
+
+on:
+  push:
+    paths:
+      - "vakovin-app/**"
+      - ".github/workflows/vakovin-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vakovin-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: APK bauen
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: vakovin-app
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Bun einrichten
+        uses: oven-sh/setup-bun@v2
+
+      - name: Java 21 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v3
+
+      - name: Abhängigkeiten installieren
+        run: bun install --frozen-lockfile
+
+      - name: Tests
+        run: bun run test
+
+      - name: Web-Teil bauen und in das Android-Projekt kopieren
+        run: bun run build:android
+
+      - name: APK bauen (Debug-Signatur)
+        working-directory: vakovin-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: APK umbenennen
+        run: cp android/app/build/outputs/apk/debug/app-debug.apk VaKoViN.apk
+
+      - name: APK als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: VaKoViN-apk
+          path: vakovin-app/VaKoViN.apk
+          if-no-files-found: error

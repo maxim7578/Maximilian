@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">VaKoViN</string>
+    <string name="title_activity_main">VaKoViN</string>
+    <string name="package_name">com.vakovin.app</string>
+    <string name="custom_url_scheme">com.vakovin.app</string>
+</resources>
