@@ -1,20 +1,22 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-// Android-App von VaKoViN. Der Web-Teil kommt aus dem statischen Build
-// (bun run build:android) und liegt fest in der APK.
+// Android-App von VaKoViN: lädt die veröffentlichte App mit Anmeldung
+// (https://vakovin.lovable.app). So gibt es nur eine Version, und jede
+// Änderung in Lovable ist sofort auch in der APK.
 const config: CapacitorConfig = {
   appId: "com.vakovin.app",
   appName: "VaKoViN",
-  webDir: "dist/client",
-  android: {
-    // Die App lädt nur eigene Dateien und die NHTSA-API.
-    allowMixedContent: false,
+  // Nur die Offline-Seite liegt in der APK.
+  webDir: "shell",
+  server: {
+    url: "https://vakovin.lovable.app",
+    cleartext: false,
+    // Nur die eigene App bleibt in der App; fremde Seiten öffnen im Browser.
+    allowNavigation: ["vakovin.lovable.app"],
+    errorPath: "index.html",
   },
-  plugins: {
-    // Native HTTP-Anfragen: die NHTSA-Abfrage läuft so ohne Browser-CORS-Prüfung.
-    CapacitorHttp: { enabled: true },
-    // Updates werden in src/lib/updater.ts selbst geprüft (GitHub-Release).
-    CapacitorUpdater: { autoUpdate: false },
+  android: {
+    allowMixedContent: false,
   },
 };
 

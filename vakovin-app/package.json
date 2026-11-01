@@ -12,7 +12,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:android": "vite build --config vite.config.capacitor.ts && rm -f dist/client/sw.js && cap sync android"
+    "build:android": "cap sync android"
   },
   "overrides": {
     "rolldown": "1.2.1"
@@ -20,7 +20,6 @@
   "dependencies": {
     "@capacitor/android": "8.6.0",
     "@capacitor/core": "8.6.0",
-    "@capgo/capacitor-updater": "8.54.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",

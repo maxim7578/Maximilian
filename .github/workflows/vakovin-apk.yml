@@ -46,12 +46,9 @@ jobs:
       - name: Abhängigkeiten installieren
         run: bun install --frozen-lockfile
 
-      - name: Tests
-        run: bun run test
-
-      - name: Web-Teil bauen und in das Android-Projekt kopieren
-        env:
-          VITE_APP_VERSION: ${{ github.run_number }}
+      # Die APK lädt https://vakovin.lovable.app; in der APK liegt nur die
+      # Offline-Seite (shell/).
+      - name: Android-Projekt synchronisieren
         run: bun run build:android
 
       - name: APK bauen (Debug-Signatur)
@@ -83,16 +80,15 @@ jobs:
           git commit -m "build: VaKoViN.apk aus Lauf ${{ github.run_number }} [skip ci]" || exit 0
           git push origin HEAD:${{ github.ref_name }}
 
-      # Update ohne Neuinstallation: Web-Paket und update.json in das Release
-      # "vakovin-latest". Die App prüft beim Start
-      # https://github.com/<repo>/releases/download/vakovin-latest/update.json
+      # Letztes Update für alte APKs mit Updater (bis Lauf 7): Sie bekommen die
+      # Umleitungsseite ota-redirect/ und werden zur neuen App geschickt.
       - name: Update-Paket veröffentlichen
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ github.run_number }}
         run: |
-          (cd dist/client && zip -qr "../../vakovin-$VERSION.zip" .)
+          (cd ota-redirect && zip -qr "../vakovin-$VERSION.zip" .)
           URL="https://github.com/${{ github.repository }}/releases/download/vakovin-latest/vakovin-$VERSION.zip"
           printf '{"version":"%s","url":"%s"}\n' "$VERSION" "$URL" > update.json
           cat update.json
