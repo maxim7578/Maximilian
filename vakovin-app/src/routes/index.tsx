@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowRight, Calendar, Car, ChevronDown, Cog, Gauge, Layers, Loader2, Palette, Search, Star, type LucideIcon } from "lucide-react";
 import heroCar from "@/assets/hero-car.jpg";
+import heroLogo from "@/assets/hero-logo.webp";
 import { z } from "zod";
 import { Equipment } from "@/components/Equipment";
 import { VinList } from "@/components/VinList";
@@ -92,7 +93,7 @@ function Home() {
       </form>
 
       {!active && (
-        <img src={heroCar} alt="" width={1280} height={800} className="-mx-4 block w-[calc(100%+2rem)] max-w-none [mask-image:linear-gradient(to_bottom,transparent,black_12%,black_80%,transparent)]" />
+        <img src={heroLogo} alt="VaKoViN-Logo" width={1254} height={1254} fetchPriority="high" className="mx-auto block w-full max-w-[440px] [mask-image:radial-gradient(closest-side,black_82%,transparent)]" />
       )}
 
       {active && (
