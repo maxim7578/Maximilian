@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vako-HU · 10 moderne Design-Konzepte</title>
+<style>
+  :root{
+    --bg:#070b14; --ink:#e9eefc; --muted:#9fb0d0;
+    --green:#30d158; --red:#ff453a; --blue:#0a84ff; --purple:#7c5cff;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(1200px 700px at 10% -10%,#15214a 0,transparent 60%),
+      radial-gradient(1000px 600px at 110% 10%,#3a1150 0,transparent 55%),
+      var(--bg);
+    color:var(--ink);min-height:100vh;padding:40px 24px 80px;}
+  .head{max-width:1200px;margin:0 auto 36px}
+  .head h1{font-size:34px;margin:0 0 6px;letter-spacing:-.02em;font-weight:800}
+  .head p{color:var(--muted);margin:0;font-size:15px;max-width:720px;line-height:1.5}
+  .grid{max-width:1200px;margin:0 auto;display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:26px;}
+  .slot{perspective:1400px}
+  .card{position:relative;border-radius:28px;overflow:hidden;height:470px;
+    transition:transform .5s cubic-bezier(.2,.8,.2,1),box-shadow .5s;
+    transform-style:preserve-3d;box-shadow:0 30px 60px -25px rgba(0,0,0,.7);}
+  .slot:hover .card{transform:rotateX(6deg) rotateY(-8deg) translateY(-6px)}
+  .tag{position:absolute;z-index:6;top:14px;left:14px;display:flex;gap:8px;align-items:center;
+    font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+  .num{display:grid;place-items:center;width:26px;height:26px;border-radius:9px;
+    background:rgba(255,255,255,.18);backdrop-filter:blur(8px);font-size:12px}
+  .name{position:absolute;z-index:6;left:16px;right:16px;bottom:14px;
+    font-size:13px;color:var(--muted)}
+  .name b{display:block;color:#fff;font-size:15px;margin-bottom:2px;letter-spacing:-.01em}
+  /* shared mini-UI bits */
+  .ui{position:absolute;inset:0;padding:54px 18px 60px;display:flex;flex-direction:column;gap:12px}
+  .title{font-weight:800;font-size:17px;letter-spacing:-.01em}
+  .sub{font-size:11px;opacity:.7;margin-top:-6px}
+  .pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;
+    padding:7px 12px;border-radius:999px;width:max-content}
+  .dot{width:9px;height:9px;border-radius:50%;box-shadow:0 0 12px currentColor}
+  .field{display:flex;align-items:center;gap:8px;font-size:12px;padding:11px 13px;border-radius:14px}
+  .btn{font-size:12px;font-weight:700;padding:11px 14px;border-radius:14px;text-align:center}
+  .rows{display:flex;flex-direction:column;gap:7px;margin-top:2px}
+  .row{display:flex;justify-content:space-between;font-size:11.5px;padding:9px 12px;border-radius:12px}
+  .mut{opacity:.6}
+
+  /* 1 LIQUID GLASS (iOS 26) */
+  .c1{background:
+     radial-gradient(130% 90% at 20% 10%,#5b8cff 0,transparent 55%),
+     radial-gradient(120% 90% at 100% 100%,#ff7ac6 0,transparent 55%),#0b1020}
+  .c1 .glass{position:absolute;inset:14px;border-radius:24px;padding:46px 16px 16px;
+    background:rgba(255,255,255,.12);backdrop-filter:blur(26px) saturate(160%);
+    border:1px solid rgba(255,255,255,.35);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 20px 40px -20px rgba(0,0,0,.6);
+    display:flex;flex-direction:column;gap:12px}
+  .c1 .field{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25)}
+  .c1 .btn{background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.6));color:#0b1020;
+    box-shadow:0 8px 20px -8px rgba(255,255,255,.6)}
+  .c1 .pill{background:rgba(48,209,88,.22);color:#9bffb6;border:1px solid rgba(48,209,88,.5)}
+  .c1 .row{background:rgba(255,255,255,.1)}
+
+  /* 2 NEO-GLASS DARK / NEON */
+  .c2{background:#0a0f1c}
+  .c2 .glass{position:absolute;inset:14px;border-radius:22px;padding:46px 16px 16px;
+    background:linear-gradient(180deg,rgba(124,92,255,.14),rgba(10,15,28,.6));
+    border:1px solid rgba(124,92,255,.4);backdrop-filter:blur(14px);
+    box-shadow:0 0 40px -10px rgba(124,92,255,.5);display:flex;flex-direction:column;gap:12px}
+  .c2 .title{color:#c9b8ff}
+  .c2 .field{background:rgba(124,92,255,.08);border:1px solid rgba(124,92,255,.3)}
+  .c2 .btn{background:linear-gradient(90deg,#7c5cff,#0a84ff);color:#fff;box-shadow:0 0 24px -4px #7c5cff}
+  .c2 .pill{background:rgba(255,69,58,.15);color:#ff8f88;border:1px solid rgba(255,69,58,.5)}
+  .c2 .row{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+
+  /* 3 CLAYMORPHISM 3D */
+  .c3{background:#dfe4f3}
+  .c3 .ui{color:#2b335a}
+  .c3 .clay{position:absolute;inset:14px;border-radius:30px;padding:46px 16px 16px;
+    background:#e7ecfb;box-shadow:14px 14px 30px #b9c2de,-10px -10px 24px #ffffff;
+    display:flex;flex-direction:column;gap:12px}
+  .c3 .field{background:#eef2fd;box-shadow:inset 5px 5px 10px #c7cfe8,inset -5px -5px 10px #fff}
+  .c3 .btn{background:#6c8cff;color:#fff;box-shadow:8px 8px 18px #b2bbdb,-6px -6px 14px #fff}
+  .c3 .pill{background:#d6ffe0;color:#1b7f3b;box-shadow:6px 6px 14px #c2cae5,-6px -6px 12px #fff}
+  .c3 .row{background:#eef2fd;box-shadow:inset 3px 3px 7px #ccd4ec,inset -3px -3px 7px #fff}
+
+  /* 4 AURORA */
+  .c4{background:#05070f;overflow:hidden}
+  .c4::before{content:"";position:absolute;inset:-40%;background:
+     conic-gradient(from 0deg,#0a84ff,#7c5cff,#30d158,#ff7ac6,#0a84ff);
+     filter:blur(60px);opacity:.55;animation:spin 14s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .c4 .glass{position:absolute;inset:14px;border-radius:24px;padding:46px 16px 16px;
+    background:rgba(8,10,20,.55);backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.18);
+    display:flex;flex-direction:column;gap:12px}
+  .c4 .field{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
+  .c4 .btn{background:rgba(255,255,255,.92);color:#07101f}
+  .c4 .pill{background:rgba(48,209,88,.2);color:#9bffb6;border:1px solid rgba(48,209,88,.5)}
+  .c4 .row{background:rgba(255,255,255,.07)}
+
+  /* 5 AUTOMOTIVE HUD / CARBON */
+  .c5{background:
+    repeating-linear-gradient(45deg,#15181d 0 6px,#111417 6px 12px)}
+  .c5 .ui{padding-top:50px}
+  .c5 .hud{position:absolute;inset:14px;border-radius:18px;padding:44px 16px 16px;
+    background:linear-gradient(180deg,#1b1f26,#0e1114);border:1px solid #2b313b;
+    box-shadow:inset 0 0 40px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:12px}
+  .c5 .title{color:#dfe6ff;font-family:"Segoe UI",sans-serif}
+  .c5 .gauge{width:84px;height:84px;border-radius:50%;margin:2px auto;
+    background:conic-gradient(var(--green) 0 72%,#232833 72% 100%);
+    display:grid;place-items:center;box-shadow:0 0 24px -6px var(--green),inset 0 0 0 8px #0e1114}
+  .c5 .gauge span{font-size:13px;font-weight:800;color:#dfffe6}
+  .c5 .field{background:#161a20;border:1px solid #2b313b;color:#bcc6d8}
+  .c5 .btn{background:linear-gradient(90deg,#0a84ff,#49c0ff);color:#021020;font-weight:800}
+  .c5 .pill{background:#13311d;color:#6cff9a;border:1px solid #1f7a3f}
+  .c5 .row{background:#161a20;border:1px solid #232833}
+
+  /* 6 NEUMORPHISM LIGHT */
+  .c6{background:#eef1f6}
+  .c6 .ui{color:#3a4257}
+  .c6 .soft{position:absolute;inset:14px;border-radius:26px;padding:46px 16px 16px;
+    background:#eef1f6;box-shadow:12px 12px 24px #cdd3df,-12px -12px 24px #ffffff;
+    display:flex;flex-direction:column;gap:12px}
+  .c6 .field{background:#eef1f6;box-shadow:inset 4px 4px 9px #cdd3df,inset -4px -4px 9px #fff}
+  .c6 .btn{background:#eef1f6;color:#0a84ff;font-weight:800;box-shadow:6px 6px 14px #cdd3df,-6px -6px 14px #fff}
+  .c6 .pill{background:#eef1f6;color:#1b7f3b;box-shadow:inset 3px 3px 7px #cdd3df,inset -3px -3px 7px #fff}
+  .c6 .row{background:#eef1f6;box-shadow:4px 4px 10px #cdd3df,-4px -4px 10px #fff}
+
+  /* 7 FLOATING 3D CARDS */
+  .c7{background:linear-gradient(160deg,#101a33,#1c0f33)}
+  .c7 .stage{position:absolute;inset:0;padding:46px 18px 58px;display:flex;flex-direction:column;gap:14px;transform-style:preserve-3d}
+  .c7 .layer{border-radius:18px;padding:13px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(10px);
+    box-shadow:0 18px 30px -16px rgba(0,0,0,.8)}
+  .c7 .l1{transform:translateZ(40px)}
+  .c7 .l2{transform:translateZ(24px)}
+  .c7 .l3{transform:translateZ(10px)}
+  .c7 .btn{background:linear-gradient(90deg,#ff7ac6,#7c5cff);color:#fff;margin-top:2px}
+  .c7 .pill{background:rgba(48,209,88,.2);color:#9bffb6;border:1px solid rgba(48,209,88,.5)}
+  .c7 .field{background:rgba(255,255,255,.06);font-size:11px}
+
+  /* 8 MINIMAL iOS LIGHT */
+  .c8{background:#f2f2f7}
+  .c8 .ui{color:#1c1c1e;padding:50px 16px 16px}
+  .c8 .title{font-weight:800}
+  .c8 .group{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .c8 .line{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;font-size:13px;border-bottom:1px solid #ececf1}
+  .c8 .line:last-child{border-bottom:0}
+  .c8 .btn{background:#0a84ff;color:#fff;border-radius:12px;margin-top:4px}
+  .c8 .pill{background:#e4f8ea;color:#1b7f3b}
+  .c8 .mut{color:#8e8e93}
+
+  /* 9 CYBER DASHBOARD */
+  .c9{background:#05080f}
+  .c9::before{content:"";position:absolute;inset:0;background:
+    linear-gradient(rgba(10,132,255,.08) 1px,transparent 1px) 0 0/22px 22px,
+    linear-gradient(90deg,rgba(10,132,255,.08) 1px,transparent 1px) 0 0/22px 22px}
+  .c9 .ui{padding-top:50px}
+  .c9 .title{color:#67e8ff;letter-spacing:.06em;text-transform:uppercase;font-size:14px}
+  .c9 .ring{width:92px;height:92px;border-radius:50%;margin:2px auto;position:relative;
+    background:conic-gradient(#30d158 0 68%,#10202e 68% 100%);filter:drop-shadow(0 0 14px #30d15899)}
+  .c9 .ring::after{content:"OK";position:absolute;inset:9px;border-radius:50%;background:#05080f;
+    display:grid;place-items:center;color:#8dffb0;font-weight:800;font-size:13px}
+  .c9 .field{background:#0b1522;border:1px solid #16304a;color:#9fe8ff}
+  .c9 .btn{background:#0a84ff;color:#001223;font-weight:800;box-shadow:0 0 20px -4px #0a84ff}
+  .c9 .pill{background:#07261a;color:#59ffa6;border:1px solid #16a35a}
+  .c9 .row{background:#0b1522;border:1px solid #16304a}
+
+  /* 10 GLASS + MESH */
+  .c10{background:#0a0d18;overflow:hidden}
+  .c10 .b{position:absolute;border-radius:50%;filter:blur(40px);opacity:.8}
+  .c10 .b1{width:180px;height:180px;background:#0a84ff;top:-30px;left:-20px}
+  .c10 .b2{width:160px;height:160px;background:#ff7ac6;bottom:-20px;right:-10px}
+  .c10 .b3{width:140px;height:140px;background:#30d158;bottom:60px;left:30px}
+  .c10 .glass{position:absolute;inset:14px;border-radius:24px;padding:46px 16px 16px;
+    background:rgba(255,255,255,.1);backdrop-filter:blur(28px) saturate(150%);
+    border:1px solid rgba(255,255,255,.28);display:flex;flex-direction:column;gap:12px}
+  .c10 .field{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2)}
+  .c10 .btn{background:rgba(255,255,255,.9);color:#0a0d18}
+  .c10 .pill{background:rgba(48,209,88,.22);color:#9bffb6;border:1px solid rgba(48,209,88,.5)}
+  .c10 .row{background:rgba(255,255,255,.08)}
+</style>
+</head>
+<body>
+  <div class="head">
+    <h1>Vako-HU · 10 moderne Design-Konzepte</h1>
+    <p>Jede Kachel zeigt dieselbe Diagnose-Oberfläche (Verbindung, Status, Befehle) in einem anderen modernen Stil – mit 3D-Tiefe und iOS-26-„Liquid&nbsp;Glass". Fahre mit der Maus über eine Kachel für den 3D-Effekt. Sag mir die Nummer, die dir gefällt – die setze ich dann real um.</p>
+  </div>
+
+  <div class="grid">
+
+    <!-- 1 -->
+    <div class="slot"><div class="card c1">
+      <div class="tag"><span class="num">01</span></div>
+      <div class="glass">
+        <div class="title">Vako-HU</div><div class="sub">Diagnose · nur Lesen</div>
+        <div class="pill"><span class="dot" style="color:var(--green)"></span>Verbunden · ENAVEVO</div>
+        <div class="field">🌐 169.254.199.99 : 22</div>
+        <div class="btn">Verbindung testen</div>
+        <div class="rows"><div class="row"><span>Fehlerspeicher</span><span class="mut">3 ⚠</span></div>
+          <div class="row"><span>VIN</span><span class="mut">WBA…982</span></div>
+          <div class="row"><span>Temperatur</span><span class="mut">48 °C</span></div></div>
+      </div>
+      <div class="name"><b>Liquid Glass (iOS 26)</b>Frostglas, Lichtkanten, Farb-Blur</div>
+    </div></div>
+
+    <!-- 2 -->
+    <div class="slot"><div class="card c2">
+      <div class="tag"><span class="num">02</span></div>
+      <div class="glass">
+        <div class="title">VAKO-HU</div><div class="sub">BMW Head-Unit Diagnose</div>
+        <div class="pill"><span class="dot" style="color:var(--red)"></span>Nicht verbunden</div>
+        <div class="field">IP · 169.254.199.99</div>
+        <div class="btn">◉ Verbindung testen</div>
+        <div class="rows"><div class="row"><span>Soundkarten</span><span class="mut">1</span></div>
+          <div class="row"><span>USB-Geräte</span><span class="mut">2</span></div>
+          <div class="row"><span>FSC-Status</span><span class="mut">anzeigen</span></div></div>
+      </div>
+      <div class="name"><b>Neo-Glass / Neon Dark</b>Dunkles Glas, Neon-Verlauf, Glow</div>
+    </div></div>
+
+    <!-- 3 -->
+    <div class="slot"><div class="card c3">
+      <div class="tag" style="color:#2b335a"><span class="num" style="background:#d7ddf0;color:#2b335a">03</span></div>
+      <div class="clay ui" style="position:absolute">
+        <div class="title">Vako-HU</div><div class="sub">Diagnose</div>
+        <div class="pill"><span class="dot" style="color:#1b7f3b"></span>Verbunden</div>
+        <div class="field">169.254.199.99</div>
+        <div class="btn">Verbindung testen</div>
+        <div class="rows"><div class="row"><span>System</span><span class="mut">OK</span></div>
+          <div class="row"><span>Fehler</span><span class="mut">2</span></div></div>
+      </div>
+      <div class="name" style="color:#5a6386"><b style="color:#2b335a">Claymorphism 3D</b>Weiche, extrudierte 3D-Flächen</div>
+    </div></div>
+
+    <!-- 4 -->
+    <div class="slot"><div class="card c4">
+      <div class="tag"><span class="num">04</span></div>
+      <div class="glass">
+        <div class="title">Vako-HU</div><div class="sub">Live-Diagnose</div>
+        <div class="pill"><span class="dot" style="color:var(--green)"></span>Verbunden</div>
+        <div class="field">🌐 169.254.199.99</div>
+        <div class="btn">Verbindung testen</div>
+        <div class="rows"><div class="row"><span>Netzwerk</span><span class="mut">eth0</span></div>
+          <div class="row"><span>Last</span><span class="mut">0.21</span></div></div>
+      </div>
+      <div class="name"><b>Aurora Glass</b>Animierter Farbverlauf hinter Glas</div>
+    </div></div>
+
+    <!-- 5 -->
+    <div class="slot"><div class="card c5">
+      <div class="tag"><span class="num">05</span></div>
+      <div class="hud">
+        <div class="title">VAKO-HU · HUD</div>
+        <div class="gauge"><span>100%</span></div>
+        <div class="pill"><span class="dot" style="color:var(--green)"></span>ONLINE · ENAVEVO</div>
+        <div class="field">ENET 169.254.199.99</div>
+        <div class="btn">VERBINDUNG TESTEN</div>
+      </div>
+      <div class="name"><b>Automotive HUD / Carbon</b>Cockpit-Look, Rundinstrument, Karbon</div>
+    </div></div>
+
+    <!-- 6 -->
+    <div class="slot"><div class="card c6">
+      <div class="tag" style="color:#3a4257"><span class="num" style="background:#e1e6f0;color:#3a4257">06</span></div>
+      <div class="soft ui" style="position:absolute">
+        <div class="title">Vako-HU</div><div class="sub">Diagnose · nur Lesen</div>
+        <div class="pill"><span class="dot" style="color:#1b7f3b"></span>Verbunden</div>
+        <div class="field">169.254.199.99 : 22</div>
+        <div class="btn">Verbindung testen</div>
+        <div class="rows"><div class="row"><span>VIN</span><span class="mut">WBA…982</span></div>
+          <div class="row"><span>Temperatur</span><span class="mut">48 °C</span></div></div>
+      </div>
+      <div class="name" style="color:#5a6386"><b style="color:#2b335a">Neumorphism Light</b>Soft-UI, eingeprägt, hell</div>
+    </div></div>
+
+    <!-- 7 -->
+    <div class="slot"><div class="card c7">
+      <div class="tag"><span class="num">07</span></div>
+      <div class="stage">
+        <div class="layer l1"><div class="title">Vako-HU</div>
+          <div class="pill" style="margin-top:8px"><span class="dot" style="color:var(--green)"></span>Verbunden</div></div>
+        <div class="layer l2 field">🌐 169.254.199.99 : 22</div>
+        <div class="layer l3"><div class="row" style="padding:0;background:none"><span>Fehlerspeicher</span><span class="mut">3 ⚠</span></div></div>
+        <div class="btn">Verbindung testen</div>
+      </div>
+      <div class="name"><b>Floating 3D Layers</b>Gestapelte, schwebende Ebenen</div>
+    </div></div>
+
+    <!-- 8 -->
+    <div class="slot"><div class="card c8">
+      <div class="tag" style="color:#1c1c1e"><span class="num" style="background:#e5e5ea;color:#1c1c1e">08</span></div>
+      <div class="ui" style="position:absolute">
+        <div class="title">Vako-HU</div><div class="sub" style="color:#8e8e93">Diagnose · nur Lesen</div>
+        <div class="group">
+          <div class="line"><span>Status</span><span class="pill">● Verbunden</span></div>
+          <div class="line"><span>IP</span><span class="mut">169.254.199.99</span></div>
+          <div class="line"><span>Headunit</span><span class="mut">ENAVEVO ›</span></div>
+        </div>
+        <div class="btn">Verbindung testen</div>
+        <div class="group"><div class="line"><span>Fehlerspeicher</span><span class="mut">3 ⚠ ›</span></div>
+          <div class="line"><span>VIN</span><span class="mut">WBA…982 ›</span></div></div>
+      </div>
+      <div class="name" style="color:#8e8e93"><b style="color:#1c1c1e">Minimal iOS Light</b>Sauber, Settings-Stil, SF-Look</div>
+    </div></div>
+
+    <!-- 9 -->
+    <div class="slot"><div class="card c9">
+      <div class="tag"><span class="num">09</span></div>
+      <div class="ui" style="position:absolute">
+        <div class="title">Vako-HU</div>
+        <div class="ring"></div>
+        <div class="pill"><span class="dot" style="color:var(--green)"></span>SYSTEM ONLINE</div>
+        <div class="field">ENET · 169.254.199.99</div>
+        <div class="btn">VERBINDUNG TESTEN</div>
+        <div class="rows"><div class="row"><span>CPU</span><span class="mut">12%</span></div>
+          <div class="row"><span>TEMP</span><span class="mut">48°C</span></div></div>
+      </div>
+      <div class="name"><b>Cyber Dashboard</b>Tech-Grid, Status-Ring, Glow</div>
+    </div></div>
+
+    <!-- 10 -->
+    <div class="slot"><div class="card c10">
+      <div class="b b1"></div><div class="b b2"></div><div class="b b3"></div>
+      <div class="tag"><span class="num">10</span></div>
+      <div class="glass">
+        <div class="title">Vako-HU</div><div class="sub">Diagnose · nur Lesen</div>
+        <div class="pill"><span class="dot" style="color:var(--green)"></span>Verbunden · ENAVEVO</div>
+        <div class="field">🌐 169.254.199.99 : 22</div>
+        <div class="btn">Verbindung testen</div>
+        <div class="rows"><div class="row"><span>Fehlerspeicher</span><span class="mut">3 ⚠</span></div>
+          <div class="row"><span>USB</span><span class="mut">2</span></div></div>
+      </div>
+      <div class="name"><b>Glass + Mesh Gradient</b>Frostglas über Farb-Blobs</div>
+    </div></div>
+
+  </div>
+</body>
+</html>
