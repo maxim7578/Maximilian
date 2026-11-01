@@ -36,10 +36,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      # Feste Versionen mit Hashes (auch für PyInstaller, das die verteilten .exe baut).
+      # Aktualisieren nach Änderungen an pyproject.toml oder windows/requirements-build.in,
+      # im Ordner bmw-cardata:
+      #   uv pip compile pyproject.toml windows/requirements-build.in --extra dev \
+      #     --python-platform windows --python-version 3.12 --generate-hashes \
+      #     -o windows/requirements-build.txt
+      # (mit --upgrade für neuere Versionen). Danach das Projekt selbst ohne Abhängigkeiten und
+      # ohne Build-Isolation installieren, damit pip nichts ungeprüft nachlädt.
       - name: Abhängigkeiten installieren
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]" "pyinstaller>=6,<7"
+          python -m pip install --require-hashes -r windows/requirements-build.txt
+          python -m pip install --no-deps --no-build-isolation -e .
 
       - name: Tests auf Windows
         run: python -m pytest -q

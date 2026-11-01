@@ -7,6 +7,7 @@ import json
 import sys
 import time
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TextIO
@@ -21,11 +22,24 @@ from .config import (
     HTTP_TIMEOUT_SECONDS,
     ConfigError,
     client_id_from_env,
+    history_days,
+    location_disabled,
+    parse_history_days,
     state_path,
     validate_client_id,
     validate_vin,
 )
-from .history import Entry, append_entry, history_csv, history_lines, history_path, load_entries
+from .history import (
+    Entry,
+    append_entry,
+    delete_history,
+    history_csv,
+    history_lines,
+    history_path,
+    load_entries,
+    prune_entries,
+    without_location,
+)
 from .maintenance import maintenance_path, maintenance_values
 from .report import basic_data_lines, printable, status_json, status_lines
 from .service import Session, fetch_vehicle_status, open_session, remember_vehicles
@@ -36,6 +50,8 @@ from .usage import DAILY_LIMIT, load_usage, record_call, usage_path
 
 HttpFactory = Callable[[], httpx.Client]
 MAX_HISTORY_LINES = 1000
+PRUNE_INTERVAL_SECONDS = 3600  # live: alte Einträge höchstens einmal pro Stunde entfernen
+SAVED = "Im Verlauf gespeichert."
 
 
 def _default_http() -> httpx.Client:
@@ -50,6 +66,22 @@ def _line_count(raw: str) -> int:
     if not 1 <= count <= MAX_HISTORY_LINES:
         raise argparse.ArgumentTypeError(f"muss zwischen 1 und {MAX_HISTORY_LINES} liegen")
     return count
+
+
+def _days(raw: str) -> int:
+    try:
+        return parse_history_days(raw)
+    except ConfigError as err:
+        raise argparse.ArgumentTypeError(str(err)) from err
+
+
+def _add_save_options(command: argparse.ArgumentParser, what: str) -> None:
+    command.add_argument("--speichern", action="store_true", help=f"{what} im lokalen Verlauf ablegen")
+    command.add_argument(
+        "--aufbewahrung", type=_days, metavar="TAGE",
+        help="Einträge älter als TAGE beim Speichern entfernen (Standard: 365, 0 = unbegrenzt)",
+    )
+    command.add_argument("--ohne-standort", action="store_true", help="Breiten-/Längengrad nicht speichern")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -67,14 +99,16 @@ def build_parser() -> argparse.ArgumentParser:
     status = commands.add_parser("status", help="Aktuellen Fahrzeugstatus anzeigen")
     status.add_argument("vin", nargs="?", help="Fahrgestellnummer (ohne Angabe: dein einziges Fahrzeug)")
     status.add_argument("--json", action="store_true", help="Ausgabe als JSON")
-    status.add_argument("--speichern", action="store_true", help="Abruf im lokalen Verlauf ablegen")
+    _add_save_options(status, "Abruf")
     live = commands.add_parser("live", help="Live-Daten vom Auto empfangen, bis Strg+C (ohne Tageslimit)")
     live.add_argument("vin", nargs="?", help="Nur dieses Fahrzeug (ohne Angabe: alle des Kontos)")
     live.add_argument("--json", action="store_true", help="Eine JSON-Zeile pro Nachricht")
-    live.add_argument("--speichern", action="store_true", help="Nachrichten im lokalen Verlauf ablegen")
+    _add_save_options(live, "Nachrichten")
     history = commands.add_parser("verlauf", help="Gespeicherte Abrufe anzeigen (ohne Abruf bei BMW)")
     history.add_argument("--anzahl", type=_line_count, default=10, help="Wie viele Einträge (Standard: 10)")
-    history.add_argument("--csv", action="store_true", help="Alle Einträge als CSV ausgeben")
+    output = history.add_mutually_exclusive_group()
+    output.add_argument("--csv", action="store_true", help="Alle Einträge als CSV ausgeben")
+    output.add_argument("--loeschen", action="store_true", help="Den gespeicherten Verlauf endgültig löschen")
     commands.add_parser("kontingent", help="Eigene Abrufe der letzten 24 Stunden anzeigen")
     commands.add_parser("abmelden", help="Gespeicherte Anmeldung löschen")
     return parser
@@ -112,26 +146,48 @@ def _utc_stamp(now: float) -> str:
 
 def _status(args: argparse.Namespace, session: Session, path: Path) -> list[str]:
     explicit = validate_vin(args.vin) if args.vin else None
+    saving = _SaveOptions.from_args(args) if args.speichern else None
     result = fetch_vehicle_status(session, explicit, _only_vehicle, path)
     vin = result.vin
     service, service_notes = maintenance_values(session.api, vin, maintenance_path(path), time.time())
     data = {**service, **result.data}
     notes = [*result.notes, *service_notes]
     stamp = _utc_stamp(time.time())
-    problem = _save_history(path, Entry(stamp, vin, data)) if args.speichern else None
+    saved = _save_history(path, Entry(stamp, vin, data), saving, prune=True) if saving else []
     if args.json:
         return [status_json(vin, data, stamp, notes)]
-    saved = [problem or "Im Verlauf gespeichert."] if args.speichern else []
     return [f"Fahrzeug {vin}", *status_lines(data), *saved, *(f"Hinweis: {note}" for note in notes)]
 
 
-def _save_history(path: Path, entry: Entry) -> str | None:
-    """Speichert einen Eintrag; ein Dateifehler kostet nur den Eintrag. Gibt die Warnung zurück."""
+@dataclass(frozen=True)
+class _SaveOptions:
+    keep_days: int
+    without_location: bool
+
+    @classmethod
+    def from_args(cls, args: argparse.Namespace) -> _SaveOptions:
+        """Liest Optionen und Einstellungen vor dem Abruf, damit Fehler nichts kosten."""
+        return cls(history_days(args.aufbewahrung), location_disabled(args.ohne_standort))
+
+
+def _save_history(path: Path, entry: Entry, options: _SaveOptions, prune: bool) -> list[str]:
+    """Speichert einen Eintrag und entfernt (wenn prune) abgelaufene; gibt Meldungen zurück.
+
+    Erfolg beginnt mit SAVED. Ein Dateifehler kostet nur den Eintrag bzw. das Aufräumen,
+    nie die Anzeige.
+    """
+    target = history_path(path)
+    data = without_location(entry.data) if options.without_location else entry.data
     try:
-        append_entry(history_path(path), entry)
+        append_entry(target, Entry(entry.time, entry.vin, data))
     except OSError as error:
-        return f"Verlauf konnte nicht gespeichert werden: {error.strerror or error}"
-    return None
+        return [f"Verlauf konnte nicht gespeichert werden: {error.strerror or error}"]
+    try:
+        if prune:
+            prune_entries(target, options.keep_days, time.time())
+    except OSError as error:
+        return [SAVED, f"Alte Verlaufseinträge konnten nicht entfernt werden: {error.strerror or error}"]
+    return [SAVED]
 
 
 def _vehicles(session: Session, path: Path) -> list[str]:
@@ -157,9 +213,11 @@ class _LivePrinter:
 
     def __init__(self, args: argparse.Namespace, path: Path, out: TextIO, err: TextIO) -> None:
         self.only = validate_vin(args.vin) if args.vin else None
-        self.as_json, self.save = args.json, args.speichern
+        self.as_json = args.json
+        self.saving = _SaveOptions.from_args(args) if args.speichern else None
         self.path, self.out, self.err = path, out, err
         self.last_vin: str | None = None
+        self.pruned_at: float | None = None
         self.skipped: set[str] = set()
 
     def __call__(self, vin: str, data: dict[str, dict[str, object]]) -> None:
@@ -169,8 +227,7 @@ class _LivePrinter:
                 print(f"Nachrichten für {vin} werden übergangen (nur {self.only} gewählt).", file=self.err)
             return
         stamp = _utc_stamp(time.time())
-        problem = _save_history(self.path, Entry(stamp, vin, data)) if self.save else None
-        if problem:
+        for problem in self._save(Entry(stamp, vin, data)):
             print(problem, file=self.err)
         if self.as_json:
             line = {"fahrgestellnummer": vin, "empfangen": stamp, "werte": data}
@@ -183,6 +240,15 @@ class _LivePrinter:
             self.last_vin = vin
         if lines:
             print("\n".join(lines), file=self.out, flush=True)
+
+    def _save(self, entry: Entry) -> list[str]:
+        if self.saving is None:
+            return []
+        now = time.time()
+        prune = self.pruned_at is None or now - self.pruned_at >= PRUNE_INTERVAL_SECONDS
+        if prune:
+            self.pruned_at = now
+        return [text for text in _save_history(self.path, entry, self.saving, prune) if text != SAVED]
 
 
 def _stream_login(http: httpx.Client, path: Path) -> Callable[[bool], Credentials]:
@@ -202,11 +268,12 @@ def _stream_login(http: httpx.Client, path: Path) -> Callable[[bool], Credential
 def _live(
     args: argparse.Namespace, path: Path, http: httpx.Client, out: TextIO, err: TextIO, stop: Callable[[], bool]
 ) -> None:
+    printer = _LivePrinter(args, path, out, err)  # prüft die Einstellungen vor dem Verbinden
     login = _stream_login(http, path)
     client = create_stream_client(login(False).gcid)
     notify = lambda text: print(text, file=err, flush=True)  # noqa: E731
     try:
-        run_stream(client, login, _LivePrinter(args, path, out, err), notify, stop=stop)
+        run_stream(client, login, printer, notify, stop=stop)
         notify("Live-Ansicht beendet.")
     except KeyboardInterrupt:
         notify("Live-Ansicht beendet.")
@@ -225,6 +292,9 @@ def _quota_lines(path: Path, now: float) -> list[str]:
 
 
 def _history_output(args: argparse.Namespace, path: Path) -> str:
+    if args.loeschen:
+        target = history_path(path)
+        return f"Verlauf gelöscht ({target})." if delete_history(target) else "Es war kein Verlauf gespeichert."
     entries = load_entries(history_path(path))
     if args.csv:
         return history_csv(entries).rstrip("\n")
@@ -236,7 +306,11 @@ def _offline(args: argparse.Namespace, path: Path, out: TextIO) -> bool:
     if args.command == "abmelden":
         print("Abgemeldet." if delete_state(path) else "Es war keine Anmeldung gespeichert.", file=out)
         if history_path(path).exists():
-            print(f"Der Verlauf {history_path(path)} bleibt erhalten; zum Löschen die Datei entfernen.", file=out)
+            print(
+                f"Der Verlauf {history_path(path)} bleibt erhalten; "
+                "löschen mit 'bmw-cardata verlauf --loeschen'.",
+                file=out,
+            )
     elif args.command == "kontingent":
         print("\n".join(_quota_lines(path, time.time())), file=out)
     elif args.command == "verlauf":

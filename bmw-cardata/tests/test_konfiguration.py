@@ -4,9 +4,15 @@ import pytest
 
 from bmw_cardata.config import (
     CLIENT_ID_ENV,
+    DEFAULT_HISTORY_DAYS,
+    HISTORY_DAYS_ENV,
+    NO_LOCATION_ENV,
     STATE_PATH_ENV,
     ConfigError,
     client_id_from_env,
+    history_days,
+    location_disabled,
+    parse_history_days,
     state_path,
     validate_client_id,
     validate_vin,
@@ -52,3 +58,41 @@ def test_pfad_aus_umgebungsvariable():
 
 def test_standardpfad_liegt_im_benutzerverzeichnis():
     assert state_path(None, {}) == Path("~/.config/bmw-cardata/state.json").expanduser()
+
+
+def test_aufbewahrungsfrist_hat_einen_standard_von_einem_jahr():
+    assert DEFAULT_HISTORY_DAYS == 365
+    assert history_days(None, {}) == 365
+
+
+def test_aufbewahrungsfrist_aus_umgebungsvariable_und_option_hat_vorrang():
+    assert history_days(None, {HISTORY_DAYS_ENV: " 30 "}) == 30
+    assert history_days(7, {HISTORY_DAYS_ENV: "30"}) == 7
+    assert history_days(0, {}) == 0
+
+
+@pytest.mark.parametrize("ungueltig", ["", "abc", "-1", "3651", "1.5"])
+def test_ungueltige_aufbewahrungsfrist_nennt_die_umgebungsvariable(ungueltig):
+    with pytest.raises(ConfigError, match=HISTORY_DAYS_ENV):
+        history_days(None, {HISTORY_DAYS_ENV: ungueltig})
+
+
+@pytest.mark.parametrize("ungueltig", ["abc", "-1", "3651"])
+def test_ungueltige_aufbewahrungsfrist_wird_abgelehnt(ungueltig):
+    with pytest.raises(ConfigError):
+        parse_history_days(ungueltig)
+
+
+@pytest.mark.parametrize("wert", ["1", "ja", "JA", "true", "yes", "on"])
+def test_standort_weglassen_per_umgebungsvariable(wert):
+    assert location_disabled(False, {NO_LOCATION_ENV: wert}) is True
+
+
+@pytest.mark.parametrize("wert", ["", "0", "nein", "false"])
+def test_standort_wird_ohne_einstellung_gespeichert(wert):
+    assert location_disabled(False, {NO_LOCATION_ENV: wert}) is False
+    assert location_disabled(False, {}) is False
+
+
+def test_option_ohne_standort_gilt_auch_ohne_umgebungsvariable():
+    assert location_disabled(True, {}) is True

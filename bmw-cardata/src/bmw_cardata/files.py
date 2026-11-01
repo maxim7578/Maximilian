@@ -14,16 +14,17 @@ def _ensure_parent(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
 
-def write_private(path: Path, text: str) -> None:
+def write_private(path: Path, text: str, errors: str = "strict") -> None:
     """Ersetzt die Datei atomar über eine eigene Zwischendatei (eindeutiger Name, Rechte 600).
 
     So bleibt nie eine halb geschriebene Fassung liegen, und zwei gleichzeitige Läufe
-    kommen sich nicht über eine gemeinsame Zwischendatei in die Quere.
+    kommen sich nicht über eine gemeinsame Zwischendatei in die Quere. errors wie bei open()
+    (z. B. "surrogateescape", um ungültige Bytes unverändert zurückzuschreiben).
     """
     _ensure_parent(path)
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        with os.fdopen(fd, "w", encoding="utf-8", errors=errors) as handle:
             handle.write(text)
         os.replace(tmp, path)
     except BaseException:
