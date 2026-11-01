@@ -99,13 +99,22 @@ docker rm -f backend artemis-nginx-proxy 2>/dev/null || true
 
 # Random JWT secret, created once on the VM and reused so logins survive redeploys.
 # (The backend refuses to start in production with the public default secret.)
-SECRET_FILE=/var/lib/artemis-backend/jwt_secret
-if [ ! -s "$SECRET_FILE" ]; then
-  sudo mkdir -p "$(dirname "$SECRET_FILE")"
-  head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' | sudo tee "$SECRET_FILE" > /dev/null
-  sudo chmod 600 "$SECRET_FILE"
+# umask 077: the file is never readable by others, not even briefly. It is passed with
+# --env-file so the secret does not show up in the process list (ps).
+ENV_FILE="$HOME/.config/artemis-backend/backend.env"
+OLD_SECRET_FILE=/var/lib/artemis-backend/jwt_secret
+if [ ! -s "$ENV_FILE" ]; then
+  (
+    umask 077
+    mkdir -p "$(dirname "$ENV_FILE")"
+    if sudo test -s "$OLD_SECRET_FILE"; then
+      SECRET="$(sudo cat "$OLD_SECRET_FILE")"   # reuse the secret of earlier deployments
+    else
+      SECRET="$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+    fi
+    printf 'JWT_SECRET_KEY=%s\n' "$SECRET" > "$ENV_FILE"
+  )
 fi
-JWT_SECRET_KEY="$(sudo cat "$SECRET_FILE")"
 
 echo "  [COS] Starting Backend Manager container..."
 docker run -d \
@@ -115,7 +124,7 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e APP_ENV=production \
-  -e JWT_SECRET_KEY="$JWT_SECRET_KEY" \
+  --env-file "$ENV_FILE" \
   -e PORT=8000 \
   -e DOCKER_NETWORK=artemis-net \
   -e ARTEMIS_IMAGE=artemis:latest \
