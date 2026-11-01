@@ -40,6 +40,8 @@ Geprüfter Stand: `d484d2a` (Branch `claude/gstack-skill-setup-c85bwb`), 8.535 D
 | N11 DSGVO | teilweise | Absturzbericht mit 600/700; Löschfrist für den Standortverlauf fehlt |
 | CI läuft nie | behoben | `ci.yml` läuft für alle Pull Requests und Pushes auf den Standardbranch |
 | N3–N6, N8, N12–N14 | offen | nicht umgesetzt, siehe Tabelle unten |
+| Restrisiko M2/M3 (aus dem Review) | offen | UDP-Absender lassen sich im LAN fälschen: Ein INVITE mit gefälschter FRITZ!Box-IP und eigener `c=`-Adresse wird weiter angenommen. Abhilfe wäre, eingehende Anrufe abzulehnen, deren Medienadresse nicht die FRITZ!Box ist – vorher mit einem echten Anruf prüfen, ob die FRITZ!Box Medien immer selbst sendet. |
+| Nummernprüfung (aus dem Review, alter Fehler) | offen | `+49 (0)30 …` wird zu `0030…` und fälschlich als Auslandsnummer gesperrt; `^0?700` usw. sperren auch Ortsnummern, die mit 700/900/137 beginnen. Sperrt eher zu viel als zu wenig. |
 
 ## Vorgehen
 

@@ -46,12 +46,17 @@ if [ -x "$PREINSTALLED_CHROMIUM" ]; then
   fi
 fi
 
-if [ ! -d "$GSTACK_DIR/.git" ]; then
-  mkdir -p "$GSTACK_DIR"
-  git -C "$GSTACK_DIR" init --quiet
-  git -C "$GSTACK_DIR" remote add origin "$GSTACK_REPO"
-  git -C "$GSTACK_DIR" fetch --quiet --depth 1 origin "$GSTACK_COMMIT"
-  git -C "$GSTACK_DIR" checkout --quiet FETCH_HEAD
+if ! git -C "$GSTACK_DIR" rev-parse -q --verify HEAD > /dev/null 2>&1; then
+  # Erst in einen Zwischenordner holen und dann verschieben: Bricht das Laden ab (Netz),
+  # bleibt kein halbes Repository liegen, das spätere Starts dauerhaft scheitern ließe.
+  GSTACK_TMP="$(mktemp -d)"
+  git -C "$GSTACK_TMP" init --quiet
+  git -C "$GSTACK_TMP" remote add origin "$GSTACK_REPO"
+  git -C "$GSTACK_TMP" fetch --quiet --depth 1 origin "$GSTACK_COMMIT"
+  git -C "$GSTACK_TMP" checkout --quiet FETCH_HEAD
+  rm -rf "$GSTACK_DIR"
+  mkdir -p "$(dirname "$GSTACK_DIR")"
+  mv "$GSTACK_TMP" "$GSTACK_DIR"
 fi
 
 # ./setup nur ausführen, wenn sich der gstack-Stand oder die Setup-Optionen seit dem
