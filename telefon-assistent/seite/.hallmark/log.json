@@ -1,0 +1,32 @@
+[
+ {
+  "shape": "Narrative Workflow",
+  "theme": "lumen",
+  "axes": "dark/roman-serif/warm",
+  "hero": "Stage",
+  "nav": "edge-aligned",
+  "footer": "colophon block",
+  "imagery": "product sample in hero and bericht, built",
+  "photos": [],
+  "entry": "stage heads numbered in the h2",
+  "fingerprint": "narrative-workflow|stage|edge-aligned|colophon|product-built|dark",
+  "sections": [
+   "hero: stage, built telegram chat",
+   "1: call path diagram in a blueprint well",
+   "2: split, bericht left",
+   "3: statement",
+   "kosten: table",
+   "einrichten: switcher band",
+   "fragen: rows",
+   "close: band"
+  ],
+  "signature": "the bot asking Soll ich anrufen? before every call",
+  "waived": [
+   "38iii",
+   "47c"
+  ],
+  "prompt": "Seite für telefon-assistent",
+  "date": "2026-11-01",
+  "mode": "build"
+ }
+]

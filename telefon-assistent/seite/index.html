@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Telefonassistent: per Telegram beauftragen, er telefoniert</title>
+  <meta name="description" content="Ein KI-Assistent, den du per Telegram-Sprachnachricht beauftragst. Er ruft über deine FRITZ!Box an, führt das Gespräch und schickt dir einen Bericht.">
+  <link rel="preload" href="fonts/instrument-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/geist-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+<body>
+  <a class="skip" href="#main">Zum Inhalt</a>
+
+  <header class="nav">
+    <div class="container nav__bar">
+      <a class="nav__mark" href="#main" aria-label="Telefonassistent, zum Seitenanfang">telefonassistent</a>
+      <nav aria-label="Seite">
+        <ul class="nav__links">
+          <li><a href="#ablauf">ablauf</a></li>
+          <li><a href="#kosten">kosten</a></li>
+          <li><a href="#fragen">fragen</a></li>
+          <li><a class="btn btn--secondary btn--nav" href="#einrichten">einrichten</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-titel">
+      <div class="container hero__grid">
+        <div class="hero__text">
+          <h1 id="hero-titel">diktiere den auftrag. er <span class="verb">telefoniert</span>.</h1>
+          <p class="lead">Per Telegram beauftragt, ruft er über deine FRITZ!Box an und berichtet.</p>
+          <div class="actions">
+            <a class="btn btn--primary" href="#einrichten">einrichten</a>
+            <a class="btn btn--secondary" href="#ablauf">so läuft ein anruf</a>
+          </div>
+        </div>
+
+        <figure class="chat well" data-slot="hero" data-kind="product"
+                data-alt="Bildschirmfoto aus Telegram: deine Sprachnachricht, die erkannte Abschrift und die Rückfrage „Soll ich anrufen?“ mit den Knöpfen Anrufen und Abbrechen">
+          <ol class="chat__list">
+            <li class="msg msg--me">
+              <span class="voice">
+                <svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                <span class="readout">sprachnachricht 0:06</span>
+              </span>
+            </li>
+            <li class="msg msg--bot">
+              <p>Verstanden: „Ruf beim Restaurant Da Mario in Köln an und reservier einen Tisch für zwei Personen heute um 17 Uhr.“</p>
+            </li>
+            <li class="msg msg--bot msg--ask">
+              <p class="msg__q">Soll ich anrufen?</p>
+              <dl class="msg__facts">
+                <dt>ziel</dt><dd>Restaurant Da Mario</dd>
+                <dt>nummer</dt><dd class="readout">0221 123456</dd>
+              </dl>
+              <span class="keys" aria-hidden="true"><span class="key key--go">Anrufen</span><span class="key">Abbrechen</span></span>
+            </li>
+          </ol>
+          <figcaption class="visually-hidden">Beispiel eines Auftrags im Telegram-Chat mit dem Assistenten.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="stage stage--one" id="ablauf" aria-labelledby="s1-titel">
+      <div class="container">
+        <div class="headblock headblock--split">
+          <h2 id="s1-titel">1. er ruft über deine fritz!box an</h2>
+          <p class="lead">Nach deinem Tipp auf Anrufen wählt er und stellt sich als dein Assistent vor.</p>
+        </div>
+        <figure class="path well blueprint" role="img" aria-label="Diagramm: Weg eines Auftrags von Telegram über den Assistenten, Asterisk und die FRITZ!Box ins Telefonnetz; Groq erkennt die Sprache, Piper spricht">
+          <ol class="path__main">
+            <li class="node"><span class="node__name">telegram</span><span class="readout">dein auftrag</span></li>
+            <li class="node node--self"><span class="node__name">assistent</span><span class="readout">laptop oder handy</span></li>
+            <li class="node"><span class="node__name">asterisk</span><span class="readout">telefonanlage</span></li>
+            <li class="node"><span class="node__name">fritz!box</span><span class="readout">ip-telefon</span></li>
+            <li class="node"><span class="node__name">telefonnetz</span><span class="readout">festnetz-flatrate</span></li>
+          </ol>
+          <ul class="path__side">
+            <li class="node node--side"><span class="node__name">groq</span><span class="readout">hören und denken</span></li>
+            <li class="node node--side"><span class="node__name">piper</span><span class="readout">sprechen, lokal</span></li>
+          </ul>
+          <figcaption class="path__cap">Sein erster Satz am Telefon: <span class="readout">„hallo! hier ist die telefonassistentin von …“</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="stage stage--two" aria-labelledby="s2-titel">
+      <div class="container split">
+        <div class="split__text">
+          <h2 id="s2-titel">2. du liest den bericht</h2>
+          <p class="lead">Nach dem Auflegen schreibt er dir, was zugesagt wurde.</p>
+          <dl class="facts">
+            <div><dt>aufgezeichnet</dt><dd>Kein Ton, nur ein Text-Protokoll.</dd></div>
+            <div><dt>niemand nimmt ab</dt><dd>Er sagt dir Bescheid; schick den Auftrag dann einfach erneut.</dd></div>
+          </dl>
+        </div>
+        <figure class="report well" data-slot="bericht" data-kind="product"
+                data-alt="Bildschirmfoto aus Telegram: der Bericht nach einem echten Anruf">
+          <p class="report__title">Bericht: Anruf bei Restaurant Da Mario</p>
+          <p>Erledigt. Der Tisch für zwei ist heute um 17 Uhr auf deinen Namen reserviert.</p>
+          <dl class="report__rows">
+            <div><dt>angerufen</dt><dd class="readout">0221 123456</dd></div>
+            <div><dt>erledigt</dt><dd class="readout live">ja</dd></div>
+          </dl>
+          <figcaption class="caption">Den Text schreibt der Assistent aus dem Gesprächsprotokoll.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="stage stage--three" aria-labelledby="s3-titel">
+      <div class="container statement">
+        <h2 id="s3-titel" class="display-s">3. klingelt dein festnetz, nimmt er ab.</h2>
+        <p class="lead">Er fragt nach Name, Anliegen und Rückrufnummer und schickt dir die Notiz.</p>
+        <p class="caption">Einschalten mit <code class="readout">EINGEHENDE_ANRUFE=an</code></p>
+      </div>
+    </section>
+
+    <section class="costs" id="kosten" aria-labelledby="kosten-titel">
+      <div class="container">
+        <div class="headblock headblock--split">
+          <h2 id="kosten-titel">was ein anruf kostet</h2>
+          <p class="lead">Ohne Gemini Live fallen keine Gebühren an.</p>
+        </div>
+        <table class="table">
+          <thead><tr><th scope="col">posten</th><th scope="col">womit</th><th scope="col">kosten</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">anrufe</th><td>Deine Festnetz-Flatrate; Handynummern je nach Tarif.</td><td>keine gebühr</td></tr>
+            <tr><th scope="row">hören und denken</th><td>Kostenloses Groq-Kontingent mit Tageslimits.</td><td>kostenlos</td></tr>
+            <tr><th scope="row">stimme</th><td>Piper auf dem Gerät, auf dem Handy eine Microsoft-Stimme.</td><td>kostenlos</td></tr>
+            <tr><th scope="row">gemini live</th><td>Optional, laut Vergleichsseiten grob 2&nbsp;Cent pro Minute.</td><td>nach dauer</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="band setup" id="einrichten" aria-labelledby="einrichten-titel">
+      <div class="container setup__grid">
+        <div class="setup__head">
+          <h2 id="einrichten-titel">auf einem übrigen handy oder laptop</h2>
+          <p class="lead">Dazu Telegram, ein Groq-Konto und deine FRITZ!Box.</p>
+        </div>
+        <div class="switch" data-switch>
+          <div class="seg" role="tablist" aria-label="Variante">
+            <button type="button" role="tab" id="t-handy" aria-selected="true" aria-controls="p-handy">android-handy</button>
+            <button type="button" role="tab" id="t-pc" aria-selected="false" aria-controls="p-pc" tabindex="-1">linux-pc</button>
+          </div>
+          <div class="panel" role="tabpanel" id="p-handy" aria-labelledby="t-handy">
+            <p>In Termux aus F-Droid startet ein Befehl die Einrichtung:</p>
+            <pre class="code" tabindex="0" aria-label="Befehl für Termux"><code>apt update &amp;&amp; yes | apt full-upgrade &amp;&amp; pkg install -y curl &amp;&amp; curl -sL https://raw.githubusercontent.com/maxim7578/Maximilian/claude/gracious-sagan-dus97i/telefon-assistent/einrichten-handy.sh | bash</code></pre>
+            <a class="link" href="https://github.com/maxim7578/Maximilian/blob/claude/gracious-sagan-dus97i/telefon-assistent/HANDY.md">anleitung für das handy</a>
+          </div>
+          <div class="panel" role="tabpanel" id="p-pc" aria-labelledby="t-pc">
+            <p>Ein Linux-Rechner, der nie schläft, mit Docker. Im Ordner telefon-assistent:</p>
+            <pre class="code" tabindex="0" aria-label="Befehl für den Linux-PC"><code>docker compose up -d --build</code></pre>
+            <a class="link" href="https://github.com/maxim7578/Maximilian/blob/claude/gracious-sagan-dus97i/telefon-assistent/README.md">anleitung für den pc</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="faq" id="fragen" aria-labelledby="fragen-titel">
+      <div class="container faq__grid">
+        <h2 id="fragen-titel">was er darf und was nicht</h2>
+        <dl class="rows">
+          <div class="row"><dt>Merkt man, dass eine KI spricht?</dt><dd>Auf Nachfrage sagt er ehrlich, dass er eine KI ist.</dd></div>
+          <div class="row"><dt>Ruft er an, ohne zu fragen?</dt><dd>Nie. Notrufe und Sondernummern wählt er gar nicht.</dd></div>
+          <div class="row"><dt>Wer kann ihn steuern?</dt><dd>Nur dein Telegram-Chat.</dd></div>
+          <div class="row"><dt>Wie klingt er?</dt><dd>Hörbar künstlich, mit 1 bis 2&nbsp;Sekunden Pause.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="band close" aria-labelledby="close-titel">
+      <div class="container close__row">
+        <h2 id="close-titel">fang mit dem handy in der schublade an</h2>
+        <div class="actions">
+          <a class="btn btn--primary" href="https://github.com/maxim7578/Maximilian/blob/claude/gracious-sagan-dus97i/telefon-assistent/HANDY.md">anleitung lesen</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p class="colophon"><span class="footer__mark">telefonassistent</span> ist quelloffen im Repository <a href="https://github.com/maxim7578/Maximilian/tree/claude/gracious-sagan-dus97i/telefon-assistent">maxim7578/Maximilian</a>. Er telefoniert mit Asterisk, hört mit Groq, spricht mit Piper und hört auf Telegram. Schriften: Instrument Serif und Geist, SIL Open Font License.</p>
+    </div>
+  </footer>
+
+  <script>
+  document.querySelectorAll('[data-switch]').forEach((sw) => {
+    const tabs = [...sw.querySelectorAll('[role="tab"]')];
+    const show = (tab, focus) => {
+      tabs.forEach((t) => {
+        const on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      });
+      if (focus) tab.focus({ preventScroll: true });
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => show(t, false));
+      t.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        e.preventDefault();
+        show(tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length], true);
+      });
+    });
+    show(tabs[0], false);
+  });
+  </script>
+  <script>window.hallmarkSlots = (m) => { for (const [k, v] of Object.entries(m)) { const s = document.querySelector(`[data-slot="${k}"]`); if (!s) continue; const im = new Image(); im.src = typeof v === 'string' ? v : v.src; im.alt = (typeof v === 'object' && v.alt) || s.dataset.alt || ''; s.querySelectorAll(':scope > img').forEach((o) => o.remove()); s.prepend(im); } };
+  document.querySelectorAll('[data-slot] img').forEach((i) => { if (i.complete && !i.naturalWidth) i.remove(); else i.addEventListener('error', () => i.remove(), { once: true }); });</script>
+</body>
+</html>
