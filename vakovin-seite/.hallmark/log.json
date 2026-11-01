@@ -1,0 +1,26 @@
+[
+ {
+  "shape": "Bento Grid",
+  "theme": "studio",
+  "axes": "light/roman-serif/warm",
+  "hero": "Counter",
+  "nav": "search-led bar",
+  "footer": "letter close",
+  "imagery": "product samples built in five slots",
+  "photos": [],
+  "entry": "heads flush, no opener",
+  "fingerprint": "bento|counter|search-led|letter|product-built|light",
+  "sections": [
+   "hero: counter, VIN measured on a crop-marked sheet",
+   "needs: bento, five tiles",
+   "felder: set table",
+   "modes: switcher beside the equipment sheet",
+   "close: action beside the start screen"
+  ],
+  "signature": "the Fahrgestellnummer measured like type under orange redlines",
+  "waived": [],
+  "prompt": "Seite für VaKoViN, Design Studio",
+  "date": "2026-11-01",
+  "mode": "build"
+ }
+]
