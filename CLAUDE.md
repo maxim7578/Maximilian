@@ -53,9 +53,10 @@ kontaktiert werden will. Preise in USD; Limit 30 Tool-Aufrufe pro Minute.
 
 `cybersecurity-skills/` ist eine Kopie von
 [mukul975/Anthropic-Cybersecurity-Skills](https://github.com/mukul975/Anthropic-Cybersecurity-Skills)
-(Community-Projekt, nicht von Anthropic; Apache 2.0) mit 818 Skills. Nur 30
-davon liegen als Kopie in `.claude/skills/` und werden automatisch geladen; alle
-818 zu laden würde rund 80.000 Tokens pro Session kosten. Übersicht, Auswahl und
-Anleitung zum Aktivieren weiterer Skills:
+(Community-Projekt, nicht von Anthropic; Apache 2.0) mit 818 Skills. Alle sind
+über Symlinks in `.claude/skills/` aktiv. Die zugehörigen Programme (gitleaks,
+semgrep, trivy usw.) fehlen in neuen Cloud-Sessions; vor der Nutzung
+`bash scripts/install-security-tools.sh` ausführen. Übersicht, empfohlene
+Auswahl und Deaktivieren:
 [`cybersecurity-skills/UEBERSICHT.md`](cybersecurity-skills/UEBERSICHT.md).
 Angriffstechniken nur gegen eigene Systeme oder mit schriftlicher Erlaubnis.

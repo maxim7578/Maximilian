@@ -63,15 +63,32 @@ Ein großer Teil zielt auf Unternehmens-IT (SOC, Active Directory, Forensik,
 Industrieanlagen). Für eigene Web-Apps, APIs und KI-Agenten sind vor allem
 KI-Sicherheit, Lieferkette, DevSecOps, API- und Web-Sicherheit nützlich.
 
-## Aktiv installierte Auswahl
+## Aktivierung
 
-Alle 818 Skills automatisch zu laden wäre schädlich: Die Beschreibungen sind
-zusammen rund 322.000 Zeichen lang (etwa 80.000 Tokens), die in jeder Session
-mitgeladen würden. Die README des Projekts nennt „~30 Tokens pro Skill“; im
-Schnitt sind es aber rund 394 Zeichen, also etwa 100 Tokens.
+Alle 818 Skills sind aktiv: `.claude/skills/<name>` ist jeweils ein Symlink auf
+`cybersecurity-skills/skills/<name>`. Die Dateien liegen damit nur einmal im Repo,
+und eine Aktualisierung der Bibliothek wirkt sofort.
 
-Deshalb liegen nur diese 30 Skills als Kopie in `.claude/skills/` und werden
-automatisch erkannt:
+Folge für den Kontext: Die Beschreibungen aller 818 Skills sind zusammen rund
+322.000 Zeichen lang. Claude Code zeigt deshalb bei den meisten nur noch den
+Namen an, nicht die Beschreibung. Die Skills werden dann vor allem über ihren
+Namen gefunden. (Die README des Projekts nennt „~30 Tokens pro Skill“; im
+Schnitt sind die Beschreibungen aber rund 394 Zeichen lang, etwa 100 Tokens.)
+
+Alle wieder deaktivieren, bis auf eine Auswahl:
+
+```bash
+find .claude/skills -maxdepth 1 -type l -lname '*cybersecurity-skills/*' -delete
+ln -s ../../cybersecurity-skills/skills/<name> .claude/skills/<name>
+```
+
+Einen passenden Skill finden:
+
+```bash
+grep -il "<stichwort>" cybersecurity-skills/skills/*/SKILL.md
+```
+
+### Empfohlene Auswahl für Web-Apps, APIs, CI und KI-Agenten
 
 | Thema | Skills |
 |---|---|
@@ -83,17 +100,24 @@ automatisch erkannt:
 | Krypto & Datenschutz | `performing-cryptographic-audit-of-application`, `implementing-gdpr-data-subject-access-request`, `performing-privacy-impact-assessment` |
 | E-Mail & Mobile | `implementing-dmarc-dkim-spf-email-security`, `testing-mobile-api-authentication`, `performing-android-app-static-analysis-with-mobsf` |
 
-Weitere Skills aktivieren:
+## Werkzeuge
+
+`scripts/install-security-tools.sh` installiert die Programme für die empfohlene
+Auswahl. Cloud-Sessions starten ohne sie, das Skript muss also pro Session
+einmal laufen (etwa 1–2 Minuten):
 
 ```bash
-cp -r cybersecurity-skills/skills/<name> .claude/skills/
+bash scripts/install-security-tools.sh
 ```
 
-Einen passenden Skill finden, ohne alle zu laden:
+Es installiert gitleaks, syft, grype, trivy, cosign, osv-scanner (Releases von
+GitHub), semgrep, guarddog, pre-commit, snyk-agent-scan (früher `mcp-scan`;
+über `uv tool`), promptfoo (npm) und die Python-Bibliotheken der Skript-Dateien.
 
-```bash
-grep -il "<stichwort>" cybersecurity-skills/skills/*/SKILL.md
-```
+Nicht enthalten, weil sehr groß (PyTorch) oder nur mit Docker-Dienst nutzbar:
+llm-guard, garak, NeMo Guardrails, Presidio, MobSF, OWASP Threat Dragon.
+Werkzeuge für die übrigen Bereiche (Volatility, Ghidra, BloodHound, Metasploit …)
+sind ebenfalls nicht installiert.
 
 ## Sicherheitsprüfung beim Import
 
@@ -103,7 +127,7 @@ Vor der Übernahme wurde die ganze Bibliothek durchsucht:
   ausdrücklich als Angriffsbeispiel markierte Zeilen.
 - Unsichtbare Unicode-Zeichen: nur in Erkennungscode, der genau solche Zeichen sucht.
 - Secrets: nur die offiziellen AWS-Beispielschlüssel (`AKIAIOSFODNN7EXAMPLE`).
-- In den Skripten der 30 aktiven Skills: keine Verbindungen zu unbekannten Servern,
+- In den Skripten der 30 empfohlenen Skills: keine Verbindungen zu unbekannten Servern,
   nur Paket-Registries, GitHub, `localhost` und Test-Platzhalter wie `evil.com`.
 
 Das ist eine Stichwortprüfung, kein vollständiges Audit jedes Skripts. Skripte
