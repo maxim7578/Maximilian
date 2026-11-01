@@ -54,6 +54,17 @@ ist in `.mcp.json` als gehosteter MCP-Server `skyaccess` eingetragen
 SkyAccess schickt. `request_booking` nur aufrufen, wenn der Nutzer ausdrücklich
 kontaktiert werden will. Preise in USD; Limit 30 Tool-Aufrufe pro Minute.
 
+## Project NOMAD (Offline-Wissensserver)
+
+`project-nomad/` ist eine unveränderte Kopie von
+[Crosstalk-Solutions/project-nomad](https://github.com/Crosstalk-Solutions/project-nomad)
+(v1.35.1, Apache 2.0): ein Offline-Server für Wikipedia/Kiwix, Karten,
+Lernkurse und lokale KI (Ollama), verwaltet über eine AdonisJS-Weboberfläche.
+Aufbau, Stand und Sicherheitshinweise:
+[`project-nomad/UEBERSICHT.md`](project-nomad/UEBERSICHT.md). Das Command Center
+hat keine Anmeldung und steuert Docker auf dem Host; nur im eigenen Netz
+betreiben.
+
 ## Cybersecurity-Skills
 
 `cybersecurity-skills/` ist eine Kopie von
