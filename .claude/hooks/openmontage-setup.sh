@@ -31,6 +31,11 @@ if ! make setup install-dev PYTHON_VERSION="$VENV_PYTHON_VERSION" < /dev/null > 
   exit 1
 fi
 
+# pip selbst aktuell halten: Eine neu angelegte venv bringt das pip ihres Python-Builds mit
+# (z. B. 24.0 mit bekannten Lücken). Ein Fehler hier bricht die Session nicht ab.
+.venv/bin/python -m pip install --quiet --disable-pip-version-check --upgrade pip >> "$LOG" 2>&1 \
+  || echo "pip-Update in .venv fehlgeschlagen, Log: $LOG" >&2
+
 # Die venv in den PATH der Session legen, damit `python` und `piper` sie verwenden.
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo "export VIRTUAL_ENV=\"$CLAUDE_PROJECT_DIR/.venv\"" >> "$CLAUDE_ENV_FILE"
