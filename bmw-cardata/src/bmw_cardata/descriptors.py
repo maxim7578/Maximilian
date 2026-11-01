@@ -41,8 +41,13 @@ def _f(label: str, *descriptors: str) -> Field:
     return Field(label, descriptors)
 
 
-def _tire(position: str, axle: str, side: str) -> Field:
-    return Field(f"Reifendruck {position}", (f"vehicle.chassis.axle.{axle}.wheel.{side}.tire.pressure",), "kPa")
+def _tire(position: str, axle: str, side: str, target: bool = False) -> Field:
+    label, suffix = ("Solldruck", "pressureTarget") if target else ("Reifendruck", "pressure")
+    return Field(f"{label} {position}", (f"vehicle.chassis.axle.{axle}.wheel.{side}.tire.{suffix}",), "kPa")
+
+
+TIRES = (("vorne links", "row1", "left"), ("vorne rechts", "row1", "right"),
+         ("hinten links", "row2", "left"), ("hinten rechts", "row2", "right"))
 
 
 STATUS_GROUPS: tuple[Group, ...] = (
@@ -92,10 +97,7 @@ STATUS_GROUPS: tuple[Group, ...] = (
         _f("Alarmanlage", "vehicle.vehicle.antiTheftAlarmSystem.alarm.armStatus"),
     )),
     Group("Reifen", (
-        _tire("vorne links", "row1", "left"),
-        _tire("vorne rechts", "row1", "right"),
-        _tire("hinten links", "row2", "left"),
-        _tire("hinten rechts", "row2", "right"),
+        *(_tire(*tire, target=target) for tire in TIRES for target in (False, True)),
         _f("Reifendiagnose", "vehicle.chassis.axle.wheel.tire.diagnosis"),
     )),
     Group("Wartung und Bordnetz", (

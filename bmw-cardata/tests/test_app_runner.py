@@ -81,6 +81,11 @@ def test_job_meldet_ob_er_läuft():
     ("verlauf", {"anzahl": 25}, ["verlauf", "--anzahl", "25"]),
     ("basisdaten", {"vin": "wba12345678901234"}, ["basisdaten", "wba12345678901234"]),
     ("fahrzeuge", {}, ["fahrzeuge"]),
+    ("live", {"warnungen": True}, ["live", "--warnungen"]),
+    ("warnungen-pruefen", {"vin": "WBA12345678901234"}, ["warnungen", "pruefen", "WBA12345678901234"]),
+    ("warnungen-test", {}, ["warnungen", "test"]),
+    ("warnungen-einstellen", {"einstellungen": {"ntfy_thema": " neu ", "ladestand": "", "batterie_12v": "45,5"}},
+     ["warnungen", "einstellen", "--ntfy-thema", "neu", "--batterie-12v", "45.5"]),
 ])
 def test_argumente_werden_aus_den_eingaben_gebaut(befehl, optionen, erwartet):
     assert build_args(befehl, **optionen) == erwartet

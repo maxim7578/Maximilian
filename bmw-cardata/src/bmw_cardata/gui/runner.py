@@ -90,6 +90,28 @@ def drain(events: queue.Queue[Event]) -> list[Event]:
             return found
 
 
+_ALERT_COMMANDS = {"warnungen-pruefen": ["warnungen", "pruefen"], "warnungen-test": ["warnungen", "test"],
+                   "warnungen-einstellen": ["warnungen", "einstellen"]}
+_SETTING_OPTIONS = (("ntfy_thema", "--ntfy-thema", False), ("ladestand", "--ladestand", True),
+                    ("batterie_12v", "--batterie-12v", True), ("reifendruck_toleranz", "--reifendruck-toleranz", True))
+
+
+def _setting_args(settings: dict[str, str]) -> list[str]:
+    """Optionen für 'warnungen einstellen'; Zahlen dürfen ein deutsches Komma haben."""
+    args: list[str] = []
+    for key, option, numeric in _SETTING_OPTIONS:
+        value = settings.get(key, "").strip()
+        if not value:
+            continue
+        if numeric:
+            try:
+                value = str(float(value.replace(",", ".")))
+            except ValueError as error:
+                raise ValueError(f"Bitte eine Zahl eintragen statt {value!r}.") from error
+        args += [option, value]
+    return args
+
+
 def build_args(
     command: str,
     *,
@@ -97,14 +119,16 @@ def build_args(
     client_id: str = "",
     nur_api: bool = False,
     speichern: bool = False,
+    warnungen: bool = False,
     anzahl: int | None = None,
+    einstellungen: dict[str, str] | None = None,
 ) -> list[str]:
     """Die Argumente der Kommandozeile aus den Eingaben der App."""
     vin, client_id = vin.strip(), client_id.strip()
     if command == "basisdaten" and not vin:
         raise ValueError("Für Basisdaten bitte eine Fahrgestellnummer eintragen.")
-    args = [command]
-    if command in ("status", "live", "basisdaten") and vin:
+    args = list(_ALERT_COMMANDS.get(command, [command]))
+    if command in ("status", "live", "basisdaten", "warnungen-pruefen") and vin:
         args.append(vin)
     if command == "anmelden" and client_id:
         args += ["--client-id", client_id]
@@ -112,8 +136,12 @@ def build_args(
         args.append("--nur-api")
     if command in ("status", "live") and speichern:
         args.append("--speichern")
+    if command == "live" and warnungen:
+        args.append("--warnungen")
     if command == "verlauf" and anzahl is not None:
         args += ["--anzahl", str(anzahl)]
+    if command == "warnungen-einstellen":
+        args += _setting_args(einstellungen or {})
     return args
 
 

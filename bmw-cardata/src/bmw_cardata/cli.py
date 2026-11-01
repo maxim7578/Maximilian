@@ -1,4 +1,4 @@
-"""Kommandozeile: anmelden | fahrzeuge | basisdaten | status | live | verlauf | kontingent | abmelden."""
+"""Kommandozeile: anmelden | fahrzeuge | basisdaten | status | live | warnungen | verlauf | kontingent | abmelden."""
 
 from __future__ import annotations
 
@@ -29,6 +29,8 @@ from .config import (
     validate_client_id,
     validate_vin,
 )
+from .alert_watch import AlertWatcher
+from .cli_alerts import add_alert_parser, check, configure, current_alert_lines, make_watcher, send_test
 from .history import (
     Entry,
     append_entry,
@@ -41,6 +43,7 @@ from .history import (
     without_location,
 )
 from .maintenance import maintenance_path, maintenance_values
+from .ntfy import NtfyError
 from .report import basic_data_lines, printable, status_json, status_lines
 from .service import Session, fetch_vehicle_status, open_session, remember_vehicles
 from .state import State, StateError, delete_state, load_state, save_state
@@ -104,6 +107,8 @@ def build_parser() -> argparse.ArgumentParser:
     live.add_argument("vin", nargs="?", help="Nur dieses Fahrzeug (ohne Angabe: alle des Kontos)")
     live.add_argument("--json", action="store_true", help="Eine JSON-Zeile pro Nachricht")
     _add_save_options(live, "Nachrichten")
+    live.add_argument("--warnungen", action="store_true", help="Neue Warnungen melden und pushen")
+    add_alert_parser(commands)
     history = commands.add_parser("verlauf", help="Gespeicherte Abrufe anzeigen (ohne Abruf bei BMW)")
     history.add_argument("--anzahl", type=_line_count, default=10, help="Wie viele Einträge (Standard: 10)")
     output = history.add_mutually_exclusive_group()
@@ -144,19 +149,23 @@ def _utc_stamp(now: float) -> str:
     return datetime.fromtimestamp(now, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _status(args: argparse.Namespace, session: Session, path: Path) -> list[str]:
-    explicit = validate_vin(args.vin) if args.vin else None
-    saving = _SaveOptions.from_args(args) if args.speichern else None
+def _collect(raw_vin: str | None, session: Session, path: Path) -> tuple[str, dict[str, dict[str, object]], list[str]]:
+    """Status samt Wartungsdaten: Fahrgestellnummer, Werte, Hinweise."""
+    explicit = validate_vin(raw_vin) if raw_vin else None
     result = fetch_vehicle_status(session, explicit, _only_vehicle, path)
-    vin = result.vin
-    service, service_notes = maintenance_values(session.api, vin, maintenance_path(path), time.time())
-    data = {**service, **result.data}
-    notes = [*result.notes, *service_notes]
+    service, service_notes = maintenance_values(session.api, result.vin, maintenance_path(path), time.time())
+    return result.vin, {**service, **result.data}, [*result.notes, *service_notes]
+
+
+def _status(args: argparse.Namespace, session: Session, path: Path) -> list[str]:
+    saving = _SaveOptions.from_args(args) if args.speichern else None  # vor dem Abruf prüfen
+    vin, data, notes = _collect(args.vin, session, path)
     stamp = _utc_stamp(time.time())
     saved = _save_history(path, Entry(stamp, vin, data), saving, prune=True) if saving else []
     if args.json:
         return [status_json(vin, data, stamp, notes)]
-    return [f"Fahrzeug {vin}", *status_lines(data), *saved, *(f"Hinweis: {note}" for note in notes)]
+    alerts = current_alert_lines(data, path)
+    return [f"Fahrzeug {vin}", *status_lines(data), *alerts, *saved, *(f"Hinweis: {note}" for note in notes)]
 
 
 @dataclass(frozen=True)
@@ -203,6 +212,9 @@ def _run_with_session(args: argparse.Namespace, path: Path, http: httpx.Client, 
         lines = _vehicles(session, path)
     elif args.command == "basisdaten":
         lines = basic_data_lines(session.api.basic_data(validate_vin(args.vin)))
+    elif args.command == "warnungen":
+        vin, data, notes = _collect(args.vin, session, path)
+        lines = [*check(vin, data, path, http, args.alle), *(f"Hinweis: {note}" for note in notes)]
     else:
         lines = _status(args, session, path)
     print("\n".join(lines), file=out)
@@ -211,8 +223,10 @@ def _run_with_session(args: argparse.Namespace, path: Path, http: httpx.Client, 
 class _LivePrinter:
     """Gibt Nachrichten aus; nennt das Fahrzeug nur, wenn es wechselt."""
 
-    def __init__(self, args: argparse.Namespace, path: Path, out: TextIO, err: TextIO) -> None:
+    def __init__(self, args: argparse.Namespace, path: Path, out: TextIO, err: TextIO,
+                 watcher: AlertWatcher | None = None) -> None:
         self.only = validate_vin(args.vin) if args.vin else None
+        self.watcher = watcher
         self.as_json = args.json
         self.saving = _SaveOptions.from_args(args) if args.speichern else None
         self.path, self.out, self.err = path, out, err
@@ -229,6 +243,8 @@ class _LivePrinter:
         stamp = _utc_stamp(time.time())
         for problem in self._save(Entry(stamp, vin, data)):
             print(problem, file=self.err)
+        if self.watcher:
+            self.watcher.check(vin, data, merge=True)
         if self.as_json:
             line = {"fahrgestellnummer": vin, "empfangen": stamp, "werte": data}
             # ensure_ascii: Steuerzeichen aus dem Netz erscheinen nur maskiert im Terminal
@@ -268,10 +284,13 @@ def _stream_login(http: httpx.Client, path: Path) -> Callable[[bool], Credential
 def _live(
     args: argparse.Namespace, path: Path, http: httpx.Client, out: TextIO, err: TextIO, stop: Callable[[], bool]
 ) -> None:
-    printer = _LivePrinter(args, path, out, err)  # prüft die Einstellungen vor dem Verbinden
+    notify = lambda text: print(text, file=err, flush=True)  # noqa: E731
+    # Warnungen im Textmodus zwischen die Werte, bei --json auf stderr (die JSON-Zeilen bleiben sauber)
+    report = notify if args.json else (lambda text: print(text, file=out, flush=True))
+    watcher = make_watcher(path, http, report) if args.warnungen else None
+    printer = _LivePrinter(args, path, out, err, watcher)  # prüft die Einstellungen vor dem Verbinden
     login = _stream_login(http, path)
     client = create_stream_client(login(False).gcid)
-    notify = lambda text: print(text, file=err, flush=True)  # noqa: E731
     try:
         run_stream(client, login, printer, notify, stop=stop)
         notify("Live-Ansicht beendet.")
@@ -315,6 +334,8 @@ def _offline(args: argparse.Namespace, path: Path, out: TextIO) -> bool:
         print("\n".join(_quota_lines(path, time.time())), file=out)
     elif args.command == "verlauf":
         print(_history_output(args, path), file=out)
+    elif args.command == "warnungen" and args.aktion == "einstellen":
+        print("\n".join(configure(args, path)), file=out)
     else:
         return False
     return True
@@ -338,10 +359,12 @@ def run(
                 _login(args, path, http, out)
             elif args.command == "live":
                 _live(args, path, http, out, err, stop)
+            elif args.command == "warnungen" and args.aktion == "test":
+                print("\n".join(send_test(path, http)), file=out)
             else:
                 _run_with_session(args, path, http, out)
         return 0
-    except (ConfigError, AuthError, ApiError, StateError, StreamError) as error:
+    except (ConfigError, AuthError, ApiError, StateError, StreamError, NtfyError) as error:
         print(f"Fehler: {error}", file=err)
     except httpx.HTTPError as error:
         print(f"Netzwerkfehler: {type(error).__name__}", file=err)

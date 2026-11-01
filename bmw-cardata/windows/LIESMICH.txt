@@ -27,6 +27,12 @@ Danach: "Status" zeigt den Fahrzeugstatus, "Live starten" empfängt Daten in
 Echtzeit (ohne Tageslimit), "Kontingent" zeigt die verbrauchten Abrufe
 (BMW erlaubt 50 pro Tag).
 
+Warnungen (offene Tür/Fenster, nicht verriegelt, Ladestand, 12-V-Batterie,
+Reifendruck, Laden beendet): "Warnungen prüfen" oder beim Live-Start
+"Warnungen melden". Push aufs Handy: "Warnungen einstellen ...",
+"Neues Thema erzeugen", "Speichern"; das angezeigte Thema in der ntfy-App
+(Android/iOS) abonnieren und mit "Test-Push senden" prüfen.
+
 Daten
 -----
 Anmeldung, Verlauf und Zwischenspeicher liegen unter

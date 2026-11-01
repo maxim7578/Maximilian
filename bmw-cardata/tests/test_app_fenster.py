@@ -58,7 +58,8 @@ def test_fenster_hat_alle_funktionen(fenster):
     app = App(fenster, run=Befehle())
     texte = {b.cget("text") for b in app.buttons} | {app.stop_button.cget("text")}
     assert texte == {"Anmelden", "Abmelden", "Fahrzeuge", "Status", "Status speichern", "Basisdaten",
-                     "Kontingent", "Live starten", "Live stoppen", "Anzeigen", "Als CSV speichern …"}
+                     "Kontingent", "Warnungen prüfen", "Warnungen einstellen …", "Live starten", "Live stoppen",
+                     "Anzeigen", "Als CSV speichern …"}
     assert fenster.title().startswith("BMW CarData")
 
 
@@ -242,3 +243,97 @@ def test_absturzbericht_übersteht_fehler_beim_schreiben_und_anzeigen(tmp_path, 
     datei = tmp_path / "datei"
     datei.write_text("")
     modul._report_crash("Fehler", datei / "app-fehler.log")
+
+
+def test_warnungen_werden_hervorgehoben_und_klingeln(fenster, monkeypatch):
+    app = App(fenster, run=Befehle())
+    geklingelt = []
+    monkeypatch.setattr(fenster, "bell", lambda: geklingelt.append(True))
+    app.append("Fahrzeug X\nWarnung: Heckklappe offen\n")
+    bereiche = app.output.tag_ranges("warn")
+    assert app.output.get(bereiche[0], bereiche[1]) == "Warnung: Heckklappe offen\n"
+    assert geklingelt == [True]
+    app.append("ohne Warnung\n")
+    assert geklingelt == [True]
+
+
+def test_live_mit_warnungen_und_warnungen_prüfen(fenster):
+    befehle = Befehle()
+    app = App(fenster, run=befehle)
+    _knopf(app, "Live starten").invoke()
+    fenster.update()
+    app.stop()
+    _bis_fertig(app, fenster)
+    app.vin.set("WBA12345678901234")
+    _knopf(app, "Warnungen prüfen").invoke()
+    _bis_fertig(app, fenster)
+    assert befehle.aufrufe == [["live", "--warnungen"],
+                               ["warnungen", "pruefen", "WBA12345678901234"]]
+
+
+def test_einstellungsfenster_zeigt_werte_und_speichert(fenster, tmp_path):
+    import json
+
+    from bmw_cardata.gui.alert_dialog import AlertDialog
+
+    pfad = tmp_path / "state.json"
+    (tmp_path / "warnungen.json").write_text(json.dumps({"ntfy_thema": "bmw-alt", "ladestand_min": 25}))
+    befehle = Befehle(antwort="Push über ntfy: https://ntfy.sh/bmw-neu\n")
+    app = App(fenster, state=str(pfad), run=befehle)
+    dialog = AlertDialog(fenster, str(pfad), app._start)
+    assert dialog.values() == {"ntfy_thema": "bmw-alt", "ladestand": "25", "batterie_12v": "50",
+                               "reifendruck_toleranz": "0.2"}
+    dialog.topic.set("bmw-neu")
+    dialog.tire.set("0,3")
+    dialog.save()
+    _bis_fertig(app, fenster)
+    assert befehle.aufrufe[0] == ["--state", str(pfad), "warnungen", "einstellen", "--ntfy-thema", "bmw-neu",
+                                  "--ladestand", "25.0", "--batterie-12v", "50.0", "--reifendruck-toleranz", "0.3"]
+    assert "> bmw-cardata warnungen einstellen\n" in app.text()
+
+
+def test_einstellungsfenster_test_push_und_neues_thema(fenster, tmp_path):
+    from bmw_cardata.gui.alert_dialog import AlertDialog
+
+    befehle = Befehle()
+    app = App(fenster, state=str(tmp_path / "s.json"), run=befehle)
+    _knopf(app, "Warnungen einstellen …").invoke()
+    dialog = AlertDialog(fenster, str(tmp_path / "s.json"), app._start)
+    dialog.test()
+    _bis_fertig(app, fenster)
+    assert befehle.aufrufe[-1][-2:] == ["warnungen", "test"]
+    dialog.topic.set("neu")
+    assert dialog.values()["ntfy_thema"] == "neu"
+    dialog.window.destroy()
+
+
+def test_ungültige_zahl_im_einstellungsfenster(fenster, tmp_path):
+    from bmw_cardata.gui.alert_dialog import AlertDialog
+
+    befehle = Befehle()
+    app = App(fenster, state=str(tmp_path / "s.json"), run=befehle)
+    dialog = AlertDialog(fenster, str(tmp_path / "s.json"), app._start)
+    dialog.soc.set("viel")
+    dialog.save()
+    assert befehle.aufrufe == [] and "Bitte eine Zahl" in app.text()
+
+
+def test_einstellungsfenster_bleibt_offen_wenn_nicht_gespeichert_wird(fenster, tmp_path):
+    from bmw_cardata.gui.alert_dialog import AlertDialog
+
+    befehle = Befehle()
+    app = App(fenster, state=str(tmp_path / "s.json"), run=befehle)
+    dialog = AlertDialog(fenster, str(tmp_path / "s.json"), app._start)
+    dialog.soc.set("viel")
+    dialog.save()
+    assert dialog.window.winfo_exists() and dialog.soc.get() == "viel"
+    dialog.soc.set("25")
+    _knopf(app, "Live starten").invoke()
+    dialog.save()
+    assert dialog.window.winfo_exists()
+    assert "Bitte warten" in app.text()
+    app.stop()
+    _bis_fertig(app, fenster)
+    dialog.save()
+    assert not dialog.window.winfo_exists()
+    _bis_fertig(app, fenster)

@@ -21,6 +21,7 @@ jobs:
   windows:
     name: Tests und Windows-Programme
     runs-on: windows-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: bmw-cardata
@@ -49,8 +50,9 @@ jobs:
           python -m pip install --require-hashes -r windows/requirements-build.txt
           python -m pip install --no-deps --no-build-isolation -e .
 
+      # Zeitlimit je Test: Ein hängender Test bricht ab und zeigt, wo jeder Thread steckt.
       - name: Tests auf Windows
-        run: python -m pytest -q
+        run: python -m pytest -q --timeout=120
 
       - name: App bauen (BMW-CarData.exe)
         run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name BMW-CarData --collect-submodules bmw_cardata --hidden-import paho.mqtt.client windows/app.py
@@ -113,3 +115,43 @@ jobs:
             bmw-cardata/dist/LIESMICH.txt
           if-no-files-found: error
           retention-days: 30
+
+  # Stellt die geprüften Programme als Vorabversion mit festem Link bereit
+  # (https://github.com/<repo>/releases/tag/bmw-cardata-windows), ohne Anmeldung und ohne ZIP.
+  veroeffentlichen:
+    name: Als Vorabversion bereitstellen
+    needs: windows
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: bmw-cardata-windows-release
+      cancel-in-progress: false
+    steps:
+      - name: Programme holen
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: bmw-cardata-windows
+          path: dist
+
+      - name: Vorabversion ersetzen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          gh release delete bmw-cardata-windows --repo "$REPO" --yes --cleanup-tag || true
+          gh release create bmw-cardata-windows dist/BMW-CarData.exe dist/bmw-cardata-cli.exe dist/LIESMICH.txt \
+            --repo "$REPO" --target "$SHA" --prerelease \
+            --title "bmw-cardata für Windows (neuester geprüfter Stand)" \
+            --notes "Automatisch gebaut und unter Windows getestet aus ${BRANCH} (${SHA:0:7}).
+
+          - BMW-CarData.exe: die App mit Fenster (Doppelklick, keine Installation)
+          - bmw-cardata-cli.exe: dieselben Funktionen für die Eingabeaufforderung
+          - LIESMICH.txt: Kurzanleitung
+
+          Windows warnt beim ersten Start, weil die Programme nicht signiert sind:
+          'Weitere Informationen' und dann 'Trotzdem ausführen'."
