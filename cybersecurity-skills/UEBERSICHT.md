@@ -103,8 +103,13 @@ grep -il "<stichwort>" cybersecurity-skills/skills/*/SKILL.md
 ## Werkzeuge
 
 `scripts/install-security-tools.sh` installiert die Programme für die empfohlene
-Auswahl. Cloud-Sessions starten ohne sie, das Skript muss also pro Session
-einmal laufen (etwa 1–2 Minuten):
+Auswahl. In Cloud-Sessions ruft der SessionStart-Hook
+`.claude/hooks/security-tools.sh` das Skript automatisch auf. Der erste Lauf
+in einem frischen Container dauert gut eine Minute, danach unter einer Sekunde,
+weil schon Installiertes übersprungen wird. Log:
+`~/.cache/security-tools-session-start/setup.log`.
+
+Lokal von Hand:
 
 ```bash
 bash scripts/install-security-tools.sh

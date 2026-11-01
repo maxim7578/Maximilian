@@ -87,13 +87,24 @@ installiere snyk-agent-scan agentscan_inst
 installiere promptfoo promptfoo_inst
 
 # --- Python-Bibliotheken, die die scripts/agent.py-Dateien importieren ---
-echo "→ Python-Bibliotheken"
-# --user nur außerhalb einer virtuellen Umgebung, dort ist es nicht erlaubt.
-PIP_USER="$(python3 -c 'import sys; print("" if sys.prefix != sys.base_prefix else "--user")')"
-if python3 -m pip install --quiet $PIP_USER requests pyyaml pyjwt cryptography beautifulsoup4 pypdf dnspython; then
-  ok+=("Python-Bibliotheken")
+# Ziel ist die .venv des Projekts (die nutzt die Session als python3), sonst python3.
+PROJEKT="$(cd "$(dirname "$0")/.." && pwd)"
+PY="${SECURITY_TOOLS_PYTHON:-}"
+if [ -z "$PY" ]; then
+  if [ -x "$PROJEKT/.venv/bin/python" ]; then PY="$PROJEKT/.venv/bin/python"; else PY=python3; fi
+fi
+if "$PY" -c 'import requests, yaml, jwt, cryptography, bs4, pypdf, dns' 2>/dev/null; then
+  ok+=("Python-Bibliotheken (schon da)")
 else
-  fehler+=("Python-Bibliotheken")
+  echo "→ Python-Bibliotheken ($PY)"
+  # --user nur außerhalb einer virtuellen Umgebung, dort ist es nicht erlaubt.
+  PIP_USER="$("$PY" -c 'import sys; print("" if sys.prefix != sys.base_prefix else "--user")')"
+  if "$PY" -m pip install --quiet --disable-pip-version-check $PIP_USER \
+      requests pyyaml pyjwt cryptography beautifulsoup4 pypdf dnspython; then
+    ok+=("Python-Bibliotheken")
+  else
+    fehler+=("Python-Bibliotheken")
+  fi
 fi
 
 echo
