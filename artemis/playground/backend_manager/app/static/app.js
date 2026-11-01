@@ -293,7 +293,14 @@ async function sendTask() {
 function appendLog(sender, text) {
   const entry = document.createElement("div");
   entry.className = `log-entry ${sender.toLowerCase()}`;
-  entry.innerHTML = `<div class="meta">${sender}</div><div>${text}</div>`;
+  // textContent statt innerHTML: Agenten-Nachrichten können Bildschirminhalte des Geräts
+  // enthalten und dürfen kein HTML/Skript in die Seite einschleusen (XSS).
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  meta.textContent = sender;
+  const body = document.createElement("div");
+  body.textContent = text;
+  entry.append(meta, body);
   agentLogs.appendChild(entry);
   agentLogs.scrollTop = agentLogs.scrollHeight;
 }

@@ -232,3 +232,35 @@ def test_agentapi_notifier_candidate_recovery_and_retry(monkeypatch, tmp_path):
     assert saved_sessions == [("localhost:1234", "good-token")]
     assert os.environ["ANTIGRAVITY_LS_ADDRESS"] == "localhost:1234"
     assert os.environ["ANTIGRAVITY_CSRF_TOKEN"] == "good-token"
+
+
+@pytest.mark.parametrize(
+    "vorlage",
+    [
+        "echo {message}",
+        "echo 'Notify: {title} - {message}'",
+        'echo "Notify: {message}"',
+    ],
+)
+def test_script_notifier_fuehrt_nachrichtentext_nicht_als_befehl_aus(monkeypatch, tmp_path, vorlage):
+    """Der Nachrichtentext kann vom Gerätebildschirm stammen und darf keine Shell-Befehle einschleusen."""
+    from mcp_server.notifiers.script import ScriptNotifier
+
+    marker = tmp_path / "eingeschleust"
+    monkeypatch.delenv("MCP_NOTIFY_COMMAND", raising=False)
+    monkeypatch.setenv("ARTEMIS_NOTIFY_CMD", vorlage)
+    for nachricht in (f"x; touch {marker}", f"'; touch {marker}; '", f'"; touch {marker}; "', f"$(touch {marker})"):
+        ScriptNotifier().notify("conv-1", nachricht, title="T")
+    assert not marker.exists()
+
+
+def test_script_notifier_uebergibt_platzhalter_als_argument(monkeypatch, tmp_path):
+    from mcp_server.notifiers.script import ScriptNotifier
+
+    ziel = tmp_path / "ausgabe.txt"
+    skript = tmp_path / "schreiben.py"
+    skript.write_text("import sys, pathlib; pathlib.Path(sys.argv[1]).write_text(sys.argv[2])")
+    monkeypatch.delenv("MCP_NOTIFY_COMMAND", raising=False)
+    monkeypatch.setenv("ARTEMIS_NOTIFY_CMD", f"python3 {skript} {ziel} '{{title}}: {{message}}'")
+    assert ScriptNotifier().notify("conv-1", "Aufgabe; erledigt $(id)", title="Fertig") is True
+    assert ziel.read_text() == "Fertig: Aufgabe; erledigt $(id)"
