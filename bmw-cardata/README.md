@@ -85,6 +85,7 @@ bmw-cardata status --json     # Status als JSON, z. B. für eigene Skripte
 bmw-cardata basisdaten WBA…   # Basisdaten, so wie BMW sie liefert
 bmw-cardata verlauf           # die letzten 10 gespeicherten Abrufe (--anzahl N für mehr)
 bmw-cardata verlauf --csv > fahrten.csv   # alle Einträge für Excel/LibreOffice
+bmw-cardata verlauf --loeschen  # gespeicherten Verlauf endgültig löschen
 bmw-cardata kontingent        # eigene Abrufe der letzten 24 Stunden
 bmw-cardata live              # Live-Daten empfangen, bis Strg+C
 bmw-cardata live --warnungen  # dabei neue Warnungen melden und pushen
@@ -151,8 +152,27 @@ mit den seit dem Eintrag davor gefahrenen Kilometern:
 ```
 
 `verlauf --csv` gibt alle Einträge mit Semikolon getrennt aus, so öffnet ein deutsches
-Excel sie direkt in Spalten. `abmelden` löscht den Verlauf nicht (es weist aber darauf hin);
-zum Löschen die Datei `verlauf.jsonl` entfernen.
+Excel sie direkt in Spalten.
+
+**Datenschutz.** Der Verlauf kann zeigen, wann das Auto wo stand. Deshalb:
+
+- **Aufbewahrungsfrist:** Bei jedem Speichern werden Einträge entfernt, die älter als
+  365 Tage sind (atomar über eine Zwischendatei, Rechte 600; jüngere Einträge bleiben
+  unverändert). Andere Frist: `--aufbewahrung TAGE` (bei `status` und `live`) oder die
+  Umgebungsvariable `BMW_CARDATA_HISTORY_DAYS`; die Option hat Vorrang. `0` heißt
+  unbegrenzt aufbewahren, höchstens sind 3650 Tage möglich. Bei `live --speichern` wird
+  höchstens einmal pro Stunde aufgeräumt.
+- **Ohne Standort:** `--ohne-standort` (bei `status` und `live`) oder
+  `BMW_CARDATA_NO_LOCATION=1` speichert Breiten-/Längengrad und andere Navigationsdaten
+  nicht im Verlauf. Angezeigt wird die Position weiterhin.
+- **Löschen:** `verlauf --loeschen` löscht `verlauf.jsonl` endgültig. `abmelden` lässt den
+  Verlauf bewusst stehen (es weist aber darauf hin).
+
+```bash
+export BMW_CARDATA_HISTORY_DAYS=90     # nur die letzten 90 Tage behalten
+export BMW_CARDATA_NO_LOCATION=1       # keine Position im Verlauf
+bmw-cardata status --speichern --aufbewahrung 30 --ohne-standort   # oder je Aufruf
+```
 
 Für einen regelmäßigen Verlauf eignet sich ein Cron-Eintrag, z. B. zweimal am Tag
 (`crontab -e`; den vollen Pfad liefert `command -v bmw-cardata`):
@@ -175,7 +195,8 @@ Fahrzeug WBA12345678901234
 - Das Auto sendet, wenn sich etwas ändert: beim Fahren, Laden, Ver- und Entriegeln. Steht
   es still, kann es lange ruhig bleiben.
 - `live WBA…` zeigt nur ein Fahrzeug, `--json` gibt eine JSON-Zeile pro Nachricht aus,
-  `--speichern` legt jede Nachricht im Verlauf ab.
+  `--speichern` legt jede Nachricht im Verlauf ab (mit `--aufbewahrung` und
+  `--ohne-standort` wie bei `status`, siehe [Verlauf](#verlauf)).
 - Der Zugang wird vor dem Ablauf automatisch erneuert, nach einem Abbruch verbindet sich
   der Client von selbst neu (nach 5, 10, 30, dann alle 60 Sekunden). Lehnt BMW kurz ab,
   versucht er es nach 3 Sekunden erneut; erst die dritte Ablehnung in Folge beendet `live`

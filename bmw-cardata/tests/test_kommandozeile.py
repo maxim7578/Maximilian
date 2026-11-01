@@ -7,7 +7,9 @@ import pytest
 from conftest import VIN, VIN2
 
 from bmw_cardata import cli
-from bmw_cardata.history import Entry, append_entry, history_path
+from bmw_cardata.config import HISTORY_DAYS_ENV, NO_LOCATION_ENV
+from bmw_cardata.descriptors import LATITUDE, LONGITUDE
+from bmw_cardata.history import Entry, append_entry, history_path, load_entries
 from bmw_cardata.maintenance import maintenance_path
 from bmw_cardata.state import load_state, save_state
 from bmw_cardata.usage import Usage, save_usage, usage_path
@@ -313,3 +315,116 @@ def test_status_zeigt_hinweise_und_json_enthält_sie(bmw, tmp_path, make_state):
     maintenance_path(pfad).unlink()
     daten = json.loads(_starte(bmw, pfad, "status", VIN, "--json")[1])
     assert "Wartungsdaten" in daten["hinweise"][0]
+
+
+def test_fahrzeuge_ohne_steuerzeichen(bmw, angemeldet):
+    bmw.add("GET", MAPPINGS, body=[{"vin": VIN + "\x1b[2J", "mappingType": "PRIMARY"}])
+    _, ausgabe, _ = _starte(bmw, angemeldet, "fahrzeuge")
+    assert "\x1b" not in ausgabe
+
+
+POSITION_DATEN = {"telematicData": {
+    "vehicle.vehicle.travelledDistance": {"value": 1000, "unit": "km"},
+    LATITUDE: {"value": 48.1}, LONGITUDE: {"value": 11.5}}}
+
+
+@pytest.fixture
+def ohne_einstellungen(monkeypatch):
+    monkeypatch.delenv(HISTORY_DAYS_ENV, raising=False)
+    monkeypatch.delenv(NO_LOCATION_ENV, raising=False)
+
+
+def _alt_und_status(bmw, pfad, *optionen):
+    append_entry(history_path(pfad), Entry("2020-01-01T10:00:00Z", VIN, {}))
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    code, ausgabe, _ = _starte(bmw, pfad, "status", VIN, "--speichern", *optionen)
+    assert code == 0 and "Im Verlauf gespeichert." in ausgabe
+    return [eintrag.time for eintrag in load_entries(history_path(pfad))]
+
+
+def test_status_speichern_entfernt_einträge_älter_als_ein_jahr(bmw, angemeldet, ohne_einstellungen):
+    zeiten = _alt_und_status(bmw, angemeldet)
+    assert len(zeiten) == 1 and not zeiten[0].startswith("2020")
+
+
+def test_aufbewahrung_null_behält_alle_einträge(bmw, angemeldet, ohne_einstellungen):
+    assert len(_alt_und_status(bmw, angemeldet, "--aufbewahrung", "0")) == 2
+
+
+def test_aufbewahrung_aus_der_umgebungsvariable(bmw, angemeldet, monkeypatch):
+    monkeypatch.setenv(HISTORY_DAYS_ENV, "0")
+    monkeypatch.delenv(NO_LOCATION_ENV, raising=False)
+    assert len(_alt_und_status(bmw, angemeldet)) == 2
+
+
+@pytest.mark.parametrize("tage", ["-1", "abc", "3651"])
+def test_ungültige_aufbewahrung_wird_abgelehnt(bmw, tmp_path, tage):
+    with pytest.raises(SystemExit):
+        _starte(bmw, tmp_path / "state.json", "status", "--speichern", "--aufbewahrung", tage)
+
+
+def test_ungültige_umgebungsvariable_stört_den_status_ohne_speichern_nicht(bmw, angemeldet, monkeypatch):
+    monkeypatch.setenv(HISTORY_DAYS_ENV, "viele")
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    assert _starte(bmw, angemeldet, "status", VIN)[0] == 0
+    code, _, fehler = _starte(bmw, angemeldet, "status", VIN, "--speichern")
+    assert code == 1 and HISTORY_DAYS_ENV in fehler
+    assert len(bmw.requests) == 1  # die falsche Einstellung fällt vor dem Abruf auf
+
+
+def test_status_ohne_standort_speichert_keine_koordinaten(bmw, angemeldet, ohne_einstellungen):
+    bmw.add("GET", TELEMATIK, body=POSITION_DATEN)
+    code, ausgabe, _ = _starte(bmw, angemeldet, "status", VIN, "--speichern", "--ohne-standort")
+    assert code == 0 and "Breitengrad" in ausgabe  # angezeigt wird die Position weiterhin
+    gespeichert = history_path(angemeldet).read_text(encoding="utf-8")
+    assert "latitude" not in gespeichert and "longitude" not in gespeichert
+    assert load_entries(history_path(angemeldet))[0].data["vehicle.vehicle.travelledDistance"]["value"] == 1000
+
+
+def test_standort_weglassen_per_umgebungsvariable(bmw, angemeldet, monkeypatch):
+    monkeypatch.setenv(NO_LOCATION_ENV, "1")
+    bmw.add("GET", TELEMATIK, body=POSITION_DATEN)
+    _starte(bmw, angemeldet, "status", VIN, "--speichern")
+    assert "latitude" not in history_path(angemeldet).read_text(encoding="utf-8")
+
+
+def test_ohne_einstellung_wird_die_position_gespeichert(bmw, angemeldet, ohne_einstellungen):
+    bmw.add("GET", TELEMATIK, body=POSITION_DATEN)
+    _starte(bmw, angemeldet, "status", VIN, "--speichern")
+    assert LATITUDE in load_entries(history_path(angemeldet))[0].data
+
+
+def test_verlauf_löschen_entfernt_die_datei(bmw, angemeldet):
+    append_entry(history_path(angemeldet), Entry("2026-10-30T10:00:00Z", VIN, {}))
+    code, ausgabe, _ = _starte(bmw, angemeldet, "verlauf", "--loeschen")
+    assert code == 0 and "Verlauf gelöscht" in ausgabe
+    assert not history_path(angemeldet).exists()
+    assert angemeldet.exists()  # die Anmeldung bleibt
+    assert bmw.requests == []
+
+
+def test_verlauf_löschen_ohne_verlauf(bmw, tmp_path):
+    code, ausgabe, _ = _starte(bmw, tmp_path / "state.json", "verlauf", "--loeschen")
+    assert code == 0 and "kein Verlauf gespeichert" in ausgabe
+
+
+def test_verlauf_löschen_und_csv_schließen_sich_aus(bmw, tmp_path):
+    with pytest.raises(SystemExit):
+        _starte(bmw, tmp_path / "state.json", "verlauf", "--loeschen", "--csv")
+
+
+def test_abmelden_nennt_den_befehl_zum_löschen_des_verlaufs(bmw, angemeldet):
+    append_entry(history_path(angemeldet), Entry("2026-10-30T10:00:00Z", VIN, {}))
+    assert "verlauf --loeschen" in _starte(bmw, angemeldet, "abmelden")[1]
+
+
+def test_nicht_aufräumbarer_verlauf_meldet_eine_warnung(bmw, angemeldet, ohne_einstellungen, monkeypatch):
+    def kaputt(*args):
+        raise PermissionError("kein Zugriff")
+
+    monkeypatch.setattr(cli, "prune_entries", kaputt)
+    bmw.add("GET", TELEMATIK, body=KM_DATEN)
+    code, ausgabe, _ = _starte(bmw, angemeldet, "status", VIN, "--speichern")
+    assert code == 0
+    assert "Im Verlauf gespeichert." in ausgabe
+    assert "Alte Verlaufseinträge konnten nicht entfernt werden" in ausgabe

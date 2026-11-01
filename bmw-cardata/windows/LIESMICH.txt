@@ -38,4 +38,14 @@ Daten
 Anmeldung, Verlauf und Zwischenspeicher liegen unter
 %USERPROFILE%\.config\bmw-cardata\  ("Abmelden" löscht die Anmeldung).
 
+Der Verlauf (verlauf.jsonl) kann die Position des Autos enthalten:
+- Einträge älter als 365 Tage werden beim Speichern automatisch entfernt.
+  Andere Frist (in Tagen, 0 = unbegrenzt), einmalig in der Eingabeaufforderung:
+      setx BMW_CARDATA_HISTORY_DAYS 90
+- Position nicht speichern:
+      setx BMW_CARDATA_NO_LOCATION 1
+  (Beides gilt für App und Kommandozeile, nach einem Neustart der App.)
+- Verlauf löschen ("Abmelden" lässt ihn stehen):
+      bmw-cardata-cli.exe verlauf --loeschen
+
 Nur lesen: CarData kennt keine Befehle (kein Verriegeln, keine Klimatisierung).

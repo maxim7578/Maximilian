@@ -7,7 +7,9 @@ from test_live import KM, FakeClient, abgelehnt, empfangen, verbunden
 
 from bmw_cardata import cli
 from bmw_cardata.auth import Tokens
-from bmw_cardata.history import history_path, load_entries
+from bmw_cardata.config import HISTORY_DAYS_ENV, NO_LOCATION_ENV
+from bmw_cardata.descriptors import LATITUDE
+from bmw_cardata.history import Entry, append_entry, history_path, load_entries
 from bmw_cardata.state import State, load_state, save_state
 
 STREAM_SCOPE = "authenticate_user openid cardata:api:read cardata:streaming:read"
@@ -193,3 +195,30 @@ def test_nur_api_ohne_zusätzlichen_hinweis(bmw, tmp_path, monkeypatch):
     monkeypatch.setenv("BMW_CARDATA_CLIENT_ID", "client-1234-abcd")
     bmw.add("POST", "/gcdm/oauth/device/code", status=400, body={"error": "x"})
     assert "--nur-api" not in _starte(bmw, tmp_path / "s.json", "anmelden", "--nur-api")[2]
+
+
+@pytest.fixture
+def ohne_einstellungen(monkeypatch):
+    monkeypatch.delenv(HISTORY_DAYS_ENV, raising=False)
+    monkeypatch.delenv(NO_LOCATION_ENV, raising=False)
+
+
+def test_live_speichern_entfernt_alte_einträge_nur_einmal_pro_stunde(bmw, mit_stream, client, ohne_einstellungen,
+                                                                      monkeypatch):
+    append_entry(history_path(mit_stream), Entry("2020-01-01T10:00:00Z", VIN, {}))
+    aufrufe = []
+    echt = cli.prune_entries
+    monkeypatch.setattr(cli, "prune_entries", lambda *args: aufrufe.append(args) or echt(*args))
+    client(verbunden, empfangen(), empfangen())
+    _starte(bmw, mit_stream, "live", "--speichern", "--aufbewahrung", "30")
+    eintraege = load_entries(history_path(mit_stream))
+    assert len(eintraege) == 2 and all(not eintrag.time.startswith("2020") for eintrag in eintraege)
+    assert len(aufrufe) == 1 and aufrufe[0][1] == 30
+
+
+def test_live_ohne_standort_speichert_keine_koordinaten(bmw, mit_stream, client, ohne_einstellungen):
+    mit_position = json.dumps({"vin": VIN, "data": {KM: {"value": 7}, LATITUDE: {"value": 48.1}}}).encode()
+    client(verbunden, empfangen(mit_position))
+    _starte(bmw, mit_stream, "live", "--speichern", "--ohne-standort")
+    eintraege = load_entries(history_path(mit_stream))
+    assert [sorted(e.data) for e in eintraege] == [[KM]]

@@ -15,6 +15,7 @@ from tkinter import filedialog, messagebox, ttk
 from tkinter.scrolledtext import ScrolledText
 
 from .. import __version__
+from ..files import write_private
 from .alert_dialog import AlertDialog
 from .runner import Event, Job, Runner, _cli_run, build_args, drain, export_csv, start_command
 
@@ -251,8 +252,8 @@ def _self_test(report: Path, seconds: float = 2.0) -> int:
 def _report_crash(details: str, log: Path) -> None:
     """Schreibt einen Absturz in eine Datei und nennt sie in einem Hinweisfenster."""
     try:
-        log.parent.mkdir(parents=True, exist_ok=True)
-        log.write_text(details, encoding="utf-8")
+        # Der Bericht kann Fahrzeug- und Standortdaten enthalten: nur für den Besitzer lesbar.
+        write_private(log, details)
     except OSError:
         pass
     try:

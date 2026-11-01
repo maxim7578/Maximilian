@@ -100,7 +100,9 @@ def status_lines(data: dict[str, dict[str, Any]]) -> list[str]:
 
 
 def basic_data_lines(data: dict[str, Any]) -> list[str]:
-    lines = [f"{key}: {value}" for key, value in sorted(data.items()) if value not in (None, "", [], {})]
+    lines = [
+        printable(f"{key}: {value}") for key, value in sorted(data.items()) if value not in (None, "", [], {})
+    ]
     return lines or ["Keine Basisdaten vorhanden."]
 
 

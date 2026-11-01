@@ -23,6 +23,41 @@ def test_gesperrte_nummern(nummer):
         pruefen(nummer)
 
 
+@pytest.mark.parametrize(
+    "nummer",
+    [
+        "01088 0043 1 234567",  # Call-by-Call ins Ausland
+        "01088 0900 1234567",  # Call-by-Call auf Mehrwertdienst
+        "010 12 030 123456",  # Call-by-Call mit kurzer Vorwahl
+        "0123 4567890",  # innovative Dienste
+        "0181 1234567",  # internationale virtuelle Netze
+        "0189 12345",
+        "0191 12345",  # Online-Dienste
+        "0194 12345",
+        "0131 12345",  # nicht vergebener Bereich
+    ],
+)
+def test_teure_vorwahlen_gesperrt(nummer):
+    with pytest.raises(NummernFehler):
+        pruefen(nummer)
+
+
+@pytest.mark.parametrize(
+    "nummer, erwartet",
+    [
+        ("030 123456", "030123456"),
+        ("0221 98765", "022198765"),
+        ("0171 1234567", "01711234567"),
+        ("0151 12345678", "015112345678"),
+        ("0160 1234567", "01601234567"),
+        ("0800 1234567", "08001234567"),
+        ("234567", "234567"),  # Ortsnummer ohne Vorwahl
+    ],
+)
+def test_normale_nummern_erlaubt(nummer, erwartet):
+    assert pruefen(nummer) == erwartet
+
+
 @pytest.mark.parametrize("nummer", ["abc", "", "12"])
 def test_ungueltige_nummern(nummer):
     with pytest.raises(NummernFehler):

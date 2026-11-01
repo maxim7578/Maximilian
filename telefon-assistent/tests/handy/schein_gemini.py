@@ -17,6 +17,8 @@ class ScheinGemini:
         self.hinweise: list[str] = []
         self.audio_sekunden = 0.0
         self.werkzeug_antwort: dict = {}
+        self.schluessel_header = ""
+        self.schluessel_in_url = ""
         self.runner: web.AppRunner | None = None
         self.url = ""
 
@@ -38,7 +40,8 @@ class ScheinGemini:
     async def _ws(self, request: web.Request) -> web.WebSocketResponse:
         ws = web.WebSocketResponse(max_msg_size=0)
         await ws.prepare(request)
-        assert request.query.get("key")
+        self.schluessel_header = request.headers.get("x-goog-api-key", "")
+        self.schluessel_in_url = request.query.get("key", "")
         self.setup = json.loads((await ws.receive()).data)["setup"]
         self.modelle.append(self.setup["model"])
         if self.ablehnen or (self.nur_modell and self.setup["model"] != f"models/{self.nur_modell}"):

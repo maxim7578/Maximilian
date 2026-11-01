@@ -97,6 +97,16 @@ docker network create artemis-net 2>/dev/null || true
 echo "  [COS] Stopping previous container instances if running..."
 docker rm -f backend artemis-nginx-proxy 2>/dev/null || true
 
+# Random JWT secret, created once on the VM and reused so logins survive redeploys.
+# (The backend refuses to start in production with the public default secret.)
+SECRET_FILE=/var/lib/artemis-backend/jwt_secret
+if [ ! -s "$SECRET_FILE" ]; then
+  sudo mkdir -p "$(dirname "$SECRET_FILE")"
+  head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' | sudo tee "$SECRET_FILE" > /dev/null
+  sudo chmod 600 "$SECRET_FILE"
+fi
+JWT_SECRET_KEY="$(sudo cat "$SECRET_FILE")"
+
 echo "  [COS] Starting Backend Manager container..."
 docker run -d \
   --name backend \
@@ -105,6 +115,7 @@ docker run -d \
   --add-host host.docker.internal:host-gateway \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -e APP_ENV=production \
+  -e JWT_SECRET_KEY="$JWT_SECRET_KEY" \
   -e PORT=8000 \
   -e DOCKER_NETWORK=artemis-net \
   -e ARTEMIS_IMAGE=artemis:latest \

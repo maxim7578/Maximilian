@@ -27,10 +27,16 @@ from typing import Any
 from PIL import Image, ImageChops
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from backlot.auth import TOKEN_ENV, new_token, url_with_token  # noqa: E402
+
 STAGE_DIR = REPO_ROOT / ".backlot" / "screenshot-stage"
 GOLDENS_DIR = REPO_ROOT / "internal" / "evals" / "goldens"
 CAPTURE_ROOT = REPO_ROOT / "internal" / "evals" / "captures"
 PORT = 4791
+# Token für den hier gestarteten Server (Befund N12); der Browser bekommt es per ?token=.
+SERVER_TOKEN = new_token()
 
 SHOTS = [
     ("library", "/?static=1", 1560, 500, 4200, [
@@ -98,6 +104,7 @@ def run_stage() -> None:
 def start_server() -> subprocess.Popen:
     env = dict(os.environ)
     env["OPENMONTAGE_PROJECTS_DIR"] = str(STAGE_DIR)
+    env[TOKEN_ENV] = SERVER_TOKEN
     server = subprocess.Popen(
         [sys.executable, "-m", "backlot", "serve", "--port", str(PORT)],
         cwd=REPO_ROOT,
@@ -141,7 +148,8 @@ def capture_shots(capture_dir: Path) -> list[dict[str, Any]]:
     results = []
     for name, path, width, height, wait_ms, _masks in SHOTS:
         out = capture_dir / f"{name}.png"
-        capture_screenshot(f"http://127.0.0.1:{PORT}{path}", out, width, height, wait_ms)
+        url = url_with_token(f"http://127.0.0.1:{PORT}{path}", SERVER_TOKEN)
+        capture_screenshot(url, out, width, height, wait_ms)
         results.append({"name": name, "path": out})
     return results
 
@@ -171,7 +179,7 @@ def run_interactions(capture_dir: Path) -> dict[str, Any]:
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1560, "height": 1000})
-        page.goto(f"http://127.0.0.1:{PORT}/p/the-last-lighthouse?static=1")
+        page.goto(url_with_token(f"http://127.0.0.1:{PORT}/p/the-last-lighthouse?static=1", SERVER_TOKEN))
         page.wait_for_selector(".stage")
         page.locator(".stage").first.click()
         page.wait_for_selector(".drawer")

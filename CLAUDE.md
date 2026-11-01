@@ -32,12 +32,14 @@ Emulator und einen LLM-Schlüssel (z. B. `GEMINI_API_KEY`) in der Umgebung oder 
 ## REA (Reverse Engineering)
 
 REA ([morluto/rea](https://github.com/morluto/rea)) ist in `.mcp.json` als
-MCP-Server `rea` eingetragen (`npx -y rea-agents@6.8.0 mcp`, rund 230 Tools wie
+MCP-Server `rea` eingetragen (`rea-agents` 6.8.0 aus `mcp/rea/` mit festem
+Lockfile, beim ersten Start per `npm ci` installiert; rund 230 Tools wie
 `binary_session`, `open_binary`, `analyze_web_bundle`). Vor der Auswahl einer
 Operation `binary_session` mit `{}` aufrufen; `result.tool_availability` zeigt,
 was in der aktuellen Umgebung geht. Engines wie Ghidra, JADX, Hopper oder Frida
 sind in Cloud-Sessions nicht installiert. Zum Aktualisieren die Version in
-`.mcp.json` anheben.
+`mcp/rea/package.json` anheben und dort `npm install --ignore-scripts` ausführen
+(aktualisiert das Lockfile), dann beides committen.
 
 ## SkyAccess (Privatjet-Leerflüge)
 
@@ -48,3 +50,16 @@ ist in `.mcp.json` als gehosteter MCP-Server `skyaccess` eingetragen
 (nur lesend) und `request_booking`, das Name, E-Mail und Reisewunsch an
 SkyAccess schickt. `request_booking` nur aufrufen, wenn der Nutzer ausdrücklich
 kontaktiert werden will. Preise in USD; Limit 30 Tool-Aufrufe pro Minute.
+
+## Cybersecurity-Skills
+
+`cybersecurity-skills/` ist eine Kopie von
+[mukul975/Anthropic-Cybersecurity-Skills](https://github.com/mukul975/Anthropic-Cybersecurity-Skills)
+(Community-Projekt, nicht von Anthropic; Apache 2.0) mit 818 Skills. Alle sind
+über Symlinks in `.claude/skills/` aktiv. Die zugehörigen Programme (gitleaks,
+semgrep, trivy usw.) installiert der SessionStart-Hook
+`.claude/hooks/security-tools.sh` in Cloud-Sessions automatisch über
+`scripts/install-security-tools.sh`. Übersicht, empfohlene
+Auswahl und Deaktivieren:
+[`cybersecurity-skills/UEBERSICHT.md`](cybersecurity-skills/UEBERSICHT.md).
+Angriffstechniken nur gegen eigene Systeme oder mit schriftlicher Erlaubnis.

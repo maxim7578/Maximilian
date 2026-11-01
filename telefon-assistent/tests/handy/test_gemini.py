@@ -19,6 +19,9 @@ async def test_gemini_hoert_spricht_und_legt_auf():
         g = GeminiGespraech(leitung, "testkey", "Du bist ein Test.", False, 60, url=url)
         ergebnis = await asyncio.wait_for(g.fuehren(sitzung), 15)
     await server.stoppen()
+    # Schlüssel im Header, nicht in der URL: URLs landen in Fehlermeldungen, Logs und Telegram.
+    assert server.schluessel_header == "testkey"
+    assert server.schluessel_in_url == ""
     setup = server.setup
     assert setup["model"] == "models/gemini-2.5-flash-native-audio-latest"
     erkennung = setup["realtimeInputConfig"]["automaticActivityDetection"]

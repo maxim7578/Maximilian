@@ -1,0 +1,7 @@
+# Zusätzlich zu den Abhängigkeiten aus pyproject.toml (inkl. Extra "dev") für den Windows-Build.
+# setuptools: Build-Backend aus pyproject.toml, damit "pip install --no-build-isolation -e ."
+# nichts ungeprüft nachlädt.
+pyinstaller>=6,<7
+setuptools>=68
+# Zeitlimit je Test: ein hängender Test bricht ab und zeigt, wo jeder Thread steckt.
+pytest-timeout>=2,<3

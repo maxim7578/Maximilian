@@ -133,3 +133,10 @@ def test_signatur_hängt_nur_von_den_datenpunkten_ab():
     assert descriptor_signature(("b", "a")) == descriptor_signature(("a", "b"))
     assert descriptor_signature(("a",)) != descriptor_signature(("a", "b"))
     assert len(descriptor_signature()) == 16
+
+
+def test_basisdaten_ohne_steuerzeichen():
+    """Werte aus der BMW-API dürfen das Terminal nicht verändern (ANSI-Escapes, Richtungswechsel)."""
+    zeilen = basic_data_lines({"modelName": "i3\x1b[2J\x1b[31m", "\x1b]0;titel\x07brand": "BMW\u202e"})
+    assert all("\x1b" not in z and "\u202e" not in z and "\x07" not in z for z in zeilen)
+    assert "modelName: i3[2J[31m" in zeilen

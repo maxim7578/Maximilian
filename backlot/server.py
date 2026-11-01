@@ -17,7 +17,9 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from backlot.auth import TOKEN_ENV, TokenAuthMiddleware, new_token, validate_token
 from backlot.state import PROJECTS_DIR, REPO_ROOT, list_projects, load_board_state, summarize_project
 
 UI_DIR = Path(__file__).resolve().parent / "ui"
@@ -162,11 +164,38 @@ async def _lifespan(app: FastAPI):
             await task
 
 
-def create_app() -> FastAPI:
+# Der Server lauscht nur auf 127.0.0.1. Ohne Host-Prüfung könnte eine fremde Webseite
+# per DNS-Rebinding (ihre Domain zeigt auf 127.0.0.1) trotzdem alle Projekte auslesen.
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+
+# Projektdateien können aus dem Netz oder von einem LLM stammen. Öffnet jemand eine
+# .html- oder .svg-Datei direkt, darf darin kein Skript im Ursprung des Boards laufen.
+MEDIA_HEADERS = {
+    "Content-Security-Policy": "sandbox; default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'",
+    "X-Content-Type-Options": "nosniff",
+}
+
+
+def _media_response(path: Path, media_type: Optional[str] = None) -> FileResponse:
+    return FileResponse(path, media_type=media_type, headers=MEDIA_HEADERS)
+
+
+def create_app(token: Optional[str] = None) -> FastAPI:
+    """Backlot-App bauen. Jede Anfrage außer /api/health braucht ``token``.
+
+    Ohne Angabe wird ein zufälliges Token erzeugt (``app.state.backlot_token``):
+    Es gibt bewusst keinen Modus ohne Token-Pflicht (Befund N12).
+    """
+    token = new_token() if token is None else validate_token(token)
     app = FastAPI(title="Backlot", docs_url=None, redoc_url=None, lifespan=_lifespan)
+    app.state.backlot_token = token
+    # add_middleware legt nach außen: Erst prüft TrustedHost den Host, dann das Token.
+    app.add_middleware(TokenAuthMiddleware, token=token)
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=ALLOWED_HOSTS)
 
     # ---- API ----------------------------------------------------------
 
+    # Ohne Token erreichbar (Skripte prüfen damit, ob der Server läuft): keine Projektdaten.
     @app.get("/api/health")
     async def health() -> dict:
         return {"ok": True, "app": "backlot"}
@@ -258,8 +287,8 @@ def create_app() -> FastAPI:
             # non-thumbable images are safe to serve as-is.
             if target.suffix.lower() in {".mp4", ".webm", ".mov"}:
                 raise HTTPException(status_code=404, detail="no poster frame available")
-            return FileResponse(target)
-        return FileResponse(cached, media_type="image/jpeg")
+            return _media_response(target)
+        return _media_response(cached, media_type="image/jpeg")
 
     # ---- Media (range requests handled by FileResponse) ---------------
 
@@ -273,7 +302,7 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=403, detail="path escapes project")
         if not target.is_file():
             raise HTTPException(status_code=404, detail="media not found")
-        return FileResponse(target)
+        return _media_response(target)
 
     # ---- UI ------------------------------------------------------------
 
@@ -365,4 +394,11 @@ def _thumbnail_for(source: Path, width: int) -> Optional[Path]:
         return None
 
 
-app = create_app()
+def __getattr__(name: str):
+    # ``backlot.server:app`` erst bei Bedarf bauen, mit dem Token aus BACKLOT_TOKEN
+    # (fehlt es, ein zufälliges). ``python -m backlot serve`` übergibt die App direkt.
+    if name == "app":
+        app = create_app(token=_os.environ.get(TOKEN_ENV) or None)
+        globals()["app"] = app
+        return app
+    raise AttributeError(name)

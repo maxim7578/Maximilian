@@ -26,7 +26,8 @@ Telegram (Sprachnachricht) → Laptop: Assistent ─┬─ Groq: Sprache erkenne
 - Der Assistent stellt sich am Telefon immer als KI vor (EU AI Act).
 - Es wird kein Ton aufgezeichnet, nur ein Text-Protokoll.
 - Vor jedem Anruf musst du in Telegram auf „Anrufen“ tippen.
-- Notrufe, Sonder- und Auslandsnummern wählt er nie.
+- Notrufe, Sonder-, Call-by-Call- und Auslandsnummern wählt er nie. Erlaubt sind nur
+  Festnetz- (02–09) und Mobilfunknummern (015–017) sowie Ortsnummern ohne Vorwahl.
 - Nur dein eigener Telegram-Chat kann ihn steuern.
 
 ---

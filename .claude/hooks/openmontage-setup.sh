@@ -16,9 +16,16 @@ LOG_DIR="$HOME/.cache/openmontage-session-start"
 LOG="$LOG_DIR/setup.log"
 mkdir -p "$LOG_DIR"
 
+# Python 3.12 statt der Mindestversion 3.10: Sicherheitsupdates wie Pillow 13 gibt es nur
+# noch für Python >= 3.11. Eine ältere .venv wird deshalb einmalig neu angelegt.
+VENV_PYTHON_VERSION=3.12
+if [ -x .venv/bin/python ] && ! .venv/bin/python -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
+  rm -rf .venv
+fi
+
 # make setup und install-dev sind idempotent (pip/npm überspringen bereits Installiertes,
 # .env wird nur angelegt, wenn sie fehlt).
-if ! make setup install-dev < /dev/null > "$LOG" 2>&1; then
+if ! make setup install-dev PYTHON_VERSION="$VENV_PYTHON_VERSION" < /dev/null > "$LOG" 2>&1; then
   echo "OpenMontage-Setup ist fehlgeschlagen, Log: $LOG" >&2
   tail -n 30 "$LOG" >&2
   exit 1

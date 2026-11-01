@@ -1,0 +1,8 @@
+{
+  "name": "maximilian-rea-mcp",
+  "private": true,
+  "description": "REA-MCP-Server mit festem Lockfile (auch für alle Unterabhängigkeiten). Aktualisieren: Version hier anheben, dann npm install --ignore-scripts.",
+  "dependencies": {
+    "rea-agents": "6.8.0"
+  }
+}
