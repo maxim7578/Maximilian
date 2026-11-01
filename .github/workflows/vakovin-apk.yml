@@ -50,6 +50,8 @@ jobs:
         run: bun run test
 
       - name: Web-Teil bauen und in das Android-Projekt kopieren
+        env:
+          VITE_APP_VERSION: ${{ github.run_number }}
         run: bun run build:android
 
       - name: APK bauen (Debug-Signatur)
@@ -80,3 +82,26 @@ jobs:
           git add release/VaKoViN.apk
           git commit -m "build: VaKoViN.apk aus Lauf ${{ github.run_number }} [skip ci]" || exit 0
           git push origin HEAD:${{ github.ref_name }}
+
+      # Update ohne Neuinstallation: Web-Paket und update.json in das Release
+      # "vakovin-latest". Die App prüft beim Start
+      # https://github.com/<repo>/releases/download/vakovin-latest/update.json
+      - name: Update-Paket veröffentlichen
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.run_number }}
+        run: |
+          (cd dist/client && zip -qr "../../vakovin-$VERSION.zip" .)
+          URL="https://github.com/${{ github.repository }}/releases/download/vakovin-latest/vakovin-$VERSION.zip"
+          printf '{"version":"%s","url":"%s"}\n' "$VERSION" "$URL" > update.json
+          cat update.json
+          gh release view vakovin-latest >/dev/null 2>&1 || gh release create vakovin-latest \
+            --title "VaKoViN Updates" --latest=false \
+            --notes "Automatische Updates der VaKoViN-App. Wird bei jedem Build überschrieben."
+          gh release upload vakovin-latest "vakovin-$VERSION.zip" --clobber
+          gh release upload vakovin-latest update.json --clobber
+          gh release upload vakovin-latest VaKoViN.apk --clobber
+          for a in $(gh release view vakovin-latest --json assets -q '.assets[].name' | grep '^vakovin-.*\.zip$' | grep -v "^vakovin-$VERSION.zip$"); do
+            gh release delete-asset vakovin-latest "$a" -y
+          done

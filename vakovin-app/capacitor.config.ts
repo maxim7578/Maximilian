@@ -13,6 +13,8 @@ const config: CapacitorConfig = {
   plugins: {
     // Native HTTP-Anfragen: die NHTSA-Abfrage läuft so ohne Browser-CORS-Prüfung.
     CapacitorHttp: { enabled: true },
+    // Updates werden in src/lib/updater.ts selbst geprüft (GitHub-Release).
+    CapacitorUpdater: { autoUpdate: false },
   },
 };
 
