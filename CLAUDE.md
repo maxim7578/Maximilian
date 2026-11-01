@@ -32,12 +32,14 @@ Emulator und einen LLM-Schlüssel (z. B. `GEMINI_API_KEY`) in der Umgebung oder 
 ## REA (Reverse Engineering)
 
 REA ([morluto/rea](https://github.com/morluto/rea)) ist in `.mcp.json` als
-MCP-Server `rea` eingetragen (`npx -y rea-agents@6.8.0 mcp`, rund 230 Tools wie
+MCP-Server `rea` eingetragen (`rea-agents` 6.8.0 aus `mcp/rea/` mit festem
+Lockfile, beim ersten Start per `npm ci` installiert; rund 230 Tools wie
 `binary_session`, `open_binary`, `analyze_web_bundle`). Vor der Auswahl einer
 Operation `binary_session` mit `{}` aufrufen; `result.tool_availability` zeigt,
 was in der aktuellen Umgebung geht. Engines wie Ghidra, JADX, Hopper oder Frida
 sind in Cloud-Sessions nicht installiert. Zum Aktualisieren die Version in
-`.mcp.json` anheben.
+`mcp/rea/package.json` anheben und dort `npm install --ignore-scripts` ausführen
+(aktualisiert das Lockfile), dann beides committen.
 
 ## SkyAccess (Privatjet-Leerflüge)
 

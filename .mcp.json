@@ -11,11 +11,10 @@
       }
     },
     "rea": {
-      "command": "npx",
+      "command": "sh",
       "args": [
-        "-y",
-        "rea-agents@6.8.0",
-        "mcp"
+        "-c",
+        "cd \"$(git rev-parse --show-toplevel)/mcp/rea\" && { { [ -x node_modules/.bin/rea ] && [ ! package-lock.json -nt node_modules/.package-lock.json ]; } || npm ci --no-audit --no-fund >&2 || npm ci --ignore-scripts --no-audit --no-fund >&2; } && exec node_modules/.bin/rea mcp"
       ]
     },
     "skyaccess": {
