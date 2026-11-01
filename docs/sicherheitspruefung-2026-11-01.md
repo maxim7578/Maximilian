@@ -38,6 +38,7 @@ Geprüfter Stand: `d484d2a` (Branch `claude/gstack-skill-setup-c85bwb`), 8.535 D
 | N9 Workflows | teilweise | Actions per SHA, `persist-credentials: false`; pip-Installation ohne Hashes bleibt |
 | N10 Steuerzeichen | behoben | `printable()` für Basisdaten und Fahrzeugliste |
 | N11 DSGVO | teilweise | Absturzbericht mit 600/700; Löschfrist für den Standortverlauf fehlt |
+| N12 backlot ohne Anmeldung | behoben | Zufallstoken pro Serverstart (`backlot/auth.py`): `?token=` → Cookie (HttpOnly, SameSite=Strict) + Umleitung, Header für Skripte, sonst 401; nur `/api/health` offen |
 | CI läuft nie | behoben | `ci.yml` läuft für alle Pull Requests und Pushes auf den Standardbranch |
 | N3–N6, N8, N12–N14 | offen | nicht umgesetzt, siehe Tabelle unten |
 | Restrisiko M2/M3 (aus dem Review) | offen | UDP-Absender lassen sich im LAN fälschen: Ein INVITE mit gefälschter FRITZ!Box-IP und eigener `c=`-Adresse wird weiter angenommen. Abhilfe wäre, eingehende Anrufe abzulehnen, deren Medienadresse nicht die FRITZ!Box ist – vorher mit einem echten Anruf prüfen, ob die FRITZ!Box Medien immer selbst sendet. |

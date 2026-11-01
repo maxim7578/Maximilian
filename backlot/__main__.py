@@ -5,12 +5,18 @@
 
 ``open`` is idempotent and non-fatal by design: agents call it at pipeline
 initialization and must continue the production even if it fails.
+
+Access needs a random token (``BACKLOT_TOKEN`` or generated at start). ``open``
+and ``serve`` print/open the URL with ``?token=...``; the browser then keeps it
+in a cookie. The running server's token is in ``.backlot/auth/token-<port>``
+(mode 0600) so later ``open`` calls and scripts can find it.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -18,6 +24,7 @@ import urllib.request
 import webbrowser
 
 from backlot import DEFAULT_PORT
+from backlot import auth
 
 
 def _port() -> int:
@@ -35,10 +42,12 @@ def _server_alive(port: int) -> bool:
         return False
 
 
-def _spawn_server(port: int) -> None:
+def _spawn_server(port: int, token: str) -> None:
     """Start the server as a detached background process."""
     cmd = [sys.executable, "-m", "backlot", "serve", "--port", str(port)]
+    # Token über die Umgebung, nie über argv: Die Befehlszeile sieht jeder Benutzer (ps).
     kwargs: dict = {
+        "env": {**os.environ, auth.TOKEN_ENV: token},
         "stdout": subprocess.DEVNULL,
         "stderr": subprocess.DEVNULL,
         "stdin": subprocess.DEVNULL,
@@ -54,9 +63,12 @@ def _spawn_server(port: int) -> None:
 
 def cmd_open(project_id: str | None) -> int:
     port = _port()
-    if not _server_alive(port):
+    if _server_alive(port):
+        token = auth.resolve_token(port, prefer_file=True)
+    else:
+        token = auth.resolve_token(port, prefer_file=False) or auth.new_token()
         try:
-            _spawn_server(port)
+            _spawn_server(port, token)
         except Exception as exc:
             print(f"backlot: could not start server ({exc}) — continuing without the board")
             return 1
@@ -71,6 +83,11 @@ def cmd_open(project_id: str | None) -> int:
     url = f"http://127.0.0.1:{port}/"
     if project_id:
         url = f"http://127.0.0.1:{port}/p/{project_id}"
+    if token:
+        url = auth.url_with_token(url, token)
+    else:
+        print(f"backlot: token of the running server unknown (set {auth.TOKEN_ENV} "
+              f"or restart it) — the board will answer 401")
     try:
         webbrowser.open(url)
     except Exception:
@@ -82,8 +99,33 @@ def cmd_open(project_id: str | None) -> int:
 def cmd_serve(port: int) -> int:
     import uvicorn
 
-    uvicorn.run("backlot.server:app", host="127.0.0.1", port=port, log_level="warning")
+    from backlot.server import create_app
+
+    if _server_alive(port):
+        # Sonst würde die Token-Datei des laufenden Servers überschrieben.
+        print(f"backlot: a server is already running on port {port}", file=sys.stderr)
+        return 1
+    token = auth.resolve_token(port, prefer_file=False) or auth.new_token()
+    try:
+        app = create_app(token=token)
+    except ValueError as exc:
+        print(f"backlot: invalid {auth.TOKEN_ENV}: {exc}", file=sys.stderr)
+        return 2
+    auth.write_token_file(port, token)
+    print(f"backlot: serving {auth.url_with_token(f'http://127.0.0.1:{port}/', token)}", flush=True)
+    # uvicorn löst SIGTERM nach dem Herunterfahren erneut aus; ohne eigenen Handler
+    # endet der Prozess sofort und die Token-Datei bliebe liegen.
+    previous = signal.signal(signal.SIGTERM, _exit_on_sigterm)
+    try:
+        uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+        auth.remove_token_file(port, token)
     return 0
+
+
+def _exit_on_sigterm(signum, frame) -> None:
+    raise SystemExit(128 + signum)
 
 
 def main(argv: list[str] | None = None) -> int:
