@@ -170,6 +170,7 @@ class RtpStrom(asyncio.DatagramProtocol):
 
     def __init__(self):
         self.ziel: tuple[str, int] | None = None
+        self._ziel_fest = False  # nach dem ersten Paket der Gegenstelle nicht mehr umlenken
         self.nutzlast = audio.PCMA
         self.eingang: asyncio.Queue[np.ndarray] = asyncio.Queue(maxsize=500)
         self._ausgang: deque[np.ndarray] = deque()
@@ -199,6 +200,7 @@ class RtpStrom(asyncio.DatagramProtocol):
 
     def verbinden(self, ip: str, port: int, nutzlast: int) -> None:
         self.ziel, self.nutzlast = (ip, port), nutzlast
+        self._ziel_fest = False
         while not self.eingang.empty():  # Freizeichen o. Ä. von vor dem Abheben verwerfen
             self.eingang.get_nowait()
         if self._sender is None and self._transport is not None:
@@ -217,8 +219,13 @@ class RtpStrom(asyncio.DatagramProtocol):
         if daten[0] & 0x10 and len(daten) >= start + 4:  # Erweiterungskopf
             start += 4 + 4 * int.from_bytes(daten[start + 2:start + 4], "big")
         ende = len(daten) - (daten[-1] if daten[0] & 0x20 else 0)
-        if self.ziel and adresse != self.ziel:
-            self.ziel = adresse  # symmetrisches RTP: dorthin antworten, woher es kommt
+        if adresse[0] != self.ziel[0]:
+            return  # nur die Gegenstelle aus dem SDP, sonst könnte jedes Gerät im WLAN mithören
+        if not self._ziel_fest:
+            # symmetrisches RTP: dorthin antworten, woher das erste Paket kommt
+            self.ziel, self._ziel_fest = adresse, True
+        elif adresse != self.ziel:
+            return
         try:
             self.eingang.put_nowait(audio.dekodieren(daten[start:ende], nutzlast))
         except asyncio.QueueFull:
@@ -519,6 +526,10 @@ class Telefon(asyncio.DatagramProtocol):
     def datagram_received(self, daten: bytes, adresse) -> None:
         if not daten.strip():
             return  # Keep-alive
+        if self.server and adresse[0] != self.server:
+            # Nur die FRITZ!Box darf anrufen oder antworten; sonst könnte jedes Gerät im
+            # WLAN Gespräche mit der KI starten und Anrufernummern fälschen.
+            return
         try:
             nachricht = Nachricht.parsen(daten)
         except Exception:

@@ -130,7 +130,11 @@ class GeminiGespraech:
     async def verbinden(self, sitzung: aiohttp.ClientSession) -> None:
         """Baut die Verbindung auf. Schlägt das fehl, kann der Anrufer auf die klassische Variante ausweichen."""
         try:
-            self._ws = await sitzung.ws_connect(f"{self.url}?key={self.api_key}", heartbeat=20, max_msg_size=0)
+            # Schlüssel als Header wie im offiziellen google-genai-SDK: In der URL stünde er
+            # sonst in Fehlermeldungen, die ins Log und in den Telegram-Chat gehen.
+            self._ws = await sitzung.ws_connect(
+                self.url, headers={"x-goog-api-key": self.api_key}, heartbeat=20, max_msg_size=0
+            )
             await self._ws.send_str(json.dumps(self._setup()))
             antwort = await asyncio.wait_for(self._ws.receive(), 10)
         except (aiohttp.ClientError, TimeoutError) as fehler:
