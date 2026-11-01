@@ -82,7 +82,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "VaKoViN" },
-      { name: "description", content: "Fahrzeugdaten per Fahrgestellnummer nachschlagen" },
+      { name: "description", content: "Fahrzeugdaten per Fahrgestellnummer" },
       { name: "theme-color", content: "#e9eef5" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

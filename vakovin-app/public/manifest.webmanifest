@@ -1,7 +1,7 @@
 {
   "name": "VaKoViN",
   "short_name": "VaKoViN",
-  "description": "Fahrzeugdaten per Fahrgestellnummer nachschlagen",
+  "description": "Fahrzeugdaten per Fahrgestellnummer",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

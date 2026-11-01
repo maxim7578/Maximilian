@@ -15,9 +15,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "VaKoViN – Fahrzeugdaten per VIN" },
-      { name: "description", content: "Fahrzeugdaten per Fahrgestellnummer nachschlagen – über die NHTSA-vPIC-Datenbank." },
+      { name: "description", content: "Fahrzeugdaten per Fahrgestellnummer, über die NHTSA-vPIC-Datenbank." },
       { property: "og:title", content: "VaKoViN – Fahrzeugdaten per VIN" },
-      { property: "og:description", content: "Fahrzeugdaten per Fahrgestellnummer nachschlagen." },
+      { property: "og:description", content: "Fahrzeugdaten per Fahrgestellnummer." },
     ],
   }),
   component: Home,
@@ -67,7 +67,7 @@ function Home() {
         <h1 className="text-5xl font-extrabold tracking-tight">
           <span className="text-foreground">VaKo</span><span className="text-brand">ViN</span>
         </h1>
-        <p className="mx-auto mt-2 max-w-xs text-base text-muted-foreground">Fahrzeugdaten per Fahrgestellnummer nachschlagen</p>
+        <p className="mx-auto mt-2 max-w-xs text-base text-muted-foreground">Fahrzeugdaten per Fahrgestellnummer</p>
       </header>
 
       <form onSubmit={submit}>
