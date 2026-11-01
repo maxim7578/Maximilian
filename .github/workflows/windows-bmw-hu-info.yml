@@ -1,0 +1,46 @@
+name: BMW HU Info - Windows EXE
+
+# Baut die Windows-.exe der BMW-HU-Info-Diagnosesoftware mit PyInstaller auf
+# einem Windows-Runner und laedt sie als Artefakt hoch. Laeuft nur bei
+# Aenderungen an der Windows-Software/am Katalog oder manuell.
+on:
+  push:
+    paths:
+      - "bmw-hu-info/windows/**"
+      - "bmw-hu-info/shared/**"
+      - ".github/workflows/windows-bmw-hu-info.yml"
+  workflow_dispatch:
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: bmw-hu-info/windows
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhaengigkeiten installieren
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Tests (deutsch)
+        run: python -m pytest -q
+
+      - name: EXE bauen
+        run: pyinstaller --noconsole --onefile --name BMW-HU-Info --add-data "..\shared\commands.json;shared" bmw_hu_info\__main__.py
+
+      - name: EXE hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: bmw-hu-info-windows-exe
+          path: bmw-hu-info/windows/dist/BMW-HU-Info.exe
+          if-no-files-found: error

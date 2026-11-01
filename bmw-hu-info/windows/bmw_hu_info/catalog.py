@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -56,6 +57,9 @@ class Katalog:
 
 
 def _standardpfad() -> Path:
+    # In einer mit PyInstaller gebauten .exe liegen die Daten unter _MEIPASS.
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS")) / "shared" / "commands.json"
     return Path(__file__).resolve().parents[2] / "shared" / "commands.json"
 
 
