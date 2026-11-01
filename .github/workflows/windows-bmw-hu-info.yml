@@ -39,7 +39,7 @@ jobs:
         run: python -m pytest -q
 
       - name: EXE bauen
-        run: pyinstaller --noconsole --onefile --name BMW-HU-Info --add-data "..\shared\commands.json;shared" bmw_hu_info\__main__.py
+        run: pyinstaller --noconsole --onefile --name BMW-HU-Info --add-data "..\shared\commands.json;shared" run_gui.py
 
       - name: EXE hochladen (Artefakt)
         uses: actions/upload-artifact@v4
