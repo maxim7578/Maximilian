@@ -170,7 +170,6 @@ class RtpStrom(asyncio.DatagramProtocol):
 
     def __init__(self):
         self.ziel: tuple[str, int] | None = None
-        self._ziel_fest = False  # nach dem ersten Paket der Gegenstelle nicht mehr umlenken
         self.nutzlast = audio.PCMA
         self.eingang: asyncio.Queue[np.ndarray] = asyncio.Queue(maxsize=500)
         self._ausgang: deque[np.ndarray] = deque()
@@ -200,7 +199,6 @@ class RtpStrom(asyncio.DatagramProtocol):
 
     def verbinden(self, ip: str, port: int, nutzlast: int) -> None:
         self.ziel, self.nutzlast = (ip, port), nutzlast
-        self._ziel_fest = False
         while not self.eingang.empty():  # Freizeichen o. Ä. von vor dem Abheben verwerfen
             self.eingang.get_nowait()
         if self._sender is None and self._transport is not None:
@@ -208,6 +206,10 @@ class RtpStrom(asyncio.DatagramProtocol):
             sock = socket.socket(fileno=os.dup(self._transport.get_extra_info("socket").fileno()))
             self._sender = threading.Thread(target=self._senden_im_takt, args=(sock,), daemon=True)
             self._sender.start()
+
+    def neues_ziel(self, ip: str, port: int) -> None:
+        """Neue Medienadresse der Gegenstelle, z. B. aus einem re-INVITE (Halten, Weiterleiten)."""
+        self.ziel = (ip, port)
 
     def datagram_received(self, daten: bytes, adresse) -> None:
         if len(daten) < 12 or daten[0] >> 6 != 2 or self.ziel is None:
@@ -221,11 +223,8 @@ class RtpStrom(asyncio.DatagramProtocol):
         ende = len(daten) - (daten[-1] if daten[0] & 0x20 else 0)
         if adresse[0] != self.ziel[0]:
             return  # nur die Gegenstelle aus dem SDP, sonst könnte jedes Gerät im WLAN mithören
-        if not self._ziel_fest:
-            # symmetrisches RTP: dorthin antworten, woher das erste Paket kommt
-            self.ziel, self._ziel_fest = adresse, True
-        elif adresse != self.ziel:
-            return
+        if adresse != self.ziel:
+            self.ziel = adresse  # symmetrisches RTP: Portwechsel derselben Gegenstelle mitmachen
         try:
             self.eingang.put_nowait(audio.dekodieren(daten[start:ende], nutzlast))
         except asyncio.QueueFull:
@@ -582,7 +581,14 @@ class Telefon(asyncio.DatagramProtocol):
         elif methode == "ACK":
             pass
         elif methode == "INVITE" and gespraech:
-            # Sitzungsauffrischung (re-INVITE): mit unserer Medienbeschreibung bestätigen
+            # Sitzungsauffrischung (re-INVITE): neue Medienadresse übernehmen und mit
+            # unserer Medienbeschreibung bestätigen
+            if anfrage.rumpf:
+                try:
+                    fern_ip, fern_port, _ = sdp_lesen(anfrage.rumpf)
+                    gespraech.rtp.neues_ziel(fern_ip, fern_port)
+                except SipFehler:
+                    pass  # ohne gültiges SDP bleibt die bisherige Adresse
             sdp = sdp_bauen(self.lokale_ip, gespraech.rtp.port, [gespraech.rtp.nutzlast])
             self._senden(self._antwort_auf(anfrage, 200, "OK", [("Contact", self._kontakt)], sdp), adresse)
         elif methode == "INVITE":

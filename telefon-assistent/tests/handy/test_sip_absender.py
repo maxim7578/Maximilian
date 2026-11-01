@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from assistent.handy.sip import Telefon
+from assistent.handy.sip import Nachricht, Telefon
 
 FRITZBOX = "192.168.178.1"
 
@@ -44,3 +44,27 @@ async def test_anfrage_der_fritzbox_wird_angenommen(telefon):
     telefon.datagram_received(INVITE, (FRITZBOX, 5060))
     await asyncio.sleep(0)
     assert telefon.erhalten == [(FRITZBOX, 5060)]
+
+
+@pytest.mark.asyncio
+async def test_re_invite_uebernimmt_neue_medienadresse(monkeypatch):
+    """Halten/Weiterleiten: Die FRITZ!Box schickt ein re-INVITE mit neuem RTP-Port."""
+    from types import SimpleNamespace
+
+    from assistent.handy.sip import RtpStrom
+
+    t = Telefon(FRITZBOX, "620", "geheim")
+    t.server, t.lokale_ip = FRITZBOX, "192.168.178.20"
+    gesendet = []
+    monkeypatch.setattr(t, "_senden", lambda nachricht, ziel=None: gesendet.append(nachricht))
+    rtp = RtpStrom()
+    rtp.verbinden(FRITZBOX, 7078, 8)
+    t._gespraeche["laufend"] = SimpleNamespace(rtp=rtp)
+    sdp = "v=0\r\nc=IN IP4 192.168.178.1\r\nm=audio 7090 RTP/AVP 8\r\n"
+    reinvite = INVITE.replace(b"gefaelscht@192.168.178.66", b"laufend").replace(
+        b"Content-Length: 0", f"Content-Length: {len(sdp)}".encode()
+    ) + sdp.encode()
+    await t._anfrage_erhalten(Nachricht.parsen(reinvite), (FRITZBOX, 5060))
+    assert rtp.ziel == (FRITZBOX, 7090)
+    assert gesendet and gesendet[0].bytes().startswith(b"SIP/2.0 200")
+    rtp.schliessen()
