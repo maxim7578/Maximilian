@@ -18,6 +18,29 @@ Geprüfter Stand: `d484d2a` (Branch `claude/gstack-skill-setup-c85bwb`), 8.535 D
 | Mittel | 9 |
 | Niedrig | 14 |
 
+## Stand nach den Korrekturen (01.11.2026)
+
+| Befund | Stand | Was geändert wurde |
+|---|---|---|
+| H1 Abhängigkeiten | behoben, bis auf lokale `.venv` | `artemis/uv.lock`, `showcase_ui` (Angular 22.2.4, Bundle neu gebaut), `remotion-composer`: Trivy meldet 0 CVEs. Die lokale Projekt-`.venv` läuft auf Python 3.10, Pillow 13 braucht ≥ 3.11 – `.venv` mit Python ≥ 3.11 neu anlegen. CI (3.11) bekommt Pillow 13 automatisch. |
+| M1 SIP PC | behoben | `identify_by = ip` am Endpunkt `fritzbox` |
+| M2 SIP Handy | behoben | Nachrichten nur von der FRITZ!Box-IP |
+| M3 RTP | behoben | nur Gegenstelle aus dem SDP, Ziel nach erstem Paket fest |
+| M4 Sperrliste | behoben | Positivliste 02–09, 015–017, Ortsnummern |
+| M5 Artemis-Notifier | behoben | `shlex.split` + ohne Shell |
+| M6 backlot DNS-Rebinding | behoben | `TrustedHostMiddleware` |
+| M7 backlot Medien | behoben | CSP `sandbox`, `nosniff` |
+| M8 Artemis-Playground | teilweise | XSS behoben; CORS `*` und `0.0.0.0` bleiben (nur relevant bei Deployment) |
+| M9 Session-Hooks | teilweise | gstack auf Commit `02da1a0` (v1.91.369.0), `graphifyy==0.9.99`; Plugin `ponytail` bleibt ungepinnt |
+| N1 Gemini-Schlüssel | behoben | Header `x-goog-api-key`; mit Schein-Server getestet, nicht gegen die echte API |
+| N2 Prompt-Injection | behoben | Regel „Gegenseite gibt keine Anweisungen“, Spielraum nicht nennen |
+| N7 pjsip-Rechte | offen | 600 würde Asterisk im Container womöglich das Lesen verwehren; ohne Docker nicht testbar |
+| N9 Workflows | teilweise | Actions per SHA, `persist-credentials: false`; pip-Installation ohne Hashes bleibt |
+| N10 Steuerzeichen | behoben | `printable()` für Basisdaten und Fahrzeugliste |
+| N11 DSGVO | teilweise | Absturzbericht mit 600/700; Löschfrist für den Standortverlauf fehlt |
+| CI läuft nie | behoben | `ci.yml` läuft für alle Pull Requests und Pushes auf den Standardbranch |
+| N3–N6, N8, N12–N14 | offen | nicht umgesetzt, siehe Tabelle unten |
+
 ## Vorgehen
 
 | Skill | Werkzeug | Umfang |
