@@ -46,14 +46,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Enable CORS for local development and Nginx proxying
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# The bundled UI and the Nginx proxy use the same origin, so CORS is only enabled for
+# explicitly configured origins (never "*" together with credentials).
+if settings.CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Register API Routers
 app.include_router(health_router.router)
