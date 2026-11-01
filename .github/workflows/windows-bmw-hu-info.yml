@@ -39,7 +39,7 @@ jobs:
         run: python -m pytest -q
 
       - name: EXE bauen
-        run: pyinstaller --noconsole --onefile --name Vako-HU --add-data "..\shared\commands.json;shared" run_gui.py
+        run: pyinstaller --noconsole --onefile --name Vako-HU --icon assets\emblem.ico --add-data "..\shared\commands.json;shared" --add-data "assets\emblem.png;assets" run_gui.py
 
       - name: EXE hochladen (Artefakt)
         uses: actions/upload-artifact@v4

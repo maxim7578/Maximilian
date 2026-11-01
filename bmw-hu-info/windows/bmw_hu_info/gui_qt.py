@@ -7,10 +7,12 @@ unveraendert wiederverwendet; hier ist nur die Darstellung neu.
 
 from __future__ import annotations
 
+import sys
 import threading
+from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -34,6 +36,13 @@ from .fehler_analyse import analysiere
 from .ssh_client import HeadunitClient, SSHVerbindungsError, Verbindungsdaten
 
 HEADUNITS = ["NBT", "NBTEVO", "ENAVEVO", "MGU"]
+
+
+def _asset(name: str) -> Path:
+    """Pfad zu einer Asset-Datei (dev und gebuendelte .exe)."""
+    if getattr(sys, "frozen", False):
+        return Path(getattr(sys, "_MEIPASS")) / "assets" / name
+    return Path(__file__).resolve().parent.parent / "assets" / name
 
 QSS = """
 #bg {
@@ -106,6 +115,9 @@ class App(QWidget):
         super().__init__()
         self.setObjectName("bg")
         self.setWindowTitle("Vako-HU - Diagnose (nur Lesen)")
+        icon = _asset("emblem.png")
+        if icon.exists():
+            self.setWindowIcon(QIcon(str(icon)))
         self.resize(1000, 680)
         self._katalog = lade_katalog()
         self._sichtbar: list[Befehl | None] = []
