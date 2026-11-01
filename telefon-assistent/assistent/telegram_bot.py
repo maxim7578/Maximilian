@@ -5,6 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.constants import ChatType
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -49,6 +50,7 @@ class TelegramBot:
         self.kontakte = Kontakte(Path(einst.daten_ordner) / "kontakte.json")
         self.offen = Offen()
         self.anrufe = None  # Anrufverwaltung der PC- oder Handy-Version
+        self._gruppen_hinweis_gesendet = False
         self.app = Application.builder().token(einst.telegram_token).build()
         self.app.add_handler(CommandHandler("start", self._start))
         self.app.add_handler(CommandHandler("hilfe", self._start))
@@ -67,24 +69,46 @@ class TelegramBot:
             return
         await self.app.bot.send_message(self.einst.telegram_chat_id, text)
 
-    def _erlaubt(self, update: Update) -> bool:
-        chat = update.effective_chat
-        return chat is not None and chat.id == self.einst.telegram_chat_id
+    async def _erlaubt(self, update: Update) -> bool:
+        """Nur der eingetragene Chat – und darin nur erlaubte Personen.
+
+        Ist TELEGRAM_ERLAUBTE_NUTZER gesetzt, muss der Absender darin stehen. Ohne die
+        Variable gilt nur ein privater Chat: In einer Gruppe dürfte sonst jedes Mitglied
+        Anrufe auslösen.
+        """
+        chat, nutzer = update.effective_chat, update.effective_user
+        if chat is None or chat.id != self.einst.telegram_chat_id:
+            return False
+        if self.einst.telegram_erlaubte_nutzer:
+            return nutzer is not None and nutzer.id in self.einst.telegram_erlaubte_nutzer
+        if chat.type == ChatType.PRIVATE:
+            return True
+        logger.warning("TELEGRAM_CHAT_ID ist eine Gruppe, aber TELEGRAM_ERLAUBTE_NUTZER fehlt – abgelehnt.")
+        if not self._gruppen_hinweis_gesendet and update.effective_message is not None:
+            self._gruppen_hinweis_gesendet = True
+            await update.effective_message.reply_text(
+                "In Gruppen höre ich nur auf bestimmte Personen. Trag in der Datei .env bei "
+                "TELEGRAM_ERLAUBTE_NUTZER die Telegram-User-IDs ein (mit Komma getrennt) und starte "
+                f"den Assistenten neu. Deine User-ID: {nutzer.id if nutzer else 'unbekannt'}"
+            )
+        return False
 
     async def _start(self, update: Update, _: ContextTypes.DEFAULT_TYPE):
         if self.einst.telegram_chat_id is None:
             await update.effective_message.reply_text(
-                f"Hallo! Deine Chat-ID ist: {update.effective_chat.id}\n\n"
-                "Trag sie in der Datei .env bei TELEGRAM_CHAT_ID ein und starte den Assistenten neu. "
+                f"Hallo! Deine Chat-ID ist: {update.effective_chat.id}\n"
+                f"(Deine User-ID für TELEGRAM_ERLAUBTE_NUTZER: "
+                f"{update.effective_user.id if update.effective_user else 'unbekannt'})\n\n"
+                "Trag die Chat-ID in der Datei .env bei TELEGRAM_CHAT_ID ein und starte den Assistenten neu. "
                 "Danach höre ich nur noch auf dich."
             )
             return
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         await update.effective_message.reply_text("Hallo! Ich bin dein Telefonassistent.\n\n" + HILFE)
 
     async def _status(self, update: Update, _):
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         await update.effective_message.reply_text(
             f"Telegram: ✅\n{await self.anrufe.status()}\n"
@@ -93,7 +117,7 @@ class TelegramBot:
         )
 
     async def _merken(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         text = " ".join(context.args or [])
         if ":" not in text:
@@ -108,20 +132,20 @@ class TelegramBot:
         await update.effective_message.reply_text(f"Gespeichert: {name.strip()} → {n}")
 
     async def _auflegen(self, update: Update, _):
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         ok = await self.anrufe.auflegen()
         await update.effective_message.reply_text("Aufgelegt." if ok else "Es läuft gerade kein Anruf.")
 
     async def _abbrechen(self, update: Update, _):
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         self.offen = Offen()
         await update.effective_message.reply_text("Alles klar, verworfen.")
 
     async def _stimmen(self, update: Update, _):
         """Schickt von jeder Stimme eine Hörprobe in Telefonqualität, mit Knopf zum Auswählen."""
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         nachricht = update.effective_message
         if not hasattr(self.anrufe, "stimmprobe"):
@@ -152,7 +176,7 @@ class TelegramBot:
         await abfrage.message.reply_text(f"✅ Ab jetzt spricht {vorname}. ({beschreibung})")
 
     async def _sprachnachricht(self, update: Update, _):
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         nachricht = update.effective_message
         datei = await (nachricht.voice or nachricht.audio).get_file()
@@ -167,7 +191,7 @@ class TelegramBot:
         await self._verarbeiten(update, text)
 
     async def _textnachricht(self, update: Update, _):
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         await self._verarbeiten(update, update.effective_message.text)
 
@@ -255,7 +279,7 @@ class TelegramBot:
     async def _knopf(self, update: Update, _):
         abfrage = update.callback_query
         await abfrage.answer()
-        if not self._erlaubt(update):
+        if not await self._erlaubt(update):
             return
         aktion, _, anruf_id = (abfrage.data or "").partition(":")
         if aktion == "stimme":

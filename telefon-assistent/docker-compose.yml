@@ -1,5 +1,7 @@
 # Startet alles mit: docker compose up -d --build
 # Läuft auf Linux (network_mode: host wird für Telefonie im Heimnetz gebraucht).
+# "konfig" und "assistent" laufen ohne root als UID 1000 (siehe container-start.sh);
+# ./daten und ./asterisk/etc werden beim Start automatisch an UID 1000 übergeben.
 
 services:
   # Erzeugt die Asterisk-Konfiguration aus .env und ist danach fertig.

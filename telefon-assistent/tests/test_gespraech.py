@@ -180,3 +180,83 @@ async def test_ki_verabschiedet_sich_und_legt_auf(tmp_path):
     ergebnis = ergebnisse[0]
     assert ergebnis.ergebnis == "Tisch für 2 um 17 Uhr reserviert" and ergebnis.erfolgreich is True
     assert ("Assistent", "Vielen Dank, auf Wiederhören.") in ergebnis.protokoll
+
+
+async def _eingehend_mit_limit(tmp_path, erlaubt: bool):
+    """Eingehender Anruf (selbst_beginnen): erst nach MEDIA_START wird das Limit gefragt."""
+    from fastapi.responses import StreamingResponse
+
+    ergebnisse, llm_anfragen, gefragt = [], [], []
+    app = FastAPI()
+
+    @app.post("/v1/chat/completions")
+    async def schein_ki(anfrage: dict):
+        llm_anfragen.append(anfrage)
+
+        async def strom():
+            yield _chunk({"role": "assistant", "content": "Hallo."})
+            yield _chunk({}, "stop")
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(strom(), media_type="text/event-stream")
+
+    async def zulassen(nummer):
+        gefragt.append(nummer)
+        return erlaubt
+
+    port = freier_port()
+
+    @app.websocket("/ws")
+    async def ws(websocket: WebSocket):
+        await websocket.accept(subprotocol="media")
+        ergebnisse.append(
+            await gespraech_fuehren(
+                websocket, systemtext="Test", selbst_beginnen=True, groq_api_key="gsk_test",
+                llm_modell="test", stt_modell="whisper-large-v3-turbo", piper_stimme="de_DE-thorsten-medium",
+                piper_ordner=tmp_path, max_sekunden=60, tts=Durchreicher(),
+                llm_basis_url=f"http://127.0.0.1:{port}/v1", zulassen=zulassen,
+            )
+        )
+
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    server_aufgabe = asyncio.create_task(server.serve())
+    while not server.started:
+        await asyncio.sleep(0.05)
+
+    async with websockets.connect(f"ws://127.0.0.1:{port}/ws", subprotocols=["media"]) as client:
+        await asyncio.sleep(0.3)  # Asterisk schickt MEDIA_START nicht unbedingt sofort
+        await client.send(json.dumps({
+            "event": "MEDIA_START", "connection_id": "t", "channel": "WebSocket/ki_rein-1",
+            "channel_id": "t-1", "format": "slin", "optimal_frame_size": 320, "ptime": 20,
+            "channel_variables": {"__ANRUFER": "0221555"},
+        }))
+        try:
+            async with asyncio.timeout(3):
+                while not ergebnisse and not llm_anfragen:
+                    await client.send(bytes(320))
+                    await asyncio.sleep(0.02)
+        except (TimeoutError, websockets.ConnectionClosed):
+            pass
+
+    for _ in range(100):
+        if ergebnisse:
+            break
+        await asyncio.sleep(0.1)
+    server.should_exit = True
+    await server_aufgabe
+    return ergebnisse, llm_anfragen, gefragt
+
+
+@pytest.mark.asyncio
+async def test_eingehend_ueber_dem_limit_spricht_die_ki_nicht(tmp_path):
+    ergebnisse, llm_anfragen, gefragt = await _eingehend_mit_limit(tmp_path, erlaubt=False)
+    assert gefragt == ["0221555"]
+    assert llm_anfragen == [], "Die KI darf über dem Limit nicht sprechen"
+    assert ergebnisse and ergebnisse[0].abgelehnt and ergebnisse[0].anrufer == "0221555"
+
+
+@pytest.mark.asyncio
+async def test_eingehend_unter_dem_limit_beginnt_die_ki(tmp_path):
+    _, llm_anfragen, gefragt = await _eingehend_mit_limit(tmp_path, erlaubt=True)
+    assert gefragt == ["0221555"]
+    assert llm_anfragen, "Die KI hätte das Gespräch beginnen sollen"

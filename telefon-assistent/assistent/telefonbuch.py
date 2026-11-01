@@ -12,13 +12,15 @@ _GESPERRT = (
     r"^11[0-9]$",  # 110, 112, 115, 116 ...
     r"^116\d+",  # 116 116 usw.
     r"^118\d+",  # Auskunftsdienste
-    r"^0?900",  # Mehrwertdienste
-    r"^0?137",  # Televoting
-    r"^0?138",
-    r"^0?180",  # Service-Nummern
-    r"^0?700",  # persönliche Rufnummern
-    r"^0?1212",
-    r"^0?199",  # netzinterne Dienste
+    # Sonderbereiche nur mit führender 0: Ortsnummern ohne Vorwahl (z. B. 900123) sind
+    # normale Anschlüsse; Sonderrufnummern sind ohne die 0 nicht erreichbar.
+    r"^0900",  # Mehrwertdienste
+    r"^0137",  # Televoting
+    r"^0138",
+    r"^0180",  # Service-Nummern
+    r"^0700",  # persönliche Rufnummern
+    r"^01212",
+    r"^0199",  # netzinterne Dienste
     r"^00",  # Auslandsgespräche (nicht in der Flatrate)
 )
 
@@ -35,6 +37,8 @@ class NummernFehler(Exception):
 def normalisieren(nummer: str) -> str:
     """Macht aus "+49 (30) 123-456" eine wählbare Nummer wie "030123456"."""
     roh = nummer.strip()
+    # "+49 (0)30 …": Die "(0)" nach der Ländervorwahl wird bei Auslandsschreibweise nicht gewählt.
+    roh = re.sub(r"^(\+|00)\s*(\d{1,3})\s*\(\s*0\s*\)", r"\1\2", roh)
     ziffern = re.sub(r"[^\d+]", "", roh)
     if ziffern.startswith("+49"):
         ziffern = "0" + ziffern[3:]

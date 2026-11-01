@@ -67,7 +67,7 @@ async def test_telegram_stimmen_befehl(tmp_path):
     from assistent.telegram_bot import TelegramBot
 
     bot = TelegramBot.__new__(TelegramBot)
-    bot.einst = SimpleNamespace(telegram_chat_id=1)
+    bot.einst = SimpleNamespace(telegram_chat_id=1, telegram_erlaubte_nutzer=frozenset())
     gesendet, texte = [], []
 
     class Anrufe:
@@ -90,7 +90,8 @@ async def test_telegram_stimmen_befehl(tmp_path):
             gesendet.append((ogg, caption, reply_markup.inline_keyboard[0][0].callback_data))
 
     bot.anrufe = Anrufe()
-    update = SimpleNamespace(effective_chat=SimpleNamespace(id=1), effective_message=Nachricht())
+    update = SimpleNamespace(effective_chat=SimpleNamespace(id=1, type="private"),
+                             effective_user=SimpleNamespace(id=1), effective_message=Nachricht())
     await bot._stimmen(update, None)
     assert gesendet == [(b"OggS...", "Katja (weiblich)", "stimme:0")]
     assert any("Conrad" in t and "nicht erreichbar" in t for t in texte)

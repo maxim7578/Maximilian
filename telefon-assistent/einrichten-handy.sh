@@ -7,10 +7,11 @@ ZWEIG="${ZWEIG:-claude/gracious-sagan-dus97i}"
 ORDNER="$HOME/Maximilian/telefon-assistent"
 DATEN="$HOME/telefon-daten"
 
+# Antworten liest frage() von Dateideskriptor 3 (in main(): die Tastatur, auch bei "curl … | bash").
 frage() { # frage VARIABLE "Text" [geheim] [Prüfmuster] [Hinweis bei falscher Eingabe]
   local antwort
   while true; do
-    if [ "$3" = "geheim" ]; then read -r -s -p "$2: " antwort < /dev/tty; echo; else read -r -p "$2: " antwort < /dev/tty; fi
+    if [ "$3" = "geheim" ]; then read -r -s -p "$2: " antwort <&3; echo; else read -r -p "$2: " antwort <&3; fi
     antwort="${antwort#"${antwort%%[![:space:]]*}"}"; antwort="${antwort%"${antwort##*[![:space:]]}"}"
     if [ -z "$4" ] || [[ "$antwort" =~ $4 ]]; then break; fi
     echo "  ⚠️  $5 Bitte nochmal eingeben."
@@ -18,8 +19,55 @@ frage() { # frage VARIABLE "Text" [geheim] [Prüfmuster] [Hinweis bei falscher E
   printf -v "$1" '%s' "$antwort"
 }
 
+absender_lesen() { # liest die Antwort von getUpdates, gibt je Chat "Chat-ID<Tab>Absender" aus
+  python -c '
+import json, sys
+try:
+    daten = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+gesehen = {}
+for u in daten.get("result", []) if isinstance(daten, dict) else []:
+    m = u.get("message") or {}
+    chat, von = m.get("chat") or {}, m.get("from") or {}
+    if "id" not in chat:
+        continue
+    name = " ".join(t for t in (von.get("first_name"), von.get("last_name")) if t) or "ohne Namen"
+    if von.get("username"):
+        name += " (@" + von["username"] + ")"
+    if chat.get("type") != "private":
+        name += ", Gruppe „" + (chat.get("title") or "") + "“"
+    gesehen[chat["id"]] = " ".join(name.split())  # keine Tabs oder Zeilenumbrüche
+for chat_id, name in gesehen.items():
+    print(f"{chat_id}\t{name}")'
+}
+
+chat_id_waehlen() { # chat_id_waehlen "<Ausgabe von absender_lesen>" – setzt CHAT_ID (leer = keine)
+  local zeilen wahl ok i
+  CHAT_ID=""
+  mapfile -t zeilen <<< "$1"
+  if [ "${#zeilen[@]}" -eq 1 ]; then
+    echo "Nachricht erhalten von: ${zeilen[0]#*$'\t'} (Chat-ID ${zeilen[0]%%$'\t'*})"
+    frage ok "Bist das du? (j/n)" "" '^[jJnN]$' "Bitte j oder n eingeben."
+    if [[ "$ok" =~ ^[jJ]$ ]]; then CHAT_ID="${zeilen[0]%%$'\t'*}"; fi
+  else
+    echo "Mehrere Absender haben deinem Bot geschrieben:"
+    for i in "${!zeilen[@]}"; do
+      printf '  %d) %s (Chat-ID %s)\n' "$((i + 1))" "${zeilen[$i]#*$'\t'}" "${zeilen[$i]%%$'\t'*}"
+    done
+    while true; do
+      frage wahl "Welcher bist du? Nummer eingeben (0 = keiner davon, abbrechen)" "" '^[0-9]{1,3}$' \
+        "Bitte nur die Nummer aus der Liste eingeben."
+      if [ "$wahl" -le "${#zeilen[@]}" ]; then break; fi
+      echo "  ⚠️  Diese Nummer gibt es nicht. Bitte nochmal eingeben."
+    done
+    if [ "$wahl" -ge 1 ]; then CHAT_ID="${zeilen[$((10#$wahl - 1))]%%$'\t'*}"; fi
+  fi
+}
+
 # Alles steckt in main(), damit "curl … | bash" erst das ganze Skript liest, bevor es losgeht.
 main() {
+exec 3< /dev/tty
 echo "=== 1/5 Programme installieren (dauert ein paar Minuten) ==="
 yes | pkg upgrade -y
 yes | pkg install -y python python-numpy python-onnxruntime espeak ffmpeg git curl
@@ -67,23 +115,24 @@ else
   echo
   echo ">>> Öffne jetzt Telegram, such deinen Bot und schick ihm: /start"
   echo "    Ich warte auf deine Nachricht …"
+  # Nicht einfach den letzten Absender nehmen: Jeder, der den Bot findet, könnte ihm schreiben.
   CHAT_ID=""
+  ABSENDER=""
   for _ in $(seq 1 120); do
-    CHAT_ID=$(curl -s "https://api.telegram.org/bot$TOKEN/getUpdates" | python -c '
-import json, sys
-try:
-    daten = json.load(sys.stdin)
-    ids = [u["message"]["chat"]["id"] for u in daten.get("result", []) if "message" in u]
-    print(ids[-1] if ids else "")
-except Exception:
-    print("")')
-    [ -n "$CHAT_ID" ] && break
+    ABSENDER=$(curl -s "https://api.telegram.org/bot$TOKEN/getUpdates" | absender_lesen)
+    [ -n "$ABSENDER" ] && break
     sleep 3
   done
-  if [ -z "$CHAT_ID" ]; then
+  if [ -z "$ABSENDER" ]; then
     echo "Keine Nachricht erhalten. Prüf den Token und trag TELEGRAM_CHAT_ID später in $ORDNER/.env ein."
   else
-    echo "Gefunden: Deine Chat-ID ist $CHAT_ID"
+    chat_id_waehlen "$ABSENDER"
+    if [ -n "$CHAT_ID" ]; then
+      echo "  ✅ Chat-ID $CHAT_ID übernommen."
+    else
+      echo "  ⚠️  Keine Chat-ID übernommen. Schick deinem Bot nach dem Start /start – er zeigt dir deine"
+      echo "     Chat-ID – und trag sie in $ORDNER/.env bei TELEGRAM_CHAT_ID ein. Bis dahin hört er auf niemanden."
+    fi
   fi
   cat > .env <<ENDE
 TELEGRAM_BOT_TOKEN=$TOKEN
@@ -127,4 +176,7 @@ echo "  cd $ORDNER && ./start-handy.sh"
 echo "Nach einem Neustart des Handys startet er automatisch (App Termux:Boot nötig)."
 }
 
-main "$@"
+# EINRICHTEN_NUR_LADEN=1: nur die Funktionen laden (für die Tests)
+if [ -z "${EINRICHTEN_NUR_LADEN:-}" ]; then
+  main "$@"
+fi

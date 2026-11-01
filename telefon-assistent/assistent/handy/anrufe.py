@@ -9,6 +9,7 @@ import aiohttp
 from loguru import logger
 
 from .. import texte
+from ..anruflimit import Anruflimit
 from ..auftrag import Anruf, jetzt
 from ..einstellungen import Einstellungen
 from .gemini import GEMINI_URL, GeminiFehler, GeminiGespraech
@@ -51,8 +52,11 @@ class HandyAnrufverwaltung:
         self.melden = melden
         self.aktuell: Anruf | None = None
         self._telefonat: Telefonat | None = None
+        self.limit = Anruflimit(einst.eingehend_pro_nummer_tag, einst.eingehend_pro_stunde)
+        self._meldungen: set[asyncio.Task] = set()
         if einst.eingehende_anrufe:
             telefon.bei_eingehendem_anruf = self._eingehend
+            telefon.eingehend_zulassen = self._eingehend_zulassen
 
     @property
     def beschaeftigt(self) -> bool:
@@ -195,6 +199,15 @@ class HandyAnrufverwaltung:
                 await gemini._ws.close()  # Anruf kam nicht zustande
             self.aktuell = None
             self._telefonat = None
+
+    def _eingehend_zulassen(self, nummer: str) -> bool:
+        """Mengenlimit, gefragt vor dem Abheben: darüber klingelt es nur (wie bei "aus")."""
+        entscheidung = self.limit.pruefen(nummer)
+        if entscheidung.meldung:
+            aufgabe = asyncio.create_task(self.melden(entscheidung.meldung))
+            self._meldungen.add(aufgabe)
+            aufgabe.add_done_callback(self._meldungen.discard)
+        return entscheidung.erlaubt
 
     async def _eingehend(self, telefonat: Telefonat) -> None:
         if self.beschaeftigt:

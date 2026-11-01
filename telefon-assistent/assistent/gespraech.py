@@ -1,6 +1,7 @@
 """Ein Telefonat mit der KI führen: Zuhören (Groq Whisper) → Denken (Groq) → Sprechen (Piper)."""
 
 import asyncio
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
 from fastapi import WebSocket
@@ -36,6 +37,8 @@ from pipecat_asterisk import AsteriskWebsocketTransport
 ABTASTRATE = 8000
 # Meldet sich nach dem Abheben niemand hörbar, beginnt der Assistent selbst.
 SELBST_BEGINNEN_NACH = 5.0
+# So lange wird bei eingehenden Anrufen höchstens auf die Kanaldaten (Anrufernummer) gewartet.
+KANALDATEN_WARTEN = 3.0
 
 
 @dataclass
@@ -44,6 +47,7 @@ class Gespraechsergebnis:
     erfolgreich: bool | None = None
     protokoll: list[tuple[str, str]] = field(default_factory=list)
     anrufer: str = ""
+    abgelehnt: bool = False  # Mengenlimit erreicht: KI hat nicht gesprochen
 
     def protokoll_text(self) -> str:
         return "\n".join(f"{wer}: {text}" for wer, text in self.protokoll)
@@ -56,6 +60,7 @@ class Ohr(FrameProcessor):
         super().__init__()
         self.etwas_gehoert = asyncio.Event()
         self.kanal_variablen: dict = {}
+        self.kanal_bekannt = asyncio.Event()
 
     async def process_frame(self, frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -69,6 +74,7 @@ class Ohr(FrameProcessor):
                     str(name).lstrip("_"): wert
                     for name, wert in (nachricht.get("channel_variables") or {}).items()
                 }
+                self.kanal_bekannt.set()
         await self.push_frame(frame, direction)
 
 
@@ -124,8 +130,13 @@ async def gespraech_fuehren(
     max_sekunden: int,
     tts=None,
     llm_basis_url: str = "https://api.groq.com/openai/v1",
+    zulassen: Callable[[str], Awaitable[bool]] | None = None,
 ) -> Gespraechsergebnis:
-    """Führt ein Telefonat über die Asterisk-Websocket-Verbindung bis zum Auflegen."""
+    """Führt ein Telefonat über die Asterisk-Websocket-Verbindung bis zum Auflegen.
+
+    `zulassen` (nur bei selbst_beginnen): wird mit der Anrufernummer gefragt, bevor die KI
+    spricht; bei False wird sofort aufgelegt und `ergebnis.abgelehnt` gesetzt.
+    """
     ergebnis = Gespraechsergebnis()
     transport = AsteriskWebsocketTransport(websocket=websocket)
 
@@ -238,18 +249,31 @@ async def gespraech_fuehren(
         await asyncio.sleep(30)
         await auflegen_nach_abschied()
 
+    async def begruessen():
+        if zulassen is not None:
+            # Erst die Anrufernummer abwarten (kommt mit MEDIA_START) und das Limit fragen.
+            try:
+                await asyncio.wait_for(ohr.kanal_bekannt.wait(), timeout=KANALDATEN_WARTEN)
+            except TimeoutError:
+                logger.warning("Keine Kanaldaten von Asterisk – Anrufernummer unbekannt.")
+            if not await zulassen(str(ohr.kanal_variablen.get("ANRUFER", ""))):
+                ergebnis.abgelehnt = True
+                await worker.cancel()
+                return
+        await worker.queue_frames(
+            [
+                LLMMessagesAppendFrame(
+                    messages=[{"role": "user", "content": "(Der Anruf wurde angenommen.)"}],
+                    run_llm=False,
+                ),
+                LLMRunFrame(),
+            ]
+        )
+
     @transport.event_handler("on_client_connected")
     async def verbunden(_transport, _client):
         if selbst_beginnen:
-            await worker.queue_frames(
-                [
-                    LLMMessagesAppendFrame(
-                        messages=[{"role": "user", "content": "(Der Anruf wurde angenommen.)"}],
-                        run_llm=False,
-                    ),
-                    LLMRunFrame(),
-                ]
-            )
+            hintergrund.append(asyncio.create_task(begruessen()))
         else:
             hintergrund.append(asyncio.create_task(selbst_anfangen()))
         hintergrund.append(asyncio.create_task(zeitlimit()))

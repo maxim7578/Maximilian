@@ -44,6 +44,29 @@ Geprüfter Stand: `d484d2a` (Branch `claude/gstack-skill-setup-c85bwb`), 8.535 D
 | Restrisiko M2/M3 (aus dem Review) | offen | UDP-Absender lassen sich im LAN fälschen: Ein INVITE mit gefälschter FRITZ!Box-IP und eigener `c=`-Adresse wird weiter angenommen. Abhilfe wäre, eingehende Anrufe abzulehnen, deren Medienadresse nicht die FRITZ!Box ist – vorher mit einem echten Anruf prüfen, ob die FRITZ!Box Medien immer selbst sendet. |
 | Nummernprüfung (aus dem Review, alter Fehler) | offen | `+49 (0)30 …` wird zu `0030…` und fälschlich als Auslandsnummer gesperrt; `^0?700` usw. sperren auch Ortsnummern, die mit 700/900/137 beginnen. Sperrt eher zu viel als zu wenig. |
 
+## Stand nach der zweiten Runde (01.11.2026)
+
+Diese Runde ersetzt die Einträge „offen“ und „teilweise“ in der Tabelle oben.
+
+| Befund | Stand | Was geändert wurde |
+|---|---|---|
+| H1 lokale `.venv` | behoben | OpenMontage-Hook legt eine `.venv` mit Python < 3.11 einmalig mit 3.12 neu an; Pillow 13.0.0, `make test` grün |
+| M2/M3 Restrisiko gefälschte IP | behoben (nicht live getestet) | Handy: INVITE mit Medienadresse ≠ FRITZ!Box → 488; re-INVITE übernimmt nur die FRITZ!Box-Adresse. Annahme: Die FRITZ!Box leitet Medien über ihre LAN-IP. Anrufe von einem anderen IP-Telefon im Heimnetz mit direkter Medienverbindung würden dadurch abgelehnt. |
+| M8 Artemis-Playground | behoben | dazu neuer kritischer Befund: In Produktion galten Anmeldecode `123456` und der öffentliche JWT-Schlüssel. Start jetzt nur mit eigenem Schlüssel, Mock-OTP und DEBUG aus, CORS nur für konfigurierte Ursprünge. `0.0.0.0` bleibt (läuft im Container hinter Nginx). |
+| M9 ponytail | behoben | Marktplatz auf Tag `v5.3.3` (Commit-Pinning für Marktplätze laut Doku nicht vorgesehen; Tags sind verschiebbar) |
+| N3 Anruflimit | behoben | 3 je Nummer in 24 h, 10 pro Stunde (einstellbar). PC-Version: Die Nummer ist erst nach der Annahme bekannt, Anrufer hören kurz Stille. |
+| N4 Chat-ID beim Einrichten | behoben | Anzeige von ID/Name, Bestätigung bzw. Auswahl |
+| N5 Berechtigung je Person | behoben | `TELEGRAM_ERLAUBTE_NUTZER`; ohne sie nur private Chats |
+| N6 hartes Zeitlimit PC | behoben (nicht live getestet) | `TIMEOUT(absolute)` = `MAX_GESPRAECH_SEKUNDEN` + 60 im Wählplan |
+| N7 pjsip-Rechte | behoben (Docker nicht getestet) | Dateien 0600, Ordner 0700, als root an UID/GID 1000 (wie im Asterisk-Image) |
+| N8 Container als root | teilweise | Telefonassistent läuft als UID 1000 (Startskript mit `setpriv`); Image-Bau nicht getestet. Artemis-Dockerfiles (Fremdcode) bleiben. |
+| N9 pip-Hashes | behoben | Windows-Build mit `--require-hashes`, Workflow grün |
+| N11 Löschfrist | behoben | 365 Tage (einstellbar), `--ohne-standort`, `verlauf --loeschen`. Gleichzeitige Schreiber (Cron + `live`) können beim Aufräumen eine Zeile verlieren (keine Dateisperre). |
+| N12 backlot | behoben | Zugriffstoken; Cookies trennen nicht nach Port |
+| N13 Debug-Keystore | kein Handlungsbedarf | Android-Standard-Debugschlüssel mit bekanntem Kennwort, nur für Debug-Builds |
+| N14 rea / skyaccess | teilweise | rea mit festem Lockfile (2 mittlere CVEs in `glob`/`minimatch`, Fix braucht neue Hauptversion von rea); skyaccess ist ein fremder Remote-Server und lässt sich nicht pinnen |
+| Nummernprüfung „+49 (0)“ | behoben | „(0)“ entfällt; Sperrmuster nur mit führender 0 |
+
 ## Vorgehen
 
 | Skill | Werkzeug | Umfang |

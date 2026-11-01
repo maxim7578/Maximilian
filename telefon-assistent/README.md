@@ -28,7 +28,10 @@ Telegram (Sprachnachricht) → Laptop: Assistent ─┬─ Groq: Sprache erkenne
 - Vor jedem Anruf musst du in Telegram auf „Anrufen“ tippen.
 - Notrufe, Sonder-, Call-by-Call- und Auslandsnummern wählt er nie. Erlaubt sind nur
   Festnetz- (02–09) und Mobilfunknummern (015–017) sowie Ortsnummern ohne Vorwahl.
-- Nur dein eigener Telegram-Chat kann ihn steuern.
+- Nur dein eigener Telegram-Chat kann ihn steuern. In einer Telegram-Gruppe nur die Personen, die
+  in `TELEGRAM_ERLAUBTE_NUTZER` stehen (siehe unten).
+- Die Programme laufen im Container nicht als root, und die Asterisk-Konfiguration mit dem
+  FRITZ!Box-Kennwort ist nur für ihren Besitzer lesbar.
 
 ---
 
@@ -121,6 +124,11 @@ docker compose up -d --force-recreate
 
 Der Bot meldet sich mit „✅ Dein Telefonassistent ist gestartet.“
 
+**Bot in einer Telegram-Gruppe?** Dann trag zusätzlich bei `TELEGRAM_ERLAUBTE_NUTZER` die
+Telegram-User-IDs der Personen ein, die Anrufe auslösen dürfen (mit Komma getrennt, z. B.
+`TELEGRAM_ERLAUBTE_NUTZER=123456789,987654321`). Ohne diese Angabe reagiert der Bot in Gruppen auf
+niemanden. Die eigene User-ID zeigt der Bot nach `/start` an.
+
 **4.6 Prüfen:** In der FRITZ!Box sollte bei **Telefonie → Telefoniegeräte** jetzt **KI-Assistent** grün
 bzw. „angemeldet“ sein. In Telegram zeigt `/status`, ob alles läuft.
 
@@ -146,9 +154,18 @@ Findet der Assistent keine Nummer (die Suche läuft über OpenStreetMap), schick
 Festnetznummer an, fragt nach Name, Anliegen und Rückrufnummer und schickt dir die Notiz in Telegram.
 Klingelt eines deiner anderen Telefone und du gehst schneller ran, hast du das Gespräch.
 
+Damit niemand den Assistenten (und dein Groq-Kontingent) mit Dauer-Anrufen beschäftigt, spricht er
+höchstens `EINGEHEND_MAX_PRO_NUMMER_TAG` Mal (Standard 3) in 24 Stunden mit derselben Nummer und
+höchstens `EINGEHEND_MAX_PRO_STUNDE` Mal (Standard 10) pro Stunde insgesamt. Anrufe mit unterdrückter
+Nummer zählen zusammen wie eine Nummer. Darüber spricht die KI nicht und du bekommst eine kurze
+Meldung in Telegram. Mit `0` schaltest du eine Grenze ab.
+
 ## Wenn etwas nicht klappt
 
 - **Protokoll ansehen:** `docker compose logs -f assistent` bzw. `docker compose logs -f asterisk`
+- **Dateirechte:** Die Container „konfig“ und „assistent“ laufen als Benutzer mit der UID 1000. Beim
+  Start übergeben sie `./daten` und `./asterisk/etc` automatisch an diese UID; die Dateien in
+  `./asterisk/etc` sind nur für sie lesbar (`sudo ls asterisk/etc`). Asterisk läuft ebenfalls als UID 1000.
 - **FRITZ!Box-Anmeldung prüfen:** `docker compose exec asterisk asterisk -rx "pjsip show registrations"`.
   Dort sollte `Registered` stehen. Wenn nicht: Benutzername und Kennwort in `.env` mit der FRITZ!Box
   vergleichen. `FRITZBOX_ADRESSE` ist meist `192.168.178.1`.
