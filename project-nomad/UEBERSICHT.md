@@ -4,8 +4,9 @@ Kopie von [Crosstalk-Solutions/project-nomad](https://github.com/Crosstalk-Solut
 (Apache 2.0, © Crosstalk Solutions, LLC; Lizenz in [`LICENSE`](LICENSE)).
 
 - **Stand:** Version 1.35.1, Upstream-Commit `54ee30a` vom 05.10.2026
-- **Übernommen am:** 01.11.2026, ohne Änderungen am Upstream-Code
+- **Übernommen am:** 01.11.2026
 - **Nicht dabei:** die Git-Historie (nur dieser eine Stand)
+- **Eigene Änderungen:** nur Paket-Updates, siehe [Abschnitt unten](#eigene-änderungen-paket-updates-vom-01112026)
 
 ## Was es ist
 
@@ -49,10 +50,9 @@ Laufende Container laut `install/management_compose.yaml`: `admin`, `mysql`,
   starten. NOMAD gehört deshalb nur in ein vertrauenswürdiges Netz und nie
   direkt ins Internet.
 - **Dozzle auf Port 9999** zeigt alle Container-Logs, ebenfalls ohne Anmeldung.
-- **Abhängigkeiten:** Ein trivy-Scan von `admin/package-lock.json` (01.11.2026)
-  fand 135 bekannte Schwachstellen in npm-Paketen (3 kritisch, 59 hoch,
-  61 mittel, 12 niedrig), u. a. in `undici`, `axios`, `@xmldom/xmldom`, `tar`,
-  `maplibre-gl` und `proxy-addr`. Für alle gibt es neuere Versionen.
+- **Abhängigkeiten:** Upstream-Stand 1.35.1 hatte laut `npm audit` 84
+  bekannte Schwachstellen (3 kritisch, 29 hoch). Nach den Updates unten sind
+  es 36, alle „mittel“ (Details dort).
 - **Fest eingebauter Schlüssel:** `BENCHMARK_HMAC_SECRET` in
   `admin/app/services/benchmark_service.ts` ist öffentlich und laut Upstream
   bewusst so; er schützt nur die Benchmark-Rangliste.
@@ -60,9 +60,57 @@ Laufende Container laut `install/management_compose.yaml`: `admin`, `mysql`,
 Sicherheitslücken bitte nicht öffentlich melden, sondern privat über den
 [Security-Tab des Upstream-Repos](https://github.com/Crosstalk-Solutions/project-nomad/security).
 
+## Eigene Änderungen: Paket-Updates vom 01.11.2026
+
+Alles in `admin/`. `npm audit`: vorher 84 Meldungen (3 kritisch, 29 hoch,
+46 mittel, 6 niedrig), nachher 36 (alle mittel).
+
+| Paket | Vorher | Nachher | Hinweis |
+|-------|--------|---------|---------|
+| `maplibre-gl` | 4.7.1 | 6.16.0 | Hauptversion; behebt kritische XSS-Lücke |
+| `react-map-gl` | 8.1.0 | 8.1.3 | unterstützt maplibre 6 |
+| `sharp` | 0.34.5 | 0.35.5 | Hauptversion (0.x); Lücken in libvips/libheif |
+| `tar` | 7.5.16 | 7.5.22 | kritisch (DoS) |
+| `axios` | 1.18.1 | 1.21.0 | u. a. SSRF |
+| `systeminformation` | 5.31.7 | 5.33.19 | Command Injection |
+| `vite` | 6.4.3 | 6.4.5 | |
+| `postcss`, `compression`, `mysql2`, `yauzl`, `@openzim/libzim`, `@scalar/api-reference`, `@adonisjs/prettier-config` | | neueste passende Version | |
+| `@faker-js/faker` | 9.9.0 | 10.5.0 | per `overrides`, kommt nur über `@adonisjs/lucid`, wird im Code nicht genutzt |
+| indirekte Pakete | | | `npm audit fix`: u. a. `undici`, `proxy-addr`, `@xmldom/xmldom`, `form-data`, `follow-redirects`, `qs` |
+
+**Codeänderung:** `admin/inertia/components/maps/MapComponent.tsx`.
+maplibre-gl 6 hat keinen Default-Export mehr
+(`import * as maplibregl from 'maplibre-gl'`) und braucht unter Vite
+`setWorkerUrl(...)` mit `?worker&url`. Ohne diesen Aufruf bleibt die Karte
+leer („Worker failed to load“, 404 auf `maplibre-gl-worker.mjs`).
+
+**Geprüft:**
+
+- Backend-Typecheck (`tsc --noEmit`): fehlerfrei.
+- Frontend-Typecheck: dieselben 35 Fehler wie im Upstream-Stand, keine neuen.
+- `vite build` läuft durch, der Worker wird mitgebaut.
+- Eine Karten-Testseite in Headless-Chromium rendert mit der Korrektur und
+  scheitert ohne sie.
+- Unit-Tests: 599 von 609 bestanden, vor und nach dem Update identisch. Die
+  10 Fehler liegen am nicht kompilierten nativen Modul `@openzim/libzim`
+  (Installation ohne Install-Skripte), nicht an den Updates.
+- sharp-Bildtests (`tests/unit/chat_images.spec.ts`, laufen nicht in
+  `test:unit` mit): 10 von 10 bestanden.
+
+**Nicht geprüft:** Docker-Image-Build, Start der ganzen App, Daten-Import mit
+`@openzim/libzim` 4.7.0 und das Kartenbild mit echten Offline-Karten.
+
+**Bewusst nicht aktualisiert (36 mittlere Meldungen):**
+
+- AdonisJS 6 → 7 (`@adonisjs/core` und Zubehör): Open Redirect und ReDoS in
+  `@adonisjs/http-server`; braucht eine größere Migration.
+- `stream-json` 1 → 3: komplett neue API, betrifft den Medikamenten-Datenimport.
+- ESLint-Werkzeuge (`minimatch`): nur Entwicklungswerkzeuge.
+
 ## Aktualisieren
 
-Neuen Stand holen und diesen Ordner ersetzen (`UEBERSICHT.md` vorher sichern):
+Neuen Stand holen und diesen Ordner ersetzen (`UEBERSICHT.md` vorher sichern;
+die Paket-Updates oben ggf. neu anwenden):
 
 ```bash
 git clone --depth 1 https://github.com/Crosstalk-Solutions/project-nomad /tmp/nomad-neu

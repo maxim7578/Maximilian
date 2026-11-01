@@ -6,8 +6,13 @@ import Map, {
   ScaleControl,
 } from 'react-map-gl/maplibre'
 import type { MapLayerMouseEvent, MapRef } from 'react-map-gl/maplibre'
-import maplibregl from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+// maplibre-gl v6 builds its worker URL at runtime, which Vite cannot follow;
+// bundle the worker explicitly and register its URL (see maplibre's Vite setup).
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+
+maplibregl.setWorkerUrl(maplibreWorkerUrl)
 
 import { Protocol } from 'pmtiles'
 import { useCallback, useEffect, useRef, useState } from 'react'
