@@ -60,5 +60,8 @@
   },
   "about": {
     "greeting": "Hallo von der Info-Seite!"
+  },
+  "assistant": {
+    "defaultName": "KI-Assistent"
   }
 }

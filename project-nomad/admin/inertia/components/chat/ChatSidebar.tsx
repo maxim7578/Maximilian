@@ -1,6 +1,7 @@
+import useAssistantName from '~/hooks/useAssistantName'
 import classNames from '~/lib/classNames'
 import StyledButton from '../StyledButton'
-import { router, usePage } from '@inertiajs/react'
+import { router } from '@inertiajs/react'
 import { ChatSession } from '../../../types/chat'
 import { IconMessage } from '@tabler/icons-react'
 import { useState } from 'react'
@@ -30,7 +31,7 @@ export default function ChatSidebar({
   onMobileClose,
 }: ChatSidebarProps) {
   const { t } = useTranslation()
-  const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
+  const aiAssistantName = useAssistantName()
   const [isKnowledgeBaseModalOpen, setIsKnowledgeBaseModalOpen] = useState(
     () => new URLSearchParams(window.location.search).get('knowledge_base') === 'true'
   )

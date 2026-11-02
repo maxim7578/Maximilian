@@ -1,5 +1,5 @@
+import useAssistantName from '~/hooks/useAssistantName'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { usePage } from '@inertiajs/react'
 import { IconBrain } from '@tabler/icons-react'
 import { useTranslation } from 'react-i18next'
 import { formatNumber } from '~/i18n'
@@ -34,9 +34,7 @@ export default function KbPolicyPromptBanner() {
   // pages so the banner pulls the user-set name when surfaced. Default to
   // "AI Assistant" when accessed outside that context (no-op for chat pages,
   // but keeps the component safe for future reuse elsewhere).
-  const aiAssistantName =
-    usePage<{ aiAssistantName?: string }>().props?.aiAssistantName ||
-    t('knowledgeBase:policyBanner.assistantFallback')
+  const aiAssistantName = useAssistantName()
 
   const { data: promptState } = useQuery({
     queryKey: ['kbPolicyPromptState'],

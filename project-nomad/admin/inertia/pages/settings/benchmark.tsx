@@ -1,4 +1,5 @@
-import { Head, Link, usePage } from '@inertiajs/react'
+import useAssistantName from '~/hooks/useAssistantName'
+import { Head, Link } from '@inertiajs/react'
 import { useState } from 'react'
 import SettingsLayout from '~/layouts/SettingsLayout'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -37,7 +38,7 @@ export default function BenchmarkPage(props: {
   }
 }) {
   const { t } = useTranslation()
-  const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
+  const aiAssistantName = useAssistantName()
   const queryClient = useQueryClient()
   const aiInstalled = useServiceInstalledStatus(SERVICE_NAMES.OLLAMA)
   const [isRunning, setIsRunning] = useState(props.benchmark.status !== 'idle')

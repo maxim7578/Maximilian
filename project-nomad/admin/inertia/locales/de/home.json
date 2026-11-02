@@ -5,7 +5,7 @@
       "description": "Offline-Karten ansehen"
     },
     "drugReference": {
-      "label": "Arzneimittelreferenz",
+      "label": "Arzneimittel-Referenz",
       "description": "Arzneimittelinformationen der FDA offline. Suche nach Medikamentenname oder Symptom"
     },
     "easySetup": {
@@ -53,7 +53,7 @@
     "releaseNotes": "Versionshinweise ansehen",
     "highlights": {
       "creatorPacks": "Creator Packs – installiere kuratierte Videopakete deiner Lieblings-Creator und schau sie komplett offline an.",
-      "medicationReference": "Arzneimittelreferenz – schlage Arzneimittelinformationen der FDA offline nach, schnell und verlässlich.",
+      "medicationReference": "Arzneimittel-Referenz – schlage Arzneimittelinformationen der FDA offline nach, schnell und verlässlich.",
       "benchmarkScoreV2": "Benchmark Score v2 – ein neu aufgebautes Bewertungsmodell mit Live-Telemetrie während des Tests; deinen Score siehst du am Ende.",
       "nomadMd": "NOMAD.md – gib deinem KI-Assistenten dauerhafte Anweisungen, die er in jedem Gespräch befolgt.",
       "knowledgeBaseCollections": "Sammlungen in der Wissensdatenbank – gruppiere nach Themen, was der Assistent durchsucht, damit die Antworten beim Thema bleiben."

@@ -1,3 +1,5 @@
+import { useNotifications } from '~/context/NotificationContext'
+import useAssistantName from '~/hooks/useAssistantName'
 import { IconPhoto, IconSend, IconWand, IconX } from '@tabler/icons-react'
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -7,7 +9,6 @@ import type { ModelVisionCapability } from '../../../types/ollama'
 import ChatMessageBubble from './ChatMessageBubble'
 import ChatAssistantAvatar from './ChatAssistantAvatar'
 import BouncingDots from '../BouncingDots'
-import { usePage } from '@inertiajs/react'
 import InfoTooltip from '../InfoTooltip'
 import { visionAttachmentGuidance } from '../../lib/vision_guidance'
 
@@ -40,7 +41,8 @@ export default function ChatInterface({
   chatSuggestionsLoading = false,
 }: ChatInterfaceProps) {
   const { t } = useTranslation()
-  const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
+  const aiAssistantName = useAssistantName()
+  const { addNotification } = useNotifications()
   const [input, setInput] = useState('')
   const [images, setImages] = useState<ChatImageAttachment[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)

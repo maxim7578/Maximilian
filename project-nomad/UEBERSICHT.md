@@ -8,7 +8,8 @@ Kopie von [Crosstalk-Solutions/project-nomad](https://github.com/Crosstalk-Solut
 - **Nicht dabei:** die Git-Historie (nur dieser eine Stand)
 - **Eigene Änderungen:** Paket-Updates und Migration auf AdonisJS 7, siehe
   [Paket-Updates](#eigene-änderungen-paket-updates-vom-01112026) und
-  [AdonisJS-7-Migration](#eigene-änderungen-migration-auf-adonisjs-7-vom-01112026)
+  [AdonisJS-7-Migration](#eigene-änderungen-migration-auf-adonisjs-7-vom-01112026),
+  außerdem [Sprachumschaltung Deutsch/Englisch](#eigene-änderungen-sprachumschaltung-deutschenglisch-vom-02112026)
 
 ## Was es ist
 
@@ -207,6 +208,68 @@ deshalb nicht geprüft, ebenso wenig der Docker-Image-Build.
   betroffen; sauber lösbar über AdonisJS-Transformer.
 - Fehlt `.adonisjs/` oder ist es veraltet (z. B. nach neuen Seiten), vor dem
   Typecheck `node ace codegen` ausführen.
+
+## Eigene Änderungen: Sprachumschaltung Deutsch/Englisch vom 02.11.2026
+
+Die Oberfläche des Command Centers gibt es auf Deutsch und Englisch.
+Umschalter „DE | EN“ neben dem Tag-/Nachtmodus (Fußzeile und Seitenleiste der
+Einstellungen); die Wahl gilt sofort, ohne Neuladen, und wird im Browser
+gespeichert (`localStorage`, Schlüssel `nomad:language`). Ohne gespeicherte
+Wahl gilt die Browsersprache, sonst Englisch.
+
+**Technik:** `i18next` 26.5.2 und `react-i18next` 17.1.0.
+
+- `inertia/i18n/`: Einrichtung, `setLanguage`, `formatNumber`, `formatDate`,
+  `formatDateTime`; Zahlen und Datumsangaben folgen der gewählten Sprache.
+- `inertia/locales/<sprache>/<namensraum>.json`: 14 Namensräume mit zusammen
+  1713 Texten je Sprache.
+- Schlüssel stehen immer mit Namensraum im Code (`t('apps:…')`). Module, die
+  Node-Tests importieren, markieren Schlüssel mit `tk('…')` und die Komponente
+  übersetzt sie.
+- Eine neue Sprache braucht nur einen weiteren Ordner unter `locales/` und einen
+  Eintrag in `inertia/i18n/language.ts`.
+
+**Tests (deutsch):**
+
+- `tests/unit/i18n_locales.spec.ts` prüft gleiche Namensräume, Schlüssel und
+  Platzhalter in allen Sprachen, keine leeren Texte, und dass jeder im Code
+  verwendete Schlüssel existiert.
+- `tests/unit/i18n_language.spec.ts` prüft die Sprachwahl.
+- Die Tests zu `chat_stream`, `vision_guidance` und `kb_file_grouping` prüfen
+  jetzt Schlüssel statt englischer Texte.
+
+**Geprüft:**
+
+- 18 Seiten wurden im Headless-Browser in beiden Sprachen geöffnet: kein
+  JS-Fehler, richtiges `lang`-Attribut, übersetzte Titel.
+- Umschalten per Klick ohne Neuladen und Merken nach dem Neuladen funktionieren.
+- Unit-Tests wie vorher plus die neuen. Backend-Typecheck fehlerfrei; der
+  Frontend-Typecheck hat 32 statt 36 Fehler (siehe unten).
+
+**Nebenbei behoben:** `ChatInterface` rief `addNotification` auf, ohne es zu
+definieren. Fehler bei Bildanhängen hätten den Chat abstürzen lassen
+(Upstream-Fehler).
+
+**Bleibt Englisch (bewusst oder noch offen):**
+
+- Inhalte und Daten vom Server: Beschreibungen von Apps, Modellen,
+  Wikipedia-Paketen und Kategorien, medizinische Daten (FDA), Länder- und
+  Kartennamen, Dokumentation.
+- Meldungen, die der Server erzeugt: API-Fehlertexte, Status von Hintergrundjobs
+  und Updates.
+- Eigennamen wie Project NOMAD, Command Center, Supply Depot, NOMAD Score und
+  Creator Packs.
+- Der Text der Apache-Lizenz und Copyright-Zeilen auf der Seite „Rechtliche
+  Hinweise“. Datenschutzhinweis und Haftungsausschlüsse sind übersetzt.
+- Eingebaute Texte von Fremdbibliotheken: Upload-Feld (Uppy) und Kartenknöpfe
+  (MapLibre, z. B. „Zoom in“).
+- Der Debug-Bericht für GitHub-Issues.
+- Fehlermeldungen, die schon im Chat stehen, bleiben nach einem Sprachwechsel
+  in der alten Sprache.
+- Die vorgegebene NOMAD.md-Vorlage ist auf Deutsch, wenn Deutsch eingestellt ist.
+
+**Zur fachlichen Durchsicht empfohlen:** die deutschen Überschriften der
+FDA-Packungsbeilagen und die Sicherheitshinweise auf den Medizin-Seiten.
 
 ## Aktualisieren
 

@@ -1,4 +1,5 @@
-import { Head, router, usePage } from '@inertiajs/react'
+import useAssistantName from '~/hooks/useAssistantName'
+import { Head, router } from '@inertiajs/react'
 import { useRef, useState } from 'react'
 import StyledTable from '~/components/StyledTable'
 import SettingsLayout from '~/layouts/SettingsLayout'
@@ -37,7 +38,7 @@ export default function ModelsPage(props: {
   }
 }) {
   const { t } = useTranslation()
-  const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
+  const aiAssistantName = useAssistantName()
   const { isInstalled } = useServiceInstalledStatus(SERVICE_NAMES.OLLAMA)
   const { addNotification } = useNotifications()
   const { openModal, closeAllModals } = useModals()

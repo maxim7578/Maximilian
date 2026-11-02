@@ -60,5 +60,8 @@
   },
   "about": {
     "greeting": "Hello from About!"
+  },
+  "assistant": {
+    "defaultName": "AI Assistant"
   }
 }

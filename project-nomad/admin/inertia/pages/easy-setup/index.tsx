@@ -1,4 +1,5 @@
-import { Head, router, usePage } from '@inertiajs/react'
+import useAssistantName from '~/hooks/useAssistantName'
+import { Head, router } from '@inertiajs/react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, useMemo } from 'react'
 import AppLayout from '~/layouts/AppLayout'
@@ -114,7 +115,7 @@ export default function EasySetupWizard(props: {
   system: { services: ServiceSlim[]; remoteOllamaUrl: string }
 }) {
   const { t } = useTranslation()
-  const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
+  const aiAssistantName = useAssistantName()
   const CORE_CAPABILITIES = buildCoreCapabilities(t, aiAssistantName)
 
   const [currentStep, setCurrentStep] = useState<WizardStep>(1)

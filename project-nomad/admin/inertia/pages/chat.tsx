@@ -1,8 +1,9 @@
-import { Head, usePage } from '@inertiajs/react'
+import useAssistantName from '~/hooks/useAssistantName'
+import { Head } from '@inertiajs/react'
 import ChatComponent from '~/components/chat'
 
 export default function Chat(props: { settings: { chatSuggestionsEnabled: boolean } }) {
-  const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
+  const aiAssistantName = useAssistantName()
   return (
     <div className="w-full h-full">
       <Head title={aiAssistantName} />
