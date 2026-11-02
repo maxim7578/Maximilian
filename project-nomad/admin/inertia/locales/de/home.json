@@ -1,0 +1,62 @@
+{
+  "tiles": {
+    "maps": {
+      "label": "Karten",
+      "description": "Offline-Karten ansehen"
+    },
+    "drugReference": {
+      "label": "Arzneimittelreferenz",
+      "description": "Arzneimittelinformationen der FDA offline. Suche nach Medikamentenname oder Symptom"
+    },
+    "easySetup": {
+      "label": "Easy Setup",
+      "description": "Du weißt nicht, wo du anfangen sollst? Richte deinen NOMAD schnell mit dem Einrichtungsassistenten ein!"
+    },
+    "supplyDepot": {
+      "label": "Supply Depot",
+      "description": "Kuratierte Apps durchsuchen und installieren oder einen eigenen Docker-Container hinzufügen"
+    },
+    "docs": {
+      "label": "Doku",
+      "description": "Handbücher und Anleitungen zu Project NOMAD lesen"
+    },
+    "settings": {
+      "label": "Einstellungen",
+      "description": "Deinen NOMAD konfigurieren"
+    },
+    "serviceFallbackDescription": "Die Anwendung {{name}} öffnen",
+    "linkTileFallbackDescription": "Öffnet sich in einem neuen Tab",
+    "linkTileHint": "Eine Verknüpfung, die du hinzugefügt hast. NOMAD verwaltet sie nicht.",
+    "startHere": "Starte hier!",
+    "poweredBy": "Basiert auf {{name}}"
+  },
+  "linkTiles": {
+    "remove": "Entfernen",
+    "cancel": "Abbrechen",
+    "editLink": "Diesen Link bearbeiten",
+    "removeLink": "Diesen Link entfernen",
+    "removeFailed": "Der Link konnte nicht entfernt werden.",
+    "addTitle": "Link hinzufügen",
+    "addDescription": "Eine Verknüpfung zu etwas anderem in deinem Netzwerk"
+  },
+  "updateBanner": {
+    "title": "Für Project NOMAD ist ein Update verfügbar!",
+    "button": "Zu den Einstellungen"
+  },
+  "rerunBanner": {
+    "title": "Dein Benchmark kann mit Score v2 neu bewertet werden",
+    "message": "Wir haben das Bewertungssystem des Benchmarks überarbeitet. Führe deinen Benchmark erneut aus, um ein aktuelles Score-v2-Ergebnis für die Community-Rangliste zu erhalten.",
+    "button": "Benchmark erneut ausführen"
+  },
+  "whatsNew": {
+    "title": "Neu in v{{version}}",
+    "releaseNotes": "Versionshinweise ansehen",
+    "highlights": {
+      "creatorPacks": "Creator Packs – installiere kuratierte Videopakete deiner Lieblings-Creator und schau sie komplett offline an.",
+      "medicationReference": "Arzneimittelreferenz – schlage Arzneimittelinformationen der FDA offline nach, schnell und verlässlich.",
+      "benchmarkScoreV2": "Benchmark Score v2 – ein neu aufgebautes Bewertungsmodell mit Live-Telemetrie während des Tests; deinen Score siehst du am Ende.",
+      "nomadMd": "NOMAD.md – gib deinem KI-Assistenten dauerhafte Anweisungen, die er in jedem Gespräch befolgt.",
+      "knowledgeBaseCollections": "Sammlungen in der Wissensdatenbank – gruppiere nach Themen, was der Assistent durchsucht, damit die Antworten beim Thema bleiben."
+    }
+  }
+}

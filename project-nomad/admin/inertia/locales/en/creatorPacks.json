@@ -1,0 +1,34 @@
+{
+  "page": {
+    "intro": "Install branded video collections from creators. Packs download in the background and play offline through Kiwix.",
+    "notAvailable": "Creator Packs aren't available on this build."
+  },
+  "section": {
+    "subtitle": "Branded video collections from creators, for offline viewing",
+    "empty": "No creator packs available.",
+    "installStarted": "Started installing \"{{name}}\"",
+    "installError": "An error occurred while starting the install.",
+    "uninstalled": "Uninstalled \"{{name}}\"",
+    "uninstallError": "An error occurred while uninstalling.",
+    "installTitle": "Install {{name}}?",
+    "installTitleFallback": "Install Creator Pack",
+    "updatePack": "Update pack",
+    "installPack": "Install pack",
+    "installText": "{{videos}} videos from {{creator}}, about {{size}}. It will download in the background and appear in Kiwix when ready.",
+    "license": "Licensed content — personal use, not for redistribution.",
+    "viewLicense": "View license",
+    "uninstallTitle": "Uninstall {{name}}?",
+    "uninstallTitleFallback": "Uninstall Creator Pack",
+    "uninstallPack": "Uninstall pack",
+    "uninstallText": "This removes the downloaded videos ({{size}}) from this NOMAD. You can reinstall the pack anytime."
+  },
+  "card": {
+    "selected": "Selected",
+    "downloading": "Downloading",
+    "installed": "Installed",
+    "install": "Install",
+    "videos": "{{videos}} videos",
+    "updateAvailable": "Update available",
+    "uninstallPack": "Uninstall pack"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "tiles": {
+    "maps": {
+      "label": "Maps",
+      "description": "View offline maps"
+    },
+    "drugReference": {
+      "label": "Drug Reference",
+      "description": "Offline FDA drug labels. Search by drug name or by symptom"
+    },
+    "easySetup": {
+      "label": "Easy Setup",
+      "description": "Not sure where to start? Use the setup wizard to quickly configure your NOMAD!"
+    },
+    "supplyDepot": {
+      "label": "Supply Depot",
+      "description": "Browse and install curated apps, or add your own Docker container"
+    },
+    "docs": {
+      "label": "Docs",
+      "description": "Read Project NOMAD manuals and guides"
+    },
+    "settings": {
+      "label": "Settings",
+      "description": "Configure your NOMAD settings"
+    },
+    "serviceFallbackDescription": "Access the {{name}} application",
+    "linkTileFallbackDescription": "Opens in a new tab",
+    "linkTileHint": "A shortcut you added. NOMAD does not manage this.",
+    "startHere": "Start here!",
+    "poweredBy": "Powered by {{name}}"
+  },
+  "linkTiles": {
+    "remove": "Remove",
+    "cancel": "Cancel",
+    "editLink": "Edit this link",
+    "removeLink": "Remove this link",
+    "removeFailed": "Failed to remove this link.",
+    "addTitle": "Add a Link",
+    "addDescription": "A shortcut to something else on your network"
+  },
+  "updateBanner": {
+    "title": "An update is available for Project NOMAD!",
+    "button": "Go to Settings"
+  },
+  "rerunBanner": {
+    "title": "Your benchmark can be re-scored with Score v2",
+    "message": "We've upgraded the benchmark scoring system. Re-run your benchmark to get an updated Score v2 result on the community leaderboard.",
+    "button": "Re-run benchmark"
+  },
+  "whatsNew": {
+    "title": "What's new in v{{version}}",
+    "releaseNotes": "See release notes",
+    "highlights": {
+      "creatorPacks": "Creator Packs - install curated video packs from your favorite creators and watch them fully offline.",
+      "medicationReference": "Medication Reference - offline FDA drug-label lookup for quick, reliable medication information.",
+      "benchmarkScoreV2": "Benchmark Score v2 - a rebuilt scoring model, with live telemetry while the test runs and your score revealed at the end.",
+      "nomadMd": "NOMAD.md - give your AI assistant standing instructions it follows in every conversation.",
+      "knowledgeBaseCollections": "Knowledge Base collections - group what the assistant searches by subject, so answers stay on topic."
+    }
+  }
+}

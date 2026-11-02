@@ -1,0 +1,202 @@
+{
+  "pageTitle": "Easy Setup Wizard",
+  "steps": {
+    "progress": "Progress",
+    "apps": "Apps",
+    "maps": "Maps",
+    "content": "Content",
+    "creatorPacks": "Creator Packs",
+    "ai": "AI",
+    "review": "Review"
+  },
+  "capabilities": {
+    "information": {
+      "name": "Information Library",
+      "description": "Offline access to Wikipedia, medical references, how-to guides, and encyclopedias",
+      "features": {
+        "wikipedia": "Complete Wikipedia offline",
+        "medical": "Medical references and first aid guides",
+        "diy": "DIY repair guides and how-to content",
+        "gutenberg": "Project Gutenberg books and literature"
+      }
+    },
+    "education": {
+      "name": "Education Platform",
+      "description": "Interactive learning platform with video courses and exercises",
+      "features": {
+        "khanAcademy": "Khan Academy math and science courses",
+        "curriculum": "K-12 curriculum content",
+        "exercises": "Interactive exercises and quizzes",
+        "progress": "Progress tracking for learners"
+      }
+    },
+    "ai": {
+      "description": "Local AI chat that runs entirely on your hardware - no internet required",
+      "features": {
+        "private": "Private conversations that never leave your device",
+        "offline": "No internet connection needed after setup",
+        "help": "Ask questions, get help with writing, brainstorm ideas",
+        "localModels": "Runs on your own hardware with local AI models"
+      }
+    },
+    "installed": "Installed",
+    "poweredBy": "Powered by {{name}}",
+    "confirmDisableAi": "Turning off AI will discard your AI model picks, indexing policy, and remote Ollama configuration. Continue?"
+  },
+  "appsStep": {
+    "title": "What do you want NOMAD to do?",
+    "subtitle": "Select the capabilities you need. You can always add more later.",
+    "allInstalled": "All available capabilities are already installed!",
+    "manageApps": "Manage Apps",
+    "coreCapabilities": "Core Capabilities",
+    "useRemoteOllama": "Use remote Ollama instance",
+    "moreAppsTitle": "Looking for more apps?",
+    "moreAppsText": "Notes, data tools, and the full catalog of add-on apps are available any time in Supply Depot.",
+    "openSupplyDepot": "Open Supply Depot"
+  },
+  "mapsStep": {
+    "title": "Choose Map Regions",
+    "subtitle": "Select map region collections to download for offline use. You can always download more regions later.",
+    "mapsManagerHint": "Only need a specific country, or want the whole world? Individual countries and a full global map can be installed any time from the <link>Maps Manager</link>.",
+    "empty": "No map collections available at this time."
+  },
+  "contentStep": {
+    "title": "Choose Content",
+    "subtitleInformation": "Select content categories for offline knowledge.",
+    "subtitleOther": "Configure content for your selected capabilities.",
+    "additionalContent": "Additional Content",
+    "additionalContentText": "Curated collections for offline reference",
+    "noContentCapabilities": "No content-based capabilities selected. You can skip this step or go back to select capabilities that require content."
+  },
+  "creatorPacksStep": {
+    "title": "Stock Creator Packs",
+    "subtitle": "Branded video collections from creators, downloaded for offline viewing in Kiwix.",
+    "empty": "No creator packs available right now."
+  },
+  "aiStep": {
+    "title": "Configure {{name}}",
+    "subtitle": "Choose models to download and set how {{name}} handles new content.",
+    "modelsTitle": "AI Models",
+    "modelsText": "Select models to download for offline AI",
+    "remoteTitle": "Remote Ollama selected",
+    "remoteMessage": "Models are managed on the remote machine. You can add models from Settings > AI Assistant after setup, note this is only supported when using Ollama, not LM Studio and other OpenAI API software.",
+    "size": "Size: {{size}}",
+    "supportsImages": "Supports images",
+    "noModels": "No recommended AI models available at this time.",
+    "autoIndexTitle": "Auto-index new content for {{name}}?",
+    "autoIndexText": "When you add new ZIMs, documents, or curated content, should {{name}} index them automatically so it can search them while answering your questions?",
+    "always": "Yes, always",
+    "askFirst": "Ask me first",
+    "changeLater": "You can change this any time from the Knowledge Base panel inside AI Chat."
+  },
+  "reviewStep": {
+    "title": "Review Your Selections",
+    "subtitle": "Review your choices before starting the setup process.",
+    "noSelectionsTitle": "No Selections Made",
+    "noSelectionsMessage": "You haven't selected anything to install or download. You can go back to make selections or go back to the home page.",
+    "capabilitiesToInstall": "Capabilities to Install",
+    "mapCollections": "Map Collections to Download ({{number}})",
+    "creatorPacks": "Creator Packs to Install ({{number}})",
+    "contentCategories": "Content Categories ({{number}})",
+    "files_one": "({{count}} file)",
+    "files_other": "({{count}} files)",
+    "wikipedia": "Wikipedia",
+    "noDownload": "No download",
+    "sizeGb": "{{size}} GB",
+    "aiModels": "AI Models to Download ({{number}})",
+    "autoIndexSetting": "Auto-index Setting",
+    "autoIndexAlways": "New content will be <bold>indexed automatically</bold> as it arrives so {{name}} can search it.",
+    "autoIndexManual": "New content will <bold>wait for you to opt in</bold> from the Knowledge Base panel before {{name}} indexes it.",
+    "readyTitle": "Ready to Start",
+    "readyMessage": "Click 'Complete Setup' to begin installing apps and downloading content. This may take some time depending on your internet connection and the size of the downloads."
+  },
+  "summary": {
+    "capabilities_one": "{{count}} capability",
+    "capabilities_other": "{{count}} capabilities",
+    "mapRegions_one": "{{count}} map region",
+    "mapRegions_other": "{{count}} map regions",
+    "contentCategories_one": "{{count}} content category",
+    "contentCategories_other": "{{count}} content categories",
+    "creatorPacks_one": "{{count}} creator pack",
+    "creatorPacks_other": "{{count}} creator packs",
+    "aiModels_one": "{{count}} AI model",
+    "aiModels_other": "{{count}} AI models",
+    "selected": "{{items}} selected"
+  },
+  "navigation": {
+    "back": "Back",
+    "cancel": "Cancel & Go to Home",
+    "next": "Next",
+    "complete": "Complete Setup"
+  },
+  "offline": {
+    "title": "No Internet Connection",
+    "message": "You'll need an internet connection to proceed. Please connect to the internet and try again."
+  },
+  "notifications": {
+    "offlineFinish": "You must have an internet connection to complete the setup.",
+    "remoteOllamaFailed": "Failed to configure remote Ollama.",
+    "completed": "Setup wizard completed! Your selections are being processed.",
+    "error": "An error occurred during setup. Some items may not have been processed."
+  },
+  "complete": {
+    "pageTitle": "Easy Setup Wizard Complete",
+    "offlineMessage": "It looks like you're not connected to the internet. Installing apps and downloading content will require an internet connection.",
+    "installActivity": "App Installation Activity",
+    "backgroundTitle": "Running in the Background",
+    "backgroundMessage": "Feel free to leave this page at any time - your app installs and downloads will continue in the background! Please note, the Information Library (if installed) may be unavailable until all initial downloads complete.",
+    "goHome": "Go to Home"
+  },
+  "wikipedia": {
+    "title": "Wikipedia",
+    "subtitle": "Select your preferred Wikipedia package",
+    "downloadingMessage": "Downloading Wikipedia... This may take a while for larger packages.",
+    "failedMessage": "Wikipedia download failed. Select a package and try again.",
+    "installed": "Installed",
+    "selected": "Selected",
+    "downloading": "Downloading",
+    "failed": "Failed",
+    "noDownload": "No download",
+    "remove": "Remove Wikipedia",
+    "downloadSelected": "Download Selected"
+  },
+  "categoryCard": {
+    "indexing": " (indexing)",
+    "downloading": " (downloading)",
+    "tiersAvailable_one": "{{count}} tier available",
+    "tiersAvailable_other": "{{count}} tiers available",
+    "clickToChoose": " - Click to choose",
+    "size": "Size: {{min}} - {{max}}"
+  },
+  "collectionCard": {
+    "allDownloaded": "All items downloaded",
+    "meta": "Items: {{items}} | Size: {{size}}"
+  },
+  "tierModal": {
+    "intro": "Select a tier based on your storage capacity and needs. Higher tiers include all content from lower tiers.",
+    "includes": "(includes {{name}})",
+    "additionalResources_one": "{{count}} additional resource",
+    "additionalResources_other": "{{count}} additional resources",
+    "plusEverything": " (plus everything in {{name}})",
+    "resourcesIncluded_one": "{{count}} resource included",
+    "resourcesIncluded_other": "{{count}} resources included",
+    "embedEstimate": "<bold>+~{{size}}</bold> of additional storage if these are indexed for the AI Assistant",
+    "embedEstimateUnknown": " (estimate excludes some files we have no prior data for)",
+    "policyAlways": "Your <bold>Auto-index</bold> setting is <bold>Always</bold>, so these files will be indexed automatically once downloaded. You can change this in the Knowledge Base settings.",
+    "policyManual": "Your <bold>Auto-index</bold> setting is <bold>Manual</bold>, so these files will sit unindexed until you opt in from the Knowledge Base settings.",
+    "info": "You can change your selection at any time. Click Submit to confirm your choice.",
+    "submit": "Submit"
+  },
+  "storage": {
+    "title": "Storage",
+    "selectedSummary": "(+{{size}} selected)",
+    "current": "Current ({{size}})",
+    "selected": "Selected (+{{size}})",
+    "exceeds": "Exceeds available space by {{size}}",
+    "remaining": "{{size}} will remain free"
+  },
+  "disks": {
+    "nasStorage": "NAS Storage",
+    "unknown": "Unknown"
+  }
+}

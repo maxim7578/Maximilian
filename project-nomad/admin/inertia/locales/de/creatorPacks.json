@@ -1,0 +1,34 @@
+{
+  "page": {
+    "intro": "Installiere gebrandete Videosammlungen von Creators. Die Packs werden im Hintergrund heruntergeladen und offline über Kiwix abgespielt.",
+    "notAvailable": "Creator Packs sind in diesem Build nicht verfügbar."
+  },
+  "section": {
+    "subtitle": "Gebrandete Videosammlungen von Creators zum Offline-Ansehen",
+    "empty": "Keine Creator Packs verfügbar.",
+    "installStarted": "Installation von „{{name}}“ gestartet",
+    "installError": "Beim Starten der Installation ist ein Fehler aufgetreten.",
+    "uninstalled": "„{{name}}“ deinstalliert",
+    "uninstallError": "Beim Deinstallieren ist ein Fehler aufgetreten.",
+    "installTitle": "{{name}} installieren?",
+    "installTitleFallback": "Creator Pack installieren",
+    "updatePack": "Pack aktualisieren",
+    "installPack": "Pack installieren",
+    "installText": "{{videos}} Videos von {{creator}}, etwa {{size}}. Das Pack wird im Hintergrund heruntergeladen und erscheint in Kiwix, sobald es bereit ist.",
+    "license": "Lizenzierte Inhalte – nur für den privaten Gebrauch, keine Weitergabe.",
+    "viewLicense": "Lizenz ansehen",
+    "uninstallTitle": "{{name}} deinstallieren?",
+    "uninstallTitleFallback": "Creator Pack deinstallieren",
+    "uninstallPack": "Pack deinstallieren",
+    "uninstallText": "Damit werden die heruntergeladenen Videos ({{size}}) von diesem NOMAD entfernt. Du kannst das Pack jederzeit erneut installieren."
+  },
+  "card": {
+    "selected": "Ausgewählt",
+    "downloading": "Wird heruntergeladen",
+    "installed": "Installiert",
+    "install": "Installieren",
+    "videos": "{{videos}} Videos",
+    "updateAvailable": "Update verfügbar",
+    "uninstallPack": "Pack deinstallieren"
+  }
+}

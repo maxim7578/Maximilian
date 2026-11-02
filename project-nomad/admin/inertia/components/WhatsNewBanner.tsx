@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { router, usePage } from '@inertiajs/react'
 import Alert from '~/components/Alert'
+import { useTranslation } from 'react-i18next'
 
 /**
  * Post-upgrade "what's new" highlights shown once on the dashboard.
@@ -11,19 +12,12 @@ import Alert from '~/components/Alert'
  * disappears on the next minor. Dismissal is remembered per-line in
  * localStorage, so dismissing v1.34 won't suppress a future v1.35 note.
  *
- * To surface a new release's highlights: bump `version` and replace
- * `highlights`. No schema or migration needed.
+ * To surface a new release's highlights: bump `version` and replace the
+ * highlight texts in `WhatsNewBanner` (keys under `home:whatsNew.highlights` in
+ * inertia/locales/<language>/home.json). No schema or migration needed.
  */
 const WHATS_NEW = {
   version: '1.34',
-  title: "What's new in v1.34",
-  highlights: [
-    'Creator Packs - install curated video packs from your favorite creators and watch them fully offline.',
-    'Medication Reference - offline FDA drug-label lookup for quick, reliable medication information.',
-    'Benchmark Score v2 - a rebuilt scoring model, with live telemetry while the test runs and your score revealed at the end.',
-    'NOMAD.md - give your AI assistant standing instructions it follows in every conversation.',
-    'Knowledge Base collections - group what the assistant searches by subject, so answers stay on topic.',
-  ],
 }
 
 /** Extract the major.minor line (e.g. "1.34.2" -> "1.34"). Returns null for
@@ -34,6 +28,7 @@ function majorMinor(version: string | undefined | null): string | null {
 }
 
 export default function WhatsNewBanner() {
+  const { t } = useTranslation()
   const { appVersion } = usePage<{ appVersion: string }>().props
   const storageKey = `nomad:whatsnew-dismissed:${WHATS_NEW.version}`
 
@@ -61,10 +56,18 @@ export default function WhatsNewBanner() {
     }
   }
 
+  const highlights = [
+    t('home:whatsNew.highlights.creatorPacks'),
+    t('home:whatsNew.highlights.medicationReference'),
+    t('home:whatsNew.highlights.benchmarkScoreV2'),
+    t('home:whatsNew.highlights.nomadMd'),
+    t('home:whatsNew.highlights.knowledgeBaseCollections'),
+  ]
+
   return (
     <div className="flex justify-center items-center p-4 w-full">
       <Alert
-        title={WHATS_NEW.title}
+        title={t('home:whatsNew.title', { version: WHATS_NEW.version })}
         type="info-inverted"
         variant="solid"
         className="w-full"
@@ -72,13 +75,13 @@ export default function WhatsNewBanner() {
         onDismiss={handleDismiss}
         buttonProps={{
           variant: 'primary',
-          children: 'See release notes',
+          children: t('home:whatsNew.releaseNotes'),
           icon: 'IconBook',
           onClick: () => router.visit('/docs/release-notes'),
         }}
       >
         <ul className="mt-1 list-disc list-inside space-y-1 text-white text-opacity-90 text-sm leading-relaxed">
-          {WHATS_NEW.highlights.map((highlight) => (
+          {highlights.map((highlight) => (
             <li key={highlight}>{highlight}</li>
           ))}
         </ul>
