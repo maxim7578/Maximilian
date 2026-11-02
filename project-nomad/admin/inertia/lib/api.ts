@@ -1,3 +1,4 @@
+import i18n from '~/i18n'
 import axios, { AxiosError, AxiosInstance } from 'axios'
 import {
   ListCatalogLanguagesResponse,
@@ -989,12 +990,12 @@ class API {
     } catch (error: any) {
       // For 409 Conflict errors, throw a specific error that the UI can handle
       if (error.response?.status === 409) {
-        const err = new Error(error.response?.data?.error || 'This benchmark has already been submitted to the repository')
+        const err = new Error(error.response?.data?.error || i18n.t('common:errors.benchmarkAlreadySubmitted'))
           ; (err as any).status = 409
         throw err
       }
       // For other errors, extract the message and throw
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to submit benchmark'
+      const errorMessage = error.response?.data?.error || error.message || i18n.t('common:errors.benchmarkSubmitFailed')
       throw new Error(errorMessage)
     }
   }

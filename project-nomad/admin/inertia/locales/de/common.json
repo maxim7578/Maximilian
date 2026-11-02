@@ -1,0 +1,64 @@
+{
+  "language": {
+    "label": "Sprache",
+    "switchTo": "Sprache auf {{language}} umstellen",
+    "names": {
+      "de": "Deutsch",
+      "en": "English"
+    }
+  },
+  "theme": {
+    "day": "Tagmodus",
+    "night": "Nachtmodus",
+    "switchToDay": "Zum Tagmodus wechseln",
+    "switchToNight": "Zum Nachtmodus wechseln"
+  },
+  "actions": {
+    "cancel": "Abbrechen",
+    "confirm": "Bestätigen",
+    "dismissAlert": "Hinweis schließen",
+    "moreInformation": "Weitere Informationen",
+    "expandRow": "Zeile aufklappen",
+    "collapseRow": "Zeile zuklappen",
+    "openMenu": "Menü öffnen",
+    "closeSidebar": "Seitenleiste schließen"
+  },
+  "status": {
+    "loading": "Wird geladen",
+    "loadingEllipsis": "Wird geladen …",
+    "noRecords": "Keine Einträge gefunden"
+  },
+  "layout": {
+    "backToHome": "Zurück zur Startseite",
+    "logoAlt": "Project-NOMAD-Logo",
+    "debugInfo": "Debug-Infos",
+    "settings": "Einstellungen",
+    "documentation": "Dokumentation"
+  },
+  "settingsNav": {
+    "supplyDepot": "Supply Depot",
+    "benchmark": "Benchmark",
+    "contentExplorer": "Inhalte entdecken",
+    "contentManager": "Inhalte verwalten",
+    "creatorPacks": "Creator Packs",
+    "mapsManager": "Karten verwalten",
+    "serviceLogs": "Dienst-Logs & Messwerte",
+    "checkForUpdates": "Nach Updates suchen",
+    "system": "System",
+    "advanced": "Erweitert",
+    "apiReference": "API-Referenz",
+    "support": "Projekt unterstützen",
+    "legal": "Rechtliche Hinweise"
+  },
+  "errors": {
+    "notFoundTitle": "Seite nicht gefunden",
+    "notFoundText": "Diese Seite gibt es nicht.",
+    "serverErrorTitle": "Serverfehler",
+    "internal": "Ein interner Fehler ist aufgetreten. Bitte versuch es erneut oder sieh in der Konsole nach Details. {{details}}",
+    "benchmarkAlreadySubmitted": "Dieser Benchmark wurde bereits an die Rangliste übermittelt",
+    "benchmarkSubmitFailed": "Benchmark konnte nicht übermittelt werden"
+  },
+  "about": {
+    "greeting": "Hallo von der Info-Seite!"
+  }
+}

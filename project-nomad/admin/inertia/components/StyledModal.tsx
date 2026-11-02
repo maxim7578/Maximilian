@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Dialog, DialogBackdrop, DialogPanel, DialogTitle } from '@headlessui/react'
 import StyledButton, { StyledButtonProps } from './StyledButton'
 import React from 'react'
@@ -27,10 +28,10 @@ const StyledModal: React.FC<StyledModalProps> = ({
   title,
   open,
   onClose,
-  cancelText = 'Cancel',
+  cancelText,
   cancelIcon,
   cancelLoading = false,
-  confirmText = 'Confirm',
+  confirmText,
   confirmIcon,
   confirmVariant = 'action',
   confirmLoading = false,
@@ -40,6 +41,9 @@ const StyledModal: React.FC<StyledModalProps> = ({
   icon,
   large = false,
 }) => {
+  const { t } = useTranslation()
+  const cancelLabel = cancelText ?? t('common:actions.cancel')
+  const confirmLabel = confirmText ?? t('common:actions.confirm')
   return (
     <Dialog
       open={open}
@@ -76,7 +80,7 @@ const StyledModal: React.FC<StyledModalProps> = ({
               </div>
             </div>
             <div className="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
-              {cancelText && onCancel && (
+              {cancelLabel && onCancel && (
                 <StyledButton
                   variant="outline"
                   onClick={() => {
@@ -85,10 +89,10 @@ const StyledModal: React.FC<StyledModalProps> = ({
                   icon={cancelIcon}
                   loading={cancelLoading}
                 >
-                  {cancelText}
+                  {cancelLabel}
                 </StyledButton>
               )}
-              {confirmText && onConfirm && (
+              {confirmLabel && onConfirm && (
                 <StyledButton
                   variant={confirmVariant}
                   onClick={() => {
@@ -98,7 +102,7 @@ const StyledModal: React.FC<StyledModalProps> = ({
                   loading={confirmLoading}
                   disabled={confirmDisabled}
                 >
-                  {confirmText}
+                  {confirmLabel}
                 </StyledButton>
               )}
             </div>

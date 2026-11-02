@@ -6,6 +6,8 @@ import { Link, usePage } from '@inertiajs/react'
 import { UsePageProps } from '../../types/system'
 import { IconMenu2, IconX } from '@tabler/icons-react'
 import ThemeToggle from '~/components/ThemeToggle'
+import LanguageSwitcher from '~/components/LanguageSwitcher'
+import { useTranslation } from 'react-i18next'
 import DebugInfoModal from './DebugInfoModal'
 
 type SidebarItem = {
@@ -22,6 +24,7 @@ interface StyledSidebarProps {
 }
 
 const StyledSidebar: React.FC<StyledSidebarProps> = ({ title, items }) => {
+  const { t } = useTranslation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [debugModalOpen, setDebugModalOpen] = useState(false)
   const { appVersion } = usePage().props as unknown as UsePageProps
@@ -63,7 +66,7 @@ const StyledSidebar: React.FC<StyledSidebarProps> = ({ title, items }) => {
     return (
       <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-desert-sand px-6 ring-1 ring-white/5 pt-4 shadow-md">
         <div className="flex h-16 shrink-0 items-center">
-          <img src="/nomad-primary.svg" alt="Project NOMAD Logo" className="h-16 w-16 object-contain" />
+          <img src="/nomad-primary.svg" alt={t('common:layout.logoAlt')} className="h-16 w-16 object-contain" />
           <h1 className="ml-3 text-xl font-semibold text-text-primary">{title}</h1>
         </div>
         <nav className="flex flex-1 flex-col">
@@ -79,7 +82,7 @@ const StyledSidebar: React.FC<StyledSidebarProps> = ({ title, items }) => {
                     className="flex flex-row items-center gap-x-3 text-desert-green text-sm font-semibold"
                   >
                     <IconArrowLeft aria-hidden="true" className="size-6 shrink-0" />
-                    Back to Home
+                    {t('common:layout.backToHome')}
                   </Link>
                 </li>
               </ul>
@@ -93,9 +96,10 @@ const StyledSidebar: React.FC<StyledSidebarProps> = ({ title, items }) => {
             className="text-gray-500 hover:text-desert-green inline-flex items-center gap-1 cursor-pointer"
           >
             <IconBug className="size-3.5" />
-            Debug Info
+            {t('common:layout.debugInfo')}
           </button>
           <ThemeToggle />
+          <LanguageSwitcher />
         </div>
       </div>
     )
@@ -107,6 +111,7 @@ const StyledSidebar: React.FC<StyledSidebarProps> = ({ title, items }) => {
         type="button"
         className="absolute left-4 top-4 z-50 xl:hidden"
         onClick={() => setSidebarOpen(true)}
+        aria-label={t('common:actions.openMenu')}
       >
         <IconMenu2 aria-hidden="true" className="size-8" />
       </button>
@@ -129,7 +134,7 @@ const StyledSidebar: React.FC<StyledSidebarProps> = ({ title, items }) => {
                   onClick={() => setSidebarOpen(false)}
                   className="-m-2.5 p-2.5"
                 >
-                  <span className="sr-only">Close sidebar</span>
+                  <span className="sr-only">{t('common:actions.closeSidebar')}</span>
                   <IconX aria-hidden="true" className="size-6 text-white" />
                 </button>
               </div>

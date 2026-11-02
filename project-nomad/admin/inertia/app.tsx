@@ -1,4 +1,5 @@
 import './css/app.css'
+import './i18n'
 import { createRoot } from 'react-dom/client'
 import { createInertiaApp, type ResolvedComponent } from '@inertiajs/react'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'

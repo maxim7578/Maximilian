@@ -7,6 +7,7 @@ import { SERVICE_NAMES } from '../../constants/service_names'
 import { Link, router } from '@inertiajs/react'
 import { IconArrowLeft } from '@tabler/icons-react'
 import classNames from 'classnames'
+import { useTranslation } from 'react-i18next'
 
 export default function AppLayout({
   children,
@@ -20,6 +21,7 @@ export default function AppLayout({
    */
   compact?: boolean
 }) {
+  const { t } = useTranslation()
   const [isChatOpen, setIsChatOpen] = useState(false)
   const aiAssistantInstalled = useServiceInstalledStatus(SERVICE_NAMES.OLLAMA)
 
@@ -35,7 +37,7 @@ export default function AppLayout({
             )}
           >
             <IconArrowLeft className="mr-2" size={24} />
-            <p className="text-lg text-text-secondary">Back to Home</p>
+            <p className="text-lg text-text-secondary">{t('common:layout.backToHome')}</p>
           </Link>
         )}
       <div
@@ -47,7 +49,7 @@ export default function AppLayout({
       >
         <img
           src="/nomad-primary.svg"
-          alt="Project NOMAD Logo"
+          alt={t('common:layout.logoAlt')}
           className={compact ? 'h-12 w-12 object-contain' : 'h-40 w-40 object-contain'}
         />
         <h1
