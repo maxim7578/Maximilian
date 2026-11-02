@@ -3,6 +3,7 @@ import { ServiceSlim } from "../../types/services"
 import StyledModal from "./StyledModal"
 import { IconArrowUp } from "@tabler/icons-react"
 import api from "~/lib/api"
+import { Trans, useTranslation } from "react-i18next"
 
 
 interface UpdateServiceModalProps {
@@ -22,6 +23,7 @@ export default function UpdateServiceModal({
     onUpdate,
     showError,
 }: UpdateServiceModalProps) {
+    const { t } = useTranslation()
     const [selectedVersion, setSelectedVersion] = useState(latestVersion)
     const [showAdvanced, setShowAdvanced] = useState(false)
     const [versions, setVersions] = useState<Array<{ tag: string; isLatest: boolean; releaseUrl?: string }>>([])
@@ -36,7 +38,7 @@ export default function UpdateServiceModal({
                 setVersions(result.versions)
             }
         } catch (error) {
-            showError('Failed to load available versions')
+            showError(t('apps:updateServiceModal.loadVersionsFailed'))
         } finally {
             setLoadingVersions(false)
         }
@@ -50,23 +52,32 @@ export default function UpdateServiceModal({
 
     return (
         <StyledModal
-            title="Update Service"
+            title={t('apps:updateServiceModal.title')}
             onConfirm={() => onUpdate(selectedVersion)}
             onCancel={onCancel}
             open={true}
-            confirmText="Update"
-            cancelText="Cancel"
+            confirmText={t('apps:actions.update')}
+            cancelText={t('apps:actions.cancel')}
             confirmVariant="primary"
             icon={<IconArrowUp className="h-12 w-12 text-desert-green" />}
         >
             <div className="space-y-4">
                 <p className="text-text-primary">
-                    Update <strong>{record.friendly_name || record.service_name}</strong> from{' '}
-                    <code className="bg-surface-secondary px-1.5 py-0.5 rounded text-sm">{currentTag}</code> to{' '}
-                    <code className="bg-surface-secondary px-1.5 py-0.5 rounded text-sm">{selectedVersion}</code>?
+                    <Trans
+                        i18nKey="apps:updateServiceModal.question"
+                        values={{
+                            name: record.friendly_name || record.service_name,
+                            current: currentTag,
+                            target: selectedVersion,
+                        }}
+                        components={{
+                            bold: <strong />,
+                            code: <code className="bg-surface-secondary px-1.5 py-0.5 rounded text-sm" />,
+                        }}
+                    />
                 </p>
                 <p className="text-sm text-text-muted">
-                    Your data and configuration will be preserved during the update.
+                    {t('apps:updateServiceModal.preserved')}
                     {versions.find((v) => v.tag === selectedVersion)?.releaseUrl && (
                         <>
                             {' '}
@@ -76,7 +87,7 @@ export default function UpdateServiceModal({
                                 rel="noopener noreferrer"
                                 className="text-desert-green hover:underline"
                             >
-                                View release notes
+                                {t('apps:updateServiceModal.viewReleaseNotes')}
                             </a>
                         </>
                     )}
@@ -88,16 +99,16 @@ export default function UpdateServiceModal({
                         onClick={handleToggleAdvanced}
                         className="text-sm text-desert-green hover:underline font-medium"
                     >
-                        {showAdvanced ? 'Hide' : 'Show'} available versions
+                        {showAdvanced ? t('apps:updateServiceModal.hideVersions') : t('apps:updateServiceModal.showVersions')}
                     </button>
 
                     {showAdvanced && (
                         <>
                             <div className="mt-3 max-h-48 overflow-y-auto border rounded-lg divide-y">
                                 {loadingVersions ? (
-                                    <div className="p-4 text-center text-text-muted text-sm">Loading versions...</div>
+                                    <div className="p-4 text-center text-text-muted text-sm">{t('apps:updateServiceModal.loadingVersions')}</div>
                                 ) : versions.length === 0 ? (
-                                    <div className="p-4 text-center text-text-muted text-sm">No other versions available</div>
+                                    <div className="p-4 text-center text-text-muted text-sm">{t('apps:updateServiceModal.noVersions')}</div>
                                 ) : (
                                     versions.map((v) => (
                                         <label
@@ -115,7 +126,7 @@ export default function UpdateServiceModal({
                                             <span className="text-sm font-medium text-text-primary">{v.tag}</span>
                                             {v.isLatest && (
                                                 <span className="text-xs bg-desert-green/10 text-desert-green px-2 py-0.5 rounded-full">
-                                                    Latest
+                                                    {t('apps:updateServiceModal.latest')}
                                                 </span>
                                             )}
                                             {v.releaseUrl && (
@@ -126,7 +137,7 @@ export default function UpdateServiceModal({
                                                     className="ml-auto text-xs text-desert-green hover:underline"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    Release notes
+                                                    {t('apps:updateServiceModal.releaseNotes')}
                                                 </a>
                                             )}
                                         </label>
@@ -134,7 +145,7 @@ export default function UpdateServiceModal({
                                 )}
                             </div>
                             <p className="mt-2 text-sm text-text-muted">
-                                It's not recommended to upgrade to a new major version (e.g. 1.8.2 &rarr; 2.0.0) unless you have verified compatibility with your current configuration. Always review the release notes and test in a staging environment if possible.
+                                {t('apps:updateServiceModal.majorWarning')}
                             </p>
                         </>
                     )}

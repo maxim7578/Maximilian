@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import StyledModal from './StyledModal'
 import { formatBytes } from '~/lib/util'
 import api from '~/lib/api'
+import { formatNumber } from '~/i18n'
+import { useTranslation } from 'react-i18next'
 
 interface Stats {
   cpuPercent: number
@@ -37,6 +39,10 @@ function Bar({ percent, label, value }: { percent: number; label: string; value:
   )
 }
 
+function formatPercent(value: number): string {
+  return formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+}
+
 /** Polls and displays live CPU/memory usage for a running service container. */
 export default function ServiceStatsModal({
   serviceName,
@@ -44,6 +50,7 @@ export default function ServiceStatsModal({
   open,
   onClose,
 }: ServiceStatsModalProps) {
+  const { t } = useTranslation()
   const [stats, setStats] = useState<Stats | null>(null)
   const [running, setRunning] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -71,29 +78,29 @@ export default function ServiceStatsModal({
 
   return (
     <StyledModal
-      title={`Stats — ${friendlyName}`}
+      title={t('apps:serviceStatsModal.title', { name: friendlyName })}
       open={open}
       onCancel={onClose}
-      cancelText="Close"
+      cancelText={t('apps:actions.close')}
     >
       <div className="space-y-4 text-sm">
         {!running ? (
           <p className="text-text-muted text-center py-6">
-            This app is not running. Start it to see live resource usage.
+            {t('apps:serviceStatsModal.notRunning')}
           </p>
         ) : !stats ? (
           <p className="text-text-muted text-center py-6">
-            {loading ? 'Loading…' : 'No stats available.'}
+            {loading ? t('apps:status.loading') : t('apps:serviceStatsModal.noStats')}
           </p>
         ) : (
           <>
-            <Bar label="CPU" percent={stats.cpuPercent} value={`${stats.cpuPercent.toFixed(1)}%`} />
+            <Bar label="CPU" percent={stats.cpuPercent} value={`${formatPercent(stats.cpuPercent)}%`} />
             <Bar
-              label="Memory"
+              label={t('apps:serviceStatsModal.memory')}
               percent={stats.memPercent}
-              value={`${formatBytes(stats.memUsageBytes)} / ${formatBytes(stats.memLimitBytes)} (${stats.memPercent.toFixed(1)}%)`}
+              value={`${formatBytes(stats.memUsageBytes)} / ${formatBytes(stats.memLimitBytes)} (${formatPercent(stats.memPercent)}%)`}
             />
-            <p className="text-xs text-text-muted">Updates every 2 seconds.</p>
+            <p className="text-xs text-text-muted">{t('apps:serviceStatsModal.interval')}</p>
           </>
         )}
       </div>
