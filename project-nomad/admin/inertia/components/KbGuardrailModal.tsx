@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Dialog, Transition } from '@headlessui/react'
 import { IconAlertTriangle, IconX } from '@tabler/icons-react'
 import { formatBytes } from '~/lib/util'
@@ -25,6 +26,7 @@ export default function KbGuardrailModal({
   onConfirm,
   onCancel,
 }: KbGuardrailModalProps) {
+  const { t } = useTranslation()
   // The primary number to surface — every triggered reason carries the same
   // estimateBytes, so just grab the first one. `0` is a defensive fallback
   // for the (impossible-by-construction) "open with empty verdict" case.
@@ -62,13 +64,13 @@ export default function KbGuardrailModal({
                   <div className="flex items-start gap-3">
                     <IconAlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-300 flex-shrink-0 mt-0.5" />
                     <Dialog.Title className="text-lg font-semibold text-text-primary">
-                      Confirm large AI indexing operation
+                      {t('knowledgeBase:guardrail.title')}
                     </Dialog.Title>
                   </div>
                   <button
                     onClick={onCancel}
                     className="text-text-muted hover:text-text-primary transition-colors flex-shrink-0"
-                    aria-label="Cancel"
+                    aria-label={t('knowledgeBase:guardrail.cancel')}
                   >
                     <IconX size={20} />
                   </button>
@@ -76,27 +78,35 @@ export default function KbGuardrailModal({
 
                 <div className="px-6 py-5 space-y-3">
                   <p className="text-text-primary text-sm">
-                    Indexing this batch for the AI Assistant will use approximately{' '}
-                    <strong>{formatBytes(estimateBytes, 1)}</strong> of disk space for embeddings, on top of the raw downloads.
+                    <Trans
+                      i18nKey="knowledgeBase:guardrail.estimate"
+                      values={{ size: formatBytes(estimateBytes, 1) }}
+                      components={{ bold: <strong /> }}
+                    />
                   </p>
 
                   {freeReason && (
                     <p className="text-text-secondary text-sm">
-                      That's more than 10% of your remaining free disk space ({formatBytes(freeReason.freeBytes, 1)} free). Embedding can take several hours and is hard to interrupt cleanly once started.
+                      {t('knowledgeBase:guardrail.freeDisk', {
+                        free: formatBytes(freeReason.freeBytes, 1),
+                      })}
                     </p>
                   )}
 
                   <p className="text-text-secondary text-sm">
-                    If you'd rather review per-item before indexing, cancel here and switch your Auto-index setting to <strong>Manual</strong> from the Knowledge Base panel.
+                    <Trans
+                      i18nKey="knowledgeBase:guardrail.manualHint"
+                      components={{ bold: <strong /> }}
+                    />
                   </p>
                 </div>
 
                 <div className="bg-surface-secondary px-6 py-4 flex justify-end gap-3">
                   <StyledButton variant="outline" size="md" onClick={onCancel}>
-                    Cancel
+                    {t('knowledgeBase:guardrail.cancel')}
                   </StyledButton>
                   <StyledButton variant="primary" size="md" onClick={onConfirm}>
-                    Proceed anyway
+                    {t('knowledgeBase:guardrail.proceed')}
                   </StyledButton>
                 </div>
               </Dialog.Panel>

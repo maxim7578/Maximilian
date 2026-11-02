@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 
 interface CollectionComboboxProps {
   /** Current value. Empty string means "Uncategorized". */
@@ -31,11 +32,12 @@ export default function CollectionCombobox({
   value,
   onChange,
   options,
-  placeholder = 'Uncategorized',
+  placeholder,
   allowUncategorized = true,
   className = '',
   disabled = false,
 }: CollectionComboboxProps) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState(value)
   const [isOpen, setIsOpen] = useState(false)
   // Whether the user has typed since the popover opened. The input is
@@ -150,7 +152,7 @@ export default function CollectionCombobox({
             setUserTyped(false)
           }
         }}
-        placeholder={placeholder}
+        placeholder={placeholder ?? t('knowledgeBase:collectionCombobox.uncategorized')}
         className="w-full rounded border border-border-subtle bg-surface-primary px-2 py-1 text-sm text-text-primary disabled:opacity-50"
       />
       {isOpen && !disabled && position && createPortal(
@@ -165,7 +167,7 @@ export default function CollectionCombobox({
               className="block w-full text-left px-2 py-1.5 text-sm text-text-secondary hover:bg-surface-secondary"
               onClick={() => commit('')}
             >
-              Uncategorized
+              {t('knowledgeBase:collectionCombobox.uncategorized')}
             </button>
           )}
           {filtered.map((opt) => (
@@ -184,11 +186,13 @@ export default function CollectionCombobox({
               className="block w-full text-left px-2 py-1.5 text-sm text-desert-green font-medium hover:bg-surface-secondary border-t border-border-subtle"
               onClick={() => commit(query.trim().toLowerCase())}
             >
-              + Create "{query.trim().toLowerCase()}"
+              {t('knowledgeBase:collectionCombobox.create', { name: query.trim().toLowerCase() })}
             </button>
           )}
           {filtered.length === 0 && !showCreateOption && (
-            <div className="px-2 py-1.5 text-sm text-text-muted">No matches</div>
+            <div className="px-2 py-1.5 text-sm text-text-muted">
+              {t('knowledgeBase:collectionCombobox.noMatches')}
+            </div>
           )}
         </div>,
         document.body

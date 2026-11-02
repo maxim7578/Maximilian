@@ -1,5 +1,6 @@
 import type { KbIngestStateValue } from '../../types/kb_ingest_state.js'
 import type { StoredFileInfo } from '../../types/rag.js'
+import { tk } from '../i18n/language.js'
 
 /**
  * Knowledge-base files come back as a list of `{source, state, chunksEmbedded}`
@@ -32,13 +33,27 @@ export function sourceToDisplayName(source: string): string {
   return parts[parts.length - 1] || source
 }
 
+/**
+ * Display label of a collapsed admin-docs row or a KB-collection header row.
+ * `key` is a translation key (plural by `count`); `name` is the collection tag
+ * (user data, interpolated as is). Render with `t(label.key, label)`.
+ */
+export type KbFileGroupLabel =
+  | { key: 'knowledgeBase:fileGroups.adminDocs'; count: number }
+  | { key: 'knowledgeBase:fileGroups.uncategorized'; count: number }
+  | { key: 'knowledgeBase:fileGroups.collection'; count: number; name: string }
+
 export interface KbFileGroup {
   bucket: KbFileBucket
   /** Source path used as the row's stable React key. For collapsed admin docs
    * or a KB-collection header this is a synthetic marker; individual file
    * paths live in `members`. */
   source: string
+  /** File name for individual file rows. For grouped rows (admin docs, KB-collection
+   * headers) it is the collection tag or an empty string; render `label` instead. */
   displayName: string
+  /** Translatable label for grouped rows; undefined for individual file rows. */
+  label?: KbFileGroupLabel
   /** Number of underlying files this row represents (1 for non-collapsed). */
   count: number
   /** All member source paths — populated for collapsed groups, empty otherwise. */
@@ -162,7 +177,8 @@ export function groupAndSortKbFiles(
       groups.push({
         bucket,
         source: '__admin_docs_group__',
-        displayName: `Project NOMAD documentation · ${members.length} file${members.length === 1 ? '' : 's'}`,
+        displayName: '',
+        label: { key: tk('knowledgeBase:fileGroups.adminDocs'), count: members.length },
         count: members.length,
         members: members.map((m) => m.source),
         state: null,
@@ -197,7 +213,14 @@ export function groupAndSortKbFiles(
       for (const key of collectionKeys) {
         const groupMembers = byCollection.get(key)!
         const collectionName = key === UNCATEGORIZED_COLLECTION_KEY ? null : key
-        const label = collectionName ?? 'Uncategorized'
+        const label: KbFileGroupLabel =
+          collectionName === null
+            ? { key: tk('knowledgeBase:fileGroups.uncategorized'), count: groupMembers.length }
+            : {
+                key: tk('knowledgeBase:fileGroups.collection'),
+                count: groupMembers.length,
+                name: collectionName,
+              }
         const activeCount = groupMembers.filter((m) => m.active).length
         const collectionActiveState: KbFileGroup['collectionActiveState'] =
           activeCount === 0
@@ -209,7 +232,8 @@ export function groupAndSortKbFiles(
         groups.push({
           bucket,
           source: collectionHeaderKey(key),
-          displayName: `${label} · ${groupMembers.length} file${groupMembers.length === 1 ? '' : 's'}`,
+          displayName: collectionName ?? '',
+          label,
           count: groupMembers.length,
           members: groupMembers.map((m) => m.source),
           state: null,

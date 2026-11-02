@@ -1,0 +1,238 @@
+{
+  "modal": {
+    "title": "Wissensdatenbank",
+    "assistantFallback": "KI-Assistent",
+    "qdrantOffline": "<bold>Wissensdatenbank nicht verfügbar:</bold> Die Qdrant-Vektordatenbank ist offline.",
+    "startingQdrant": "Wird gestartet …",
+    "startQdrant": "Qdrant starten",
+    "collectionLabel": "Sammlung:",
+    "upload": "Hochladen",
+    "why": {
+      "title": "Warum Dokumente in deine Wissensdatenbank hochladen?",
+      "assistantTitle": "Wissensdatenbank-Anbindung für {{name}}",
+      "assistantBody": "Wenn du Dokumente in deine Wissensdatenbank hochlädst, verarbeitet und bettet NOMAD den Inhalt ein und macht ihn so direkt für {{name}} zugänglich. Dadurch kann {{name}} in Unterhaltungen auf deine eigenen Dokumente zurückgreifen und genauere, persönlichere Antworten auf Basis deiner hochgeladenen Daten geben.",
+      "ocrTitle": "Bessere Dokumentverarbeitung mit OCR",
+      "ocrBody": "NOMAD bringt eine eingebaute Texterkennung (OCR) mit und kann so Text aus bildbasierten Dokumenten wie gescannten PDFs oder Fotos auslesen. Selbst wenn deine Dokumente nicht in einem üblichen Textformat vorliegen, kann NOMAD ihren Inhalt verarbeiten und für die KI einbetten.",
+      "libraryTitle": "Anbindung der Informationsbibliothek",
+      "libraryBody": "NOMAD findet automatisch alle Inhalte, die du in deiner Informationsbibliothek speicherst (falls installiert), liest sie aus und stellt sie {{name}} sofort ohne weitere Schritte zur Verfügung."
+    },
+    "policy": {
+      "question": "Neue Inhalte automatisch für die KI indexieren?",
+      "hint": "Indexierte Inhalte belegen auf der Festplatte meist das 5- bis 10-Fache der ursprünglichen Dateigröße. Änderungen gelten für Inhalte, die nach dem Ändern dieser Einstellung hinzukommen.",
+      "ariaLabel": "Indexierungsrichtlinie",
+      "always": "Immer",
+      "manual": "Manuell"
+    },
+    "queue": {
+      "cleanUpFailed": "Fehlgeschlagene entfernen",
+      "cancelAll": "Alle Jobs abbrechen",
+      "cancelAllTitle": "Stoppt und entfernt alle Embedding-Jobs unabhängig von ihrem Status, auch hängende oder laufende. Löscht die hochgeladenen Quelldateien dieser Jobs."
+    },
+    "stored": {
+      "title": "Gespeicherte Dateien der Wissensdatenbank",
+      "searchIn": "Suchen in:",
+      "all": "Alle",
+      "uncategorized": "Ohne Kategorie",
+      "manageCollections": "Sammlungen verwalten",
+      "resetRebuild": "Zurücksetzen & neu aufbauen",
+      "resetRebuildTitle": "Löscht die gesamte Embedding-Sammlung und bettet alles von Grund auf neu ein. Entfernt Vektoren von Dateien, die nicht mehr auf der Festplatte liegen, endgültig. Destruktiv: Zur Bestätigung musst du RESET eintippen.",
+      "reembedAll": "Alle neu einbetten",
+      "reembedAllTitle": "Bettet jede Datei auf der Festplatte neu ein und ersetzt die vorhandenen Vektoren Datei für Datei. Vektoren von Dateien, die nicht mehr auf der Festplatte liegen, bleiben erhalten. Nutze das, wenn sich der Chunker oder das Embedding-Modell geändert hat.",
+      "syncStorage": "Speicher synchronisieren",
+      "syncStorageTitle": "Durchsucht den Speicher nach neuen Dateien und reiht alle ein, die noch nicht eingebettet sind. Jederzeit sicher; bereits eingebettete Inhalte bleiben unberührt.",
+      "warningsUnavailable": "Dateiwarnungen nicht verfügbar – der Speicherstatus konnte nicht gelesen werden. Neuer Versuch …"
+    },
+    "columns": {
+      "fileName": "Dateiname",
+      "size": "Größe",
+      "uploaded": "Hochgeladen",
+      "collection": "Sammlung",
+      "active": "Aktiv"
+    },
+    "state": {
+      "indexed": "Indexiert",
+      "notIndexed": "Nicht indexiert",
+      "failed": "Fehlgeschlagen",
+      "stalled": "Hängt"
+    },
+    "warnings": {
+      "zeroChunks": "0 Chunks eingebettet – diese Datei enthält keinen Text. Der KI-Assistent kann sie nicht nutzen.",
+      "partialStall": "Nur {{embedded}} von geschätzt {{expected}} Chunks eingebettet – die Verarbeitung hängt möglicherweise."
+    },
+    "actions": {
+      "managedByNomad": "Von NOMAD verwaltet",
+      "confirmRemove": "Aus der Wissensdatenbank entfernen?",
+      "deleting": "Wird gelöscht …",
+      "confirm": "Bestätigen",
+      "cancel": "Abbrechen",
+      "reembed": "Neu einbetten",
+      "index": "Indexieren",
+      "retry": "Erneut versuchen",
+      "view": "Ansehen",
+      "download": "Herunterladen",
+      "delete": "Löschen"
+    },
+    "notifications": {
+      "policyAlways": "Neue Inhalte werden automatisch für die KI indexiert.",
+      "policyManual": "Neue Inhalte warten, bis du sie freigibst.",
+      "policyFailed": "Indexierungsrichtlinie konnte nicht aktualisiert werden.",
+      "collectionUpdated": "Sammlung aktualisiert.",
+      "collectionUpdateFailed": "Sammlung konnte nicht aktualisiert werden.",
+      "activeUpdated": "Aktiv-Status aktualisiert.",
+      "activeUpdateFailed": "Aktiv-Status konnte nicht aktualisiert werden.",
+      "collectionActiveUpdated": "Aktiv-Status der Sammlung aktualisiert.",
+      "collectionActiveUpdateFailed": "Aktiv-Status der Sammlung konnte nicht aktualisiert werden.",
+      "fileRemoved": "Datei aus der Wissensdatenbank entfernt.",
+      "deleteFailed": "Datei konnte nicht gelöscht werden.",
+      "fileQueued": "Datei zum Einbetten eingereiht.",
+      "queueFailed": "Datei konnte nicht eingereiht werden.",
+      "failedJobsCleaned": "Fehlgeschlagene Jobs entfernt.",
+      "cleanupFailed": "Jobs konnten nicht entfernt werden.",
+      "allJobsCancelled": "Alle Embedding-Jobs abgebrochen.",
+      "cancelFailed": "Jobs konnten nicht abgebrochen werden.",
+      "startQdrantFailed": "Qdrant konnte nicht gestartet werden.",
+      "syncSuccess": "Speicher erfolgreich synchronisiert. Neu gefundene Dateien wurden zur Verarbeitung eingereiht.",
+      "syncFailed": "Speicher konnte nicht synchronisiert werden",
+      "reembedDone": "Neueinbettung abgeschlossen.",
+      "reembedFailed": "Wissensdatenbank konnte nicht neu eingebettet werden.",
+      "resetDone": "Zurücksetzen abgeschlossen.",
+      "resetFailed": "Wissensdatenbank konnte nicht zurückgesetzt werden.",
+      "filesQueued_one": "{{count}} Datei zur Verarbeitung eingereiht.",
+      "filesQueued_other": "{{count}} Dateien zur Verarbeitung eingereiht.",
+      "uploadFailed": "Hochladen fehlgeschlagen: {{name}}"
+    },
+    "confirmCancelAll": {
+      "title": "Alle Embedding-Jobs abbrechen?",
+      "confirm": "Alle Jobs abbrechen",
+      "cancel": "Jobs behalten",
+      "body": "Damit stoppst du <bold>alle</bold> Embedding-Jobs – auch laufende oder hängende – und leerst die Verarbeitungswarteschlange. Die hochgeladenen Quelldateien dieser Jobs werden gelöscht; was du weiterhin indexiert haben willst, musst du erneut hochladen. Bereits fertig eingebettete Dateien sind nicht betroffen. Willst du wirklich fortfahren?"
+    },
+    "confirmSync": {
+      "title": "Synchronisieren bestätigen?",
+      "confirm": "Synchronisieren",
+      "body": "Damit werden die Speicherverzeichnisse von NOMAD nach neuen Dateien durchsucht und diese zur Verarbeitung eingereiht. Das ist nützlich, wenn du Dateien manuell in den Speicher gelegt hast oder sichergehen willst, dass alles aktuell ist. Werden neue Dateien gefunden und verarbeitet, kann die Ressourcenauslastung vorübergehend steigen. Willst du wirklich fortfahren?"
+    },
+    "reembedAll": {
+      "title": "Alle Dokumente neu einbetten?",
+      "confirm": "Alle neu einbetten",
+      "confirming": "Wird neu eingebettet …",
+      "intro_one": "Damit wird jedes Dokument in deiner Wissensdatenbank neu verarbeitet – etwa <bold>{{count}} Datei</bold>. Für jede Datei löscht NOMAD die vorhandenen Embeddings aus Qdrant und reiht einen neuen Embedding-Job mit dem aktuellen Chunking und Embedding-Modell ein.",
+      "intro_other": "Damit wird jedes Dokument in deiner Wissensdatenbank neu verarbeitet – etwa <bold>{{count}} Dateien</bold>. Für jede Datei löscht NOMAD die vorhandenen Embeddings aus Qdrant und reiht einen neuen Embedding-Job mit dem aktuellen Chunking und Embedding-Modell ein.",
+      "purposeTitle": "Wofür das gedacht ist",
+      "purposeBody": "Nutze das, wenn sich das Embedding-Modell oder die Chunking-Logik geändert hat oder du veraltete Vektoren vermutest. Dateien auf der Festplatte werden <em>nicht</em> gelöscht, und verwaiste Punkte, deren Quelldatei nicht mehr existiert, bleiben unangetastet (siehe <em>Zurücksetzen & neu aufbauen</em>, wenn du komplett neu anfangen willst).",
+      "headsUp": "Achtung",
+      "durationWarning_one": "Das Einbetten von {{count}} Datei kann lange dauern, besonders bei großen PDFs oder ZIM-Archiven.",
+      "durationWarning_other": "Das Einbetten von {{count}} Dateien kann lange dauern, besonders bei großen PDFs oder ZIM-Archiven.",
+      "cpuWarning": "Auf Systemen ohne GPU-Beschleunigung ist die CPU-Last die ganze Zeit über hoch.",
+      "searchWarning": "Suchergebnisse aus der Wissensdatenbank können unvollständig sein, bis jede Datei neu eingebettet ist.",
+      "busyWarning": "Laufen bereits Embedding-Jobs, wird diese Aktion abgelehnt – warte, bis die Warteschlange leer ist."
+    },
+    "reset": {
+      "title": "Wissensdatenbank zurücksetzen & neu aufbauen?",
+      "confirm": "Löschen & neu aufbauen",
+      "confirming": "Wird zurückgesetzt …",
+      "intro_one": "Damit werden in der Qdrant-Sammlung <code>nomad_knowledge_base</code> <bold>alle Punkte endgültig gelöscht</bold>, und sie wird aus der <bold>{{count}} Datei</bold> neu aufgebaut, die aktuell auf der Festplatte liegt. Die Sammlung wird gelöscht, neu angelegt und jede Datei erneut zum Einbetten eingereiht.",
+      "intro_other": "Damit werden in der Qdrant-Sammlung <code>nomad_knowledge_base</code> <bold>alle Punkte endgültig gelöscht</bold>, und sie wird aus den <bold>{{count}} Dateien</bold> neu aufgebaut, die aktuell auf der Festplatte liegen. Die Sammlung wird gelöscht, neu angelegt und jede Datei erneut zum Einbetten eingereiht.",
+      "differenceTitle": "Unterschied zu „Alle neu einbetten“",
+      "differenceReembed": "<bold>Alle neu einbetten</bold> ersetzt Vektoren Datei für Datei. Verwaiste Punkte (Vektoren, deren Quelldatei irgendwann von der Festplatte gelöscht wurde) bleiben erhalten.",
+      "differenceReset": "<bold>Zurücksetzen & neu aufbauen</bold> löscht die gesamte Sammlung. Verwaiste Punkte sind <bold>für immer weg</bold>. Danach gibt es in Qdrant nur noch Dateien, die aktuell auf der Festplatte liegen.",
+      "destructiveTitle": "Diese Aktion ist destruktiv und lässt sich nicht rückgängig machen",
+      "emptyWarning": "Die Suche in der Wissensdatenbank bleibt leer, bis das Einbetten fertig ist (auf reinen CPU-Systemen möglicherweise Stunden).",
+      "missingCollectionWarning": "Während des Zurücksetzens existiert die Qdrant-Sammlung für einige Sekunden nicht – Chat-Anfragen mit RAG können in diesem Zeitraum den Fehler „collection not found“ liefern. Nutze den Chat erst wieder, wenn der Neuaufbau begonnen hat.",
+      "busyWarning": "Laufen bereits Embedding-Jobs, wird diese Aktion abgelehnt – warte, bis die Warteschlange leer ist.",
+      "typeToConfirm": "Gib zur Bestätigung <code>RESET</code> ein:",
+      "typeExactly": "Gib RESET genau so ein (Großbuchstaben, ohne Leerzeichen), um die Bestätigung freizuschalten."
+    },
+    "reembedFile": {
+      "title": "Diese Datei neu einbetten?",
+      "confirm": "Neu einbetten",
+      "confirming": "Wird eingereiht …",
+      "body": "Damit werden die vorhandenen Embeddings für <bold>{{name}}</bold> gelöscht und ein neuer Embedding-Job eingereiht. Die Datei auf der Festplatte bleibt unberührt.",
+      "headsUp": "Achtung",
+      "durationWarning": "Bei großen ZIM-Archiven kann das lange dauern, besonders auf reinen CPU-Systemen.",
+      "searchWarning": "Suchergebnisse, die auf diese Datei verwiesen haben, sind unvollständig, bis das neue Embedding fertig ist.",
+      "busyWarning": "Läuft für diese Datei bereits ein Job, wird das Neueinbetten abgelehnt – warte, bis er fertig ist."
+    },
+    "viewer": {
+      "close": "Schließen",
+      "loading": "Wird geladen …",
+      "error": "Datei konnte nicht geladen werden. Vielleicht wurde sie verschoben oder ihr Typ lässt sich nicht anzeigen."
+    }
+  },
+  "fileGroups": {
+    "adminDocs_one": "Project-NOMAD-Dokumentation · {{count}} Datei",
+    "adminDocs_other": "Project-NOMAD-Dokumentation · {{count}} Dateien",
+    "collection_one": "{{name}} · {{count}} Datei",
+    "collection_other": "{{name}} · {{count}} Dateien",
+    "uncategorized_one": "Ohne Kategorie · {{count}} Datei",
+    "uncategorized_other": "Ohne Kategorie · {{count}} Dateien"
+  },
+  "collectionCombobox": {
+    "uncategorized": "Ohne Kategorie",
+    "create": "+ „{{name}}“ anlegen",
+    "noMatches": "Keine Treffer"
+  },
+  "collectionsManager": {
+    "title": "Sammlungen verwalten",
+    "close": "Schließen",
+    "description": "Benenne Sammlungen um oder entferne sie. Beim Entfernen einer Sammlung werden keine Dateien gelöscht – sie kommen einfach zurück nach „Ohne Kategorie“, damit du sie neu zuordnen kannst.",
+    "loading": "Wird geladen …",
+    "empty": "Noch keine Sammlungen. Ordne in der Tabelle der Wissensdatenbank eine Datei einer Sammlung zu, um eine anzulegen.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "confirmRemove": "„{{name}}“ entfernen? Die Dateien kommen nach „Ohne Kategorie“.",
+    "confirm": "Bestätigen",
+    "rename": "Umbenennen",
+    "remove": "Entfernen",
+    "renamed": "Sammlung umbenannt.",
+    "renameFailed": "Sammlung konnte nicht umbenannt werden.",
+    "removed": "Sammlung entfernt.",
+    "removeFailed": "Sammlung konnte nicht entfernt werden."
+  },
+  "policyBanner": {
+    "assistantFallback": "KI-Assistent",
+    "indexing": "{{name}} indexiert jetzt deine vorhandenen Inhalte. Den Fortschritt siehst du im Bereich „Wissensdatenbank“.",
+    "indexFailed": "Indexierung konnte nicht gestartet werden. Versuch es erneut im Bereich „Wissensdatenbank“.",
+    "later": "Deine Inhalte bleiben vorerst unindexiert. Du kannst sie jederzeit im Bereich „Wissensdatenbank“ freigeben.",
+    "saveFailed": "Deine Auswahl konnte nicht gespeichert werden. Versuch es erneut.",
+    "question_one": "Deine vorhandene Datei für {{name}} indexieren?",
+    "question_other": "Deine {{formattedCount}} vorhandenen Dateien für {{name}} indexieren?",
+    "explanation": "Nach dem Indexieren kann {{name}} beim Beantworten deiner Fragen darauf zurückgreifen.",
+    "indexNow": "Vorhandene Inhalte indexieren",
+    "maybeLater": "Vielleicht später"
+  },
+  "guardrail": {
+    "title": "Große KI-Indexierung bestätigen",
+    "cancel": "Abbrechen",
+    "estimate": "Das Indexieren dieses Pakets für den KI-Assistenten belegt zusätzlich zu den eigentlichen Downloads etwa <bold>{{size}}</bold> Speicherplatz für Embeddings.",
+    "freeDisk": "Das sind mehr als 10 % deines verbleibenden freien Speicherplatzes ({{free}} frei). Das Einbetten kann mehrere Stunden dauern und lässt sich nach dem Start nur schwer sauber unterbrechen.",
+    "manualHint": "Wenn du lieber jedes Element vor dem Indexieren prüfen willst, brich hier ab und stell im Bereich „Wissensdatenbank“ die automatische Indexierung auf <bold>Manuell</bold>.",
+    "proceed": "Trotzdem fortfahren"
+  },
+  "embedJobs": {
+    "title": "Verarbeitungswarteschlange",
+    "lastActivity": "· letzte Aktivität {{time}}",
+    "chunks": "· {{chunks}} Chunks",
+    "empty": "Derzeit werden keine Dateien verarbeitet",
+    "health": {
+      "waiting": "Wartet",
+      "healthy": "Aktiv",
+      "slow": "Langsam",
+      "stalled": "Hängt",
+      "failed": "Fehlgeschlagen"
+    },
+    "healthAria": {
+      "waiting": "Job ist eingereiht und wartet auf den Start",
+      "healthy": "Job bettet mit normaler Geschwindigkeit ein",
+      "slow": "Job macht seit mindestens 2 Minuten keinen Fortschritt",
+      "stalled": "Job macht seit mindestens 5 Minuten keinen Fortschritt",
+      "failed": "Job fehlgeschlagen"
+    },
+    "timeAgo": {
+      "justNow": "gerade eben",
+      "seconds": "vor {{count}} s",
+      "minutes": "vor {{count}} min",
+      "hours": "vor {{count}} h"
+    }
+  }
+}

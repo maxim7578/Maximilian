@@ -11,9 +11,7 @@ test('chat stream preserves an actionable server error message', () => {
     }),
     'NOMAD cannot confirm that this model accepts images. Choose a model marked “Supports images”.'
   )
-  assert.equal(
-    chatStreamErrorMessage({ error: true }),
-    'The model encountered an error. Please try again.'
-  )
+  // Without a server message the generic error is returned as a translation key.
+  assert.equal(chatStreamErrorMessage({ error: true }), 'chat:stream.genericError')
   assert.equal(chatStreamErrorMessage({ done: true }), null)
 })

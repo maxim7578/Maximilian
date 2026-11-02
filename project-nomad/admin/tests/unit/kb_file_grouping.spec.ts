@@ -61,7 +61,7 @@ test('groupAndSortKbFiles collapses all admin docs into a single row', () => {
   assert.equal(groups.length, 1)
   assert.equal(groups[0].bucket, 'admin_docs')
   assert.equal(groups[0].count, 4)
-  assert.equal(groups[0].displayName, 'Project NOMAD documentation · 4 files')
+  assert.deepEqual(groups[0].label, { key: 'knowledgeBase:fileGroups.adminDocs', count: 4 })
   assert.deepEqual(groups[0].members.sort(), [
     '/app/README.md',
     '/app/docs/getting-started.md',
@@ -103,7 +103,8 @@ test('groupAndSortKbFiles alphabetizes within a bucket', () => {
 
 test('groupAndSortKbFiles uses singular noun when only one admin doc exists', () => {
   const groups = groupAndSortKbFiles(asInfos(['/app/docs/release-notes.md']))
-  assert.equal(groups[0].displayName, 'Project NOMAD documentation · 1 file')
+  // The noun is pluralized by the translation (fileGroups.adminDocs_one / _other) via count.
+  assert.deepEqual(groups[0].label, { key: 'knowledgeBase:fileGroups.adminDocs', count: 1 })
 })
 
 test('groupAndSortKbFiles handles empty input', () => {
@@ -362,7 +363,24 @@ test('groupAndSortKbFiles orders KB-collection headers alphabetically with Uncat
 test('groupAndSortKbFiles labels the null-collection header "Uncategorized" with a file count', () => {
   const groups = groupAndSortKbFiles(collectioned)
   const header = groups.find((g) => g.collection === null)
-  assert.equal(header?.displayName, 'Uncategorized · 1 file')
+  assert.deepEqual(header?.label, { key: 'knowledgeBase:fileGroups.uncategorized', count: 1 })
+})
+
+test('groupAndSortKbFiles beschriftet einen benannten Sammlungs-Header mit Name und Dateianzahl', () => {
+  const groups = groupAndSortKbFiles(collectioned)
+  const header = groups.find((g) => g.collection === 'recipes')
+  assert.deepEqual(header?.label, {
+    key: 'knowledgeBase:fileGroups.collection',
+    count: 2,
+    name: 'recipes',
+  })
+})
+
+test('groupAndSortKbFiles gibt einzelnen Dateizeilen kein Gruppen-Label', () => {
+  const groups = groupAndSortKbFiles(collectioned, { key: 'name', direction: 'asc' }, new Set(['diy']))
+  const fileRow = groups.find((g) => !g.isCollectionHeader)
+  assert.equal(fileRow?.displayName, 'diy_guide.txt')
+  assert.equal(fileRow?.label, undefined)
 })
 
 test('groupAndSortKbFiles computes all-active, all-inactive, and mixed aggregate state per header', () => {

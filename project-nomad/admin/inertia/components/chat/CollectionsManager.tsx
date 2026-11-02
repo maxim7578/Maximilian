@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import StyledModal from '../StyledModal'
 import StyledButton from '~/components/StyledButton'
@@ -10,6 +11,7 @@ interface CollectionsManagerProps {
 }
 
 export default function CollectionsManager({ onClose }: CollectionsManagerProps) {
+  const { t } = useTranslation()
   const { addNotification } = useNotifications()
   const queryClient = useQueryClient()
   const [editingName, setEditingName] = useState<string | null>(null)
@@ -31,46 +33,53 @@ export default function CollectionsManager({ onClose }: CollectionsManagerProps)
     mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
       api.renameCollection(oldName, newName),
     onSuccess: (data) => {
-      addNotification({ type: 'success', message: data?.message || 'Collection renamed.' })
+      addNotification({ type: 'success', message: data?.message || t('knowledgeBase:collectionsManager.renamed') })
       setEditingName(null)
       invalidateAll()
     },
     onError: (error: any) => {
-      addNotification({ type: 'error', message: error?.message || 'Failed to rename collection.' })
+      addNotification({
+        type: 'error',
+        message: error?.message || t('knowledgeBase:collectionsManager.renameFailed'),
+      })
     },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (name: string) => api.deleteCollection(name),
     onSuccess: (data) => {
-      addNotification({ type: 'success', message: data?.message || 'Collection removed.' })
+      addNotification({ type: 'success', message: data?.message || t('knowledgeBase:collectionsManager.removed') })
       setConfirmDelete(null)
       invalidateAll()
     },
     onError: (error: any) => {
-      addNotification({ type: 'error', message: error?.message || 'Failed to remove collection.' })
+      addNotification({
+        type: 'error',
+        message: error?.message || t('knowledgeBase:collectionsManager.removeFailed'),
+      })
     },
   })
 
   return (
     <StyledModal
       open={true}
-      title="Manage Collections"
+      title={t('knowledgeBase:collectionsManager.title')}
       onClose={onClose}
-      cancelText="Close"
+      cancelText={t('knowledgeBase:collectionsManager.close')}
       onCancel={onClose}
       large
     >
       <div className="text-left">
         <p className="text-sm text-text-secondary mb-4">
-          Rename or remove collections. Removing a collection doesn't delete any files —
-          they're simply moved back to Uncategorized so you can re-sort them.
+          {t('knowledgeBase:collectionsManager.description')}
         </p>
 
-        {isLoading && <p className="text-sm text-text-muted">Loading…</p>}
+        {isLoading && (
+          <p className="text-sm text-text-muted">{t('knowledgeBase:collectionsManager.loading')}</p>
+        )}
         {!isLoading && collections.length === 0 && (
           <p className="text-sm text-text-muted">
-            No collections yet. Assign a file to a collection from the Knowledge Base table to create one.
+            {t('knowledgeBase:collectionsManager.empty')}
           </p>
         )}
 
@@ -94,16 +103,16 @@ export default function CollectionsManager({ onClose }: CollectionsManagerProps)
                       renameMutation.mutate({ oldName: name, newName: editValue.trim() })
                     }
                   >
-                    Save
+                    {t('knowledgeBase:collectionsManager.save')}
                   </StyledButton>
                   <StyledButton variant="outline" onClick={() => setEditingName(null)}>
-                    Cancel
+                    {t('knowledgeBase:collectionsManager.cancel')}
                   </StyledButton>
                 </>
               ) : confirmDelete === name ? (
                 <>
                   <span className="flex-1 text-sm text-text-primary">
-                    Remove "{name}"? Files move to Uncategorized.
+                    {t('knowledgeBase:collectionsManager.confirmRemove', { name })}
                   </span>
                   <StyledButton
                     variant="danger"
@@ -111,10 +120,10 @@ export default function CollectionsManager({ onClose }: CollectionsManagerProps)
                     loading={deleteMutation.isPending}
                     onClick={() => deleteMutation.mutate(name)}
                   >
-                    Confirm
+                    {t('knowledgeBase:collectionsManager.confirm')}
                   </StyledButton>
                   <StyledButton variant="outline" onClick={() => setConfirmDelete(null)}>
-                    Cancel
+                    {t('knowledgeBase:collectionsManager.cancel')}
                   </StyledButton>
                 </>
               ) : (
@@ -128,14 +137,14 @@ export default function CollectionsManager({ onClose }: CollectionsManagerProps)
                       setEditValue(name)
                     }}
                   >
-                    Rename
+                    {t('knowledgeBase:collectionsManager.rename')}
                   </StyledButton>
                   <StyledButton
                     variant="danger"
                     icon="IconTrash"
                     onClick={() => setConfirmDelete(name)}
                   >
-                    Remove
+                    {t('knowledgeBase:collectionsManager.remove')}
                   </StyledButton>
                 </>
               )}

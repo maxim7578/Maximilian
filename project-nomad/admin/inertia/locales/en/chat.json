@@ -1,0 +1,90 @@
+{
+  "chat": {
+    "newChat": "New Chat",
+    "cancel": "Cancel",
+    "clearHistory": {
+      "title": "Clear All Chat History?",
+      "confirm": "Clear All",
+      "body": "Are you sure you want to delete all chat sessions? This action cannot be undone and all conversations will be permanently deleted."
+    },
+    "switchModel": {
+      "title": "Switch to {{model}}?",
+      "confirm": "Switch & New Chat",
+      "body": "Switching to <bold>{{model}}</bold> will start a new chat. Your current conversation stays available in the sidebar."
+    },
+    "errors": {
+      "noResponse": "Sorry, I could not generate a response.",
+      "processing": "Sorry, there was an error processing your request. Please try again.",
+      "startingChat": "Sorry, there was an error starting this chat. Please try again."
+    },
+    "closeSidebar": "Close conversation sidebar",
+    "openSidebar": "Open conversation sidebar",
+    "remoteConnected": "Remote Connected",
+    "remoteDisconnected": "Remote Disconnected",
+    "searchIn": "Search in:",
+    "allCollections": "All",
+    "model": "Model:",
+    "loadingModels": "Loading models...",
+    "noModels": "No models installed",
+    "knowledgeBase": "Knowledge Base:",
+    "knowledgeBaseTooltip": "When on, the assistant searches your knowledge base for relevant documents before answering. Turning this off is faster and lighter on hardware, which helps when your knowledge base is small or empty. This is the same setting as in AI Assistant settings.",
+    "thinking": "Thinking:",
+    "thinkingTooltip": "When on, this model works through its reasoning before answering. Slower, but often better on tricky questions. Your choice is remembered for this model; the default for other models is set in AI Assistant settings.",
+    "closeChat": "Close chat"
+  },
+  "interface": {
+    "tooManyImages": "You can attach up to {{max}} images.",
+    "unsupportedImage": "{{name}} is not supported. Use JPEG, PNG, or WebP.",
+    "imageTooLarge": "{{name}} exceeds the 8 MB per-image limit.",
+    "partiallyAttached_one": "Only the first {{count}} selected image(s) were attached.",
+    "partiallyAttached_other": "Only the first {{count}} selected image(s) were attached.",
+    "emptyTitle": "Start a conversation",
+    "emptyDescription": "Interact with your installed language models directly in the Command Center.",
+    "suggestions": "Suggestions:",
+    "thinking": "Thinking",
+    "suggestionsDisabled": "Need some inspiration? Enable chat suggestions in settings to get started with example prompts.",
+    "attachedImages": "Attached images",
+    "removeImage": "Remove {{name}}",
+    "attachImages": "Attach images",
+    "placeholder": "Type your message to {{name}}... (Shift+Enter for new line)"
+  },
+  "bubble": {
+    "reasoning": "Reasoning",
+    "thoughtFor": "Thought for {{seconds}}s",
+    "truncated": "This answer hit the length limit and was cut off.",
+    "continue": "Continue",
+    "sources": "Sources"
+  },
+  "sidebar": {
+    "ariaLabel": "Chat conversations",
+    "noChats": "No previous chats",
+    "logoAlt": "Project NOMAD Logo",
+    "openFullChat": "Open Full Chat",
+    "backToHome": "Back to Home",
+    "modelsAndSettings": "Models & Settings",
+    "knowledgeBase": "Knowledge Base",
+    "clearHistory": "Clear History"
+  },
+  "button": {
+    "openChat": "Open chat"
+  },
+  "nomadMd": {
+    "description": "Custom instructions passed to {{name}} as a system prompt on every chat.",
+    "assistantFallback": "your AI assistant",
+    "loading": "Loading…",
+    "tip": "Tip: this file is also stored on disk at <code>storage/NOMAD.md</code> and can be edited directly.",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saveFailed": "Failed to save NOMAD.md.",
+    "saved": "NOMAD.md saved. It applies to new messages.",
+    "template": "# NOMAD.md\n\n<!--\nThis file holds custom instructions for your AI assistant. Everything here is\nsent to the assistant as a system prompt on every chat — use it to set persona,\ntone, priorities, and standing rules.\n\nIt is also stored on disk at storage/NOMAD.md, so you can edit it directly.\nReplace this template with your own instructions, then click Save.\n-->\n\n## About me\n\n- (e.g. I'm setting up an off-grid homestead in a cold climate.)\n\n## How the assistant should respond\n\n- Be concise and practical.\n- Prioritize safety and proven methods.\n"
+  },
+  "vision": {
+    "temporary": "Images are sent only with this request. They are not saved and will disappear after you send them or reload this page.",
+    "unknown": "NOMAD cannot confirm whether this model accepts images. You can try an image, but the request will fail if the model is text-only. Images are sent only with this request. They are not saved and will disappear after you send them or reload this page.",
+    "unsupported": "This model cannot use images. Choose a model marked “Supports images” in Models & Settings."
+  },
+  "stream": {
+    "genericError": "The model encountered an error. Please try again."
+  }
+}

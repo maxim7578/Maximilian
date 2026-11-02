@@ -1,0 +1,90 @@
+{
+  "chat": {
+    "newChat": "Neuer Chat",
+    "cancel": "Abbrechen",
+    "clearHistory": {
+      "title": "Gesamten Chatverlauf löschen?",
+      "confirm": "Alle löschen",
+      "body": "Willst du wirklich alle Chats löschen? Das lässt sich nicht rückgängig machen, alle Unterhaltungen werden endgültig gelöscht."
+    },
+    "switchModel": {
+      "title": "Zu {{model}} wechseln?",
+      "confirm": "Wechseln & neuer Chat",
+      "body": "Der Wechsel zu <bold>{{model}}</bold> startet einen neuen Chat. Deine aktuelle Unterhaltung bleibt in der Seitenleiste verfügbar."
+    },
+    "errors": {
+      "noResponse": "Leider konnte ich keine Antwort erzeugen.",
+      "processing": "Leider ist bei der Verarbeitung deiner Anfrage ein Fehler aufgetreten. Bitte versuch es noch einmal.",
+      "startingChat": "Leider ist beim Starten dieses Chats ein Fehler aufgetreten. Bitte versuch es noch einmal."
+    },
+    "closeSidebar": "Chat-Seitenleiste schließen",
+    "openSidebar": "Chat-Seitenleiste öffnen",
+    "remoteConnected": "Remote verbunden",
+    "remoteDisconnected": "Remote getrennt",
+    "searchIn": "Suchen in:",
+    "allCollections": "Alle",
+    "model": "Modell:",
+    "loadingModels": "Modelle werden geladen …",
+    "noModels": "Keine Modelle installiert",
+    "knowledgeBase": "Wissensdatenbank:",
+    "knowledgeBaseTooltip": "Wenn aktiviert, durchsucht der Assistent vor dem Antworten deine Wissensdatenbank nach passenden Dokumenten. Ausgeschaltet ist es schneller und schont die Hardware – hilfreich, wenn deine Wissensdatenbank klein oder leer ist. Es ist dieselbe Einstellung wie in den Einstellungen des KI-Assistenten.",
+    "thinking": "Nachdenken:",
+    "thinkingTooltip": "Wenn aktiviert, denkt dieses Modell vor dem Antworten erst nach. Langsamer, aber bei kniffligen Fragen oft besser. Deine Wahl wird für dieses Modell gespeichert; den Standard für andere Modelle legst du in den Einstellungen des KI-Assistenten fest.",
+    "closeChat": "Chat schließen"
+  },
+  "interface": {
+    "tooManyImages": "Du kannst bis zu {{max}} Bilder anhängen.",
+    "unsupportedImage": "{{name}} wird nicht unterstützt. Verwende JPEG, PNG oder WebP.",
+    "imageTooLarge": "{{name}} überschreitet die Grenze von 8 MB pro Bild.",
+    "partiallyAttached_one": "Es wurde nur {{count}} Bild angehängt – das erste deiner Auswahl.",
+    "partiallyAttached_other": "Es wurden nur {{count}} Bilder angehängt – die ersten deiner Auswahl.",
+    "emptyTitle": "Starte eine Unterhaltung",
+    "emptyDescription": "Chatte direkt im Command Center mit deinen installierten Sprachmodellen.",
+    "suggestions": "Vorschläge:",
+    "thinking": "Denkt nach",
+    "suggestionsDisabled": "Brauchst du Inspiration? Aktiviere Chat-Vorschläge in den Einstellungen, um mit Beispiel-Prompts zu starten.",
+    "attachedImages": "Angehängte Bilder",
+    "removeImage": "{{name}} entfernen",
+    "attachImages": "Bilder anhängen",
+    "placeholder": "Schreib {{name}} eine Nachricht … (Umschalt+Enter für neue Zeile)"
+  },
+  "bubble": {
+    "reasoning": "Gedankengang",
+    "thoughtFor": "{{seconds}} s nachgedacht",
+    "truncated": "Diese Antwort hat das Längenlimit erreicht und wurde abgeschnitten.",
+    "continue": "Weiter",
+    "sources": "Quellen"
+  },
+  "sidebar": {
+    "ariaLabel": "Chat-Unterhaltungen",
+    "noChats": "Noch keine Chats",
+    "logoAlt": "Project-NOMAD-Logo",
+    "openFullChat": "Vollbild-Chat öffnen",
+    "backToHome": "Zurück zur Startseite",
+    "modelsAndSettings": "Modelle & Einstellungen",
+    "knowledgeBase": "Wissensdatenbank",
+    "clearHistory": "Verlauf löschen"
+  },
+  "button": {
+    "openChat": "Chat öffnen"
+  },
+  "nomadMd": {
+    "description": "Eigene Anweisungen, die {{name}} bei jedem Chat als Systemprompt erhält.",
+    "assistantFallback": "dein KI-Assistent",
+    "loading": "Wird geladen …",
+    "tip": "Tipp: Diese Datei liegt auch unter <code>storage/NOMAD.md</code> auf der Festplatte und kann dort direkt bearbeitet werden.",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saveFailed": "NOMAD.md konnte nicht gespeichert werden.",
+    "saved": "NOMAD.md gespeichert. Gilt ab den nächsten Nachrichten.",
+    "template": "# NOMAD.md\n\n<!--\nDiese Datei enthält eigene Anweisungen für deinen KI-Assistenten. Alles hier wird\ndem Assistenten bei jedem Chat als Systemprompt mitgegeben – lege damit Persona,\nTonfall, Prioritäten und feste Regeln fest.\n\nSie liegt außerdem unter storage/NOMAD.md auf der Festplatte, du kannst sie also direkt bearbeiten.\nErsetze diese Vorlage durch deine eigenen Anweisungen und klicke dann auf „Speichern“.\n-->\n\n## Über mich\n\n- (z. B. Ich baue ein autarkes Gehöft in einer kalten Klimazone auf.)\n\n## Wie der Assistent antworten soll\n\n- Knapp und praxisnah antworten.\n- Sicherheit und bewährte Methoden haben Vorrang.\n"
+  },
+  "vision": {
+    "temporary": "Bilder werden nur mit dieser Anfrage gesendet. Sie werden nicht gespeichert und verschwinden, sobald du sie sendest oder die Seite neu lädst.",
+    "unknown": "NOMAD kann nicht bestätigen, ob dieses Modell Bilder verarbeitet. Du kannst es mit einem Bild versuchen, aber die Anfrage schlägt fehl, wenn das Modell nur Text versteht. Bilder werden nur mit dieser Anfrage gesendet. Sie werden nicht gespeichert und verschwinden, sobald du sie sendest oder die Seite neu lädst.",
+    "unsupported": "Dieses Modell kann keine Bilder verarbeiten. Wähle unter „Modelle & Einstellungen“ ein Modell mit der Markierung „Unterstützt Bilder“."
+  },
+  "stream": {
+    "genericError": "Beim Modell ist ein Fehler aufgetreten. Bitte versuch es noch einmal."
+  }
+}

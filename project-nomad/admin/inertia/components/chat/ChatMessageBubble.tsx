@@ -1,4 +1,6 @@
 import classNames from '~/lib/classNames'
+import { useTranslation } from 'react-i18next'
+import { formatDateTime } from '~/i18n'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { ChatMessage } from '../../../types/chat'
@@ -10,6 +12,7 @@ export interface ChatMessageBubbleProps {
 }
 
 export default function ChatMessageBubble({ message, onContinue }: ChatMessageBubbleProps) {
+  const { t } = useTranslation()
   return (
     <div
       className={classNames(
@@ -32,7 +35,7 @@ export default function ChatMessageBubble({ message, onContinue }: ChatMessageBu
       {message.isThinking && message.thinking && (
         <div className="mb-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs">
           <div className="mb-1 flex items-center gap-1.5 font-medium text-amber-700">
-            <span>Reasoning</span>
+            <span>{t('chat:bubble.reasoning')}</span>
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse inline-block" />
           </div>
           <div className="prose prose-xs max-w-none text-amber-900/80 max-h-32 overflow-y-auto">
@@ -44,8 +47,8 @@ export default function ChatMessageBubble({ message, onContinue }: ChatMessageBu
         <details className="mb-3 rounded border border-border-subtle bg-surface-secondary text-xs">
           <summary className="cursor-pointer px-3 py-2 font-medium text-text-muted hover:text-text-primary select-none">
             {message.thinkingDuration !== undefined
-              ? `Thought for ${message.thinkingDuration}s`
-              : 'Reasoning'}
+              ? t('chat:bubble.thoughtFor', { seconds: message.thinkingDuration })
+              : t('chat:bubble.reasoning')}
           </summary>
           <div className="px-3 pb-3 prose prose-xs max-w-none text-text-secondary max-h-48 overflow-y-auto border-t border-border-subtle pt-2">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.thinking}</ReactMarkdown>
@@ -118,21 +121,21 @@ export default function ChatMessageBubble({ message, onContinue }: ChatMessageBu
       </div>
       {message.role === 'assistant' && message.truncated && !message.isStreaming && (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border-subtle pt-2 text-xs text-text-secondary">
-          <span>This answer hit the length limit and was cut off.</span>
+          <span>{t('chat:bubble.truncated')}</span>
           {onContinue && (
             <button
               type="button"
               onClick={onContinue}
               className="rounded border border-border-default px-2 py-0.5 font-medium text-desert-green hover:bg-surface-primary focus:outline-none focus:ring-2 focus:ring-desert-green"
             >
-              Continue
+              {t('chat:bubble.continue')}
             </button>
           )}
         </div>
       )}
       {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
         <div className="mt-3 border-t border-border-subtle pt-2 text-xs text-text-primary">
-          <div className="mb-1 font-medium">Sources</div>
+          <div className="mb-1 font-medium">{t('chat:bubble.sources')}</div>
           <ul className="space-y-0.5">
             {message.sources.map((src, idx) => (
               <li key={idx}>
@@ -149,7 +152,7 @@ export default function ChatMessageBubble({ message, onContinue }: ChatMessageBu
           message.role === 'user' ? 'text-white/70' : 'text-text-muted'
         )}
       >
-        {message.timestamp.toLocaleTimeString([], {
+        {formatDateTime(message.timestamp, {
           hour: '2-digit',
           minute: '2-digit',
         })}

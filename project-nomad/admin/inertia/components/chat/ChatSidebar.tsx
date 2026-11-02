@@ -4,6 +4,7 @@ import { router, usePage } from '@inertiajs/react'
 import { ChatSession } from '../../../types/chat'
 import { IconMessage } from '@tabler/icons-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import KnowledgeBaseModal from './KnowledgeBaseModal'
 import NomadMdModal from './NomadMdModal'
 
@@ -28,6 +29,7 @@ export default function ChatSidebar({
   isMobileOpen = false,
   onMobileClose,
 }: ChatSidebarProps) {
+  const { t } = useTranslation()
   const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
   const [isKnowledgeBaseModalOpen, setIsKnowledgeBaseModalOpen] = useState(
     () => new URLSearchParams(window.location.search).get('knowledge_base') === 'true'
@@ -52,7 +54,7 @@ export default function ChatSidebar({
         'fixed inset-y-0 left-0 z-50 md:static md:z-auto md:flex',
         isMobileOpen ? 'flex' : 'hidden'
       )}
-      aria-label="Chat conversations"
+      aria-label={t('chat:sidebar.ariaLabel')}
     >
       <div className="p-4 border-b border-border-subtle h-[75px] flex items-center justify-center">
         <StyledButton
@@ -64,13 +66,13 @@ export default function ChatSidebar({
           variant="primary"
           fullWidth
         >
-          New Chat
+          {t('chat:chat.newChat')}
         </StyledButton>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {sessions.length === 0 ? (
-          <div className="p-4 text-center text-text-muted text-sm">No previous chats</div>
+          <div className="p-4 text-center text-text-muted text-sm">{t('chat:sidebar.noChats')}</div>
         ) : (
           <div className="p-2 space-y-1">
             {sessions.map((session) => (
@@ -114,7 +116,7 @@ export default function ChatSidebar({
         )}
       </div>
       <div className="p-4 flex flex-col items-center justify-center gap-y-2">
-        <img src="/nomad-primary.svg" alt="Project NOMAD Logo" className="h-28 w-28 mb-6 object-contain" />
+        <img src="/nomad-primary.svg" alt={t('chat:sidebar.logoAlt')} className="h-28 w-28 mb-6 object-contain" />
         <StyledButton
           onClick={() => {
             // /chat is served by the admin app itself, so navigate in place rather than
@@ -127,7 +129,7 @@ export default function ChatSidebar({
           size="sm"
           fullWidth
         >
-          {isInModal ? 'Open Full Chat' : 'Back to Home'}
+          {isInModal ? t('chat:sidebar.openFullChat') : t('chat:sidebar.backToHome')}
         </StyledButton>
         <StyledButton
           onClick={() => {
@@ -138,7 +140,7 @@ export default function ChatSidebar({
           size="sm"
           fullWidth
         >
-          Models & Settings
+          {t('chat:sidebar.modelsAndSettings')}
         </StyledButton>
         <StyledButton
           onClick={() => {
@@ -149,7 +151,7 @@ export default function ChatSidebar({
           size="sm"
           fullWidth
         >
-          Knowledge Base
+          {t('chat:sidebar.knowledgeBase')}
         </StyledButton>
         <StyledButton
           onClick={() => {
@@ -170,7 +172,7 @@ export default function ChatSidebar({
             size="sm"
             fullWidth
           >
-            Clear History
+            {t('chat:sidebar.clearHistory')}
           </StyledButton>
         )}
       </div>
