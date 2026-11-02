@@ -24,6 +24,8 @@ import useDebounce from '~/hooks/useDebounce'
 import ActiveModelDownloads from '~/components/ActiveModelDownloads'
 import { useSystemInfo } from '~/hooks/useSystemInfo'
 import GpuPassthroughAlert from '~/components/GpuPassthroughAlert'
+import { Trans, useTranslation } from 'react-i18next'
+import type { ResponseStyle } from '../../../types/ollama'
 
 export default function ModelsPage(props: {
   models: {
@@ -34,6 +36,7 @@ export default function ModelsPage(props: {
     resolvedContextWindows?: Record<string, number>
   }
 }) {
+  const { t } = useTranslation()
   const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
   const { isInstalled } = useServiceInstalledStatus(SERVICE_NAMES.OLLAMA)
   const { addNotification } = useNotifications()
@@ -72,7 +75,7 @@ export default function ModelsPage(props: {
         router.reload()
       }
     } catch (error: any) {
-      const msg = error?.response?.data?.message || error?.message || 'Failed to configure remote Ollama.'
+      const msg = error?.response?.data?.message || error?.message || t('models:notifications.remoteConfigureFailed')
       setRemoteOllamaError(msg)
     } finally {
       setRemoteOllamaSaving(false)
@@ -86,11 +89,11 @@ export default function ModelsPage(props: {
       const res = await api.configureRemoteOllama(null)
       if (res?.success) {
         setRemoteOllamaUrl('')
-        addNotification({ message: 'Remote Ollama configuration cleared.', type: 'success' })
+        addNotification({ message: t('models:notifications.remoteCleared'), type: 'success' })
         router.reload()
       }
     } catch (error: any) {
-      setRemoteOllamaError(error?.message || 'Failed to clear remote Ollama.')
+      setRemoteOllamaError(error?.message || t('models:notifications.remoteClearFailed'))
     } finally {
       setRemoteOllamaSaving(false)
     }
@@ -134,7 +137,7 @@ export default function ModelsPage(props: {
     setIsForceRefreshing(true)
     await refetch()
     setIsForceRefreshing(false)
-    addNotification({ message: 'Model list refreshed from remote.', type: 'success' })
+    addNotification({ message: t('models:notifications.listRefreshed'), type: 'success' })
   }
 
   async function handleInstallModel(modelName: string) {
@@ -142,14 +145,14 @@ export default function ModelsPage(props: {
       const res = await api.downloadModel(modelName)
       if (res.success) {
         addNotification({
-          message: `Model download initiated for ${modelName}. It may take some time to complete.`,
+          message: t('models:notifications.downloadStarted', { model: modelName }),
           type: 'success',
         })
       }
     } catch (error) {
       console.error('Error installing model:', error)
       addNotification({
-        message: `There was an error installing the model: ${modelName}. Please try again.`,
+        message: t('models:notifications.installError', { model: modelName }),
         type: 'error',
       })
     }
@@ -160,7 +163,7 @@ export default function ModelsPage(props: {
       const res = await api.deleteModel(modelName)
       if (res.success) {
         addNotification({
-          message: `Model deleted: ${modelName}.`,
+          message: t('models:notifications.deleted', { model: modelName }),
           type: 'success',
         })
       }
@@ -169,7 +172,7 @@ export default function ModelsPage(props: {
     } catch (error) {
       console.error('Error deleting model:', error)
       addNotification({
-        message: `There was an error deleting the model: ${modelName}. Please try again.`,
+        message: t('models:notifications.deleteError', { model: modelName }),
         type: 'error',
       })
     }
@@ -178,19 +181,18 @@ export default function ModelsPage(props: {
   async function confirmDeleteModel(model: string) {
     openModal(
       <StyledModal
-        title="Delete Model?"
+        title={t('models:deleteModal.title')}
         onConfirm={() => {
           handleDeleteModel(model)
         }}
         onCancel={closeAllModals}
         open={true}
-        confirmText="Delete"
-        cancelText="Cancel"
+        confirmText={t('models:deleteModal.confirm')}
+        cancelText={t('models:deleteModal.cancel')}
         confirmVariant="primary"
       >
         <p className="text-text-primary">
-          Are you sure you want to delete this model? You will need to download it again if you want
-          to use it in the future.
+          {t('models:deleteModal.text')}
         </p>
       </StyledModal>,
       'confirm-delete-model-modal'
@@ -204,23 +206,30 @@ export default function ModelsPage(props: {
   // hardware can afford. An explicit choice is a cap, never a boost — asking for
   // more than a model or a GPU can support just degrades or fails to load.
   const contextWindowOptions = [
-    { value: 'auto', label: 'Auto (recommended)' },
-    { value: '4096', label: '4K tokens' },
-    { value: '8192', label: '8K tokens' },
-    { value: '16384', label: '16K tokens' },
-    { value: '32768', label: '32K tokens' },
-    { value: '65536', label: '64K tokens' },
-    { value: '131072', label: '128K tokens' },
+    { value: 'auto', label: t('models:options.contextAuto') },
+    { value: '4096', label: t('models:options.contextTokens', { size: '4K' }) },
+    { value: '8192', label: t('models:options.contextTokens', { size: '8K' }) },
+    { value: '16384', label: t('models:options.contextTokens', { size: '16K' }) },
+    { value: '32768', label: t('models:options.contextTokens', { size: '32K' }) },
+    { value: '65536', label: t('models:options.contextTokens', { size: '64K' }) },
+    { value: '131072', label: t('models:options.contextTokens', { size: '128K' }) },
   ]
 
   // Presets rather than a raw 0-1 number: the value is a cosine-similarity
   // floor, which is not a thing anyone can reason about directly. The stored
   // setting is still the number, so retuning these labels later cannot orphan a
   // saved value.
+  // Preset labels live in shared constants; translate them by their (fixed) English label.
+  const relevanceLabels: Record<(typeof RAG_MIN_RELEVANCE_PRESETS)[number]['label'], string> = {
+    'Off — use every passage retrieved': t('models:options.relevance.off'),
+    'Lenient': t('models:options.relevance.lenient'),
+    'Balanced (recommended)': t('models:options.relevance.balanced'),
+    'Strict': t('models:options.relevance.strict'),
+  }
   const minRelevanceOptions = [
     ...RAG_MIN_RELEVANCE_PRESETS.map((preset) => ({
       value: String(preset.value),
-      label: preset.label,
+      label: relevanceLabels[preset.label] ?? preset.label,
     })),
     // The setting is API-writable to any value in [0,1], so a value off the
     // preset ladder is reachable. Surface it as a disabled option rather than
@@ -228,12 +237,18 @@ export default function ModelsPage(props: {
     // the chosen model has since been deleted.
     ...(RAG_MIN_RELEVANCE_PRESETS.some((p) => String(p.value) === minRelevance)
       ? []
-      : [{ value: minRelevance, label: `Custom (${minRelevance})`, disabled: true }]),
+      : [{ value: minRelevance, label: t('models:options.customRelevance', { value: minRelevance }), disabled: true }]),
   ]
 
+  const responseStyleLabels: Record<ResponseStyle, string> = {
+    auto: t('models:options.responseStyle.auto'),
+    focused: t('models:options.responseStyle.focused'),
+    creative: t('models:options.responseStyle.creative'),
+    off: t('models:options.responseStyle.off'),
+  }
   const responseStyleOptions = RESPONSE_STYLE_PRESETS.map((preset) => ({
     value: preset.value,
-    label: preset.label,
+    label: responseStyleLabels[preset.value] ?? preset.label,
   }))
 
   const resolvedWindows = props.models.resolvedContextWindows ?? {}
@@ -241,10 +256,10 @@ export default function ModelsPage(props: {
     tokens >= 1024 ? `${Math.round(tokens / 1024)}K` : String(tokens)
 
   const tasksModelOptions = [
-    { value: '', label: 'Use the chat model' },
+    { value: '', label: t('models:options.useChatModel') },
     ...props.models.installedModels.map((model) => ({ value: model.name, label: model.name })),
     ...(tasksModel && !props.models.installedModels.some((m) => m.name === tasksModel)
-      ? [{ value: tasksModel, label: `${tasksModel} (not installed)`, disabled: true }]
+      ? [{ value: tasksModel, label: t('models:options.notInstalled', { model: tasksModel }), disabled: true }]
       : []),
   ]
 
@@ -258,14 +273,14 @@ export default function ModelsPage(props: {
       // without a reload.
       queryClient.invalidateQueries({ queryKey: ['system-setting', key] })
       addNotification({
-        message: 'Setting updated successfully.',
+        message: t('models:notifications.settingUpdated'),
         type: 'success',
       })
     },
     onError: (error) => {
       console.error('Error updating setting:', error)
       addNotification({
-        message: 'There was an error updating the setting. Please try again.',
+        message: t('models:notifications.settingError'),
         type: 'error',
       })
     },
@@ -273,18 +288,16 @@ export default function ModelsPage(props: {
 
   return (
     <SettingsLayout>
-      <Head title={`${aiAssistantName} Settings | Project NOMAD`} />
+      <Head title={t('models:page.headTitle', { name: aiAssistantName })} />
       <div className="xl:pl-72 w-full">
         <main className="px-12 py-6">
           <h1 className="text-4xl font-semibold mb-4">{aiAssistantName}</h1>
           <p className="text-text-muted mb-4">
-            Easily manage the {aiAssistantName}'s settings and installed models. We recommend
-            starting with smaller models first to see how they perform on your system before moving
-            on to larger ones.
+            {t('models:page.intro', { name: aiAssistantName })}
           </p>
           {!isInstalled && (
             <Alert
-              title={`${aiAssistantName}'s dependencies are not installed. Please install them to manage AI models.`}
+              title={t('models:page.dependenciesMissing', { name: aiAssistantName })}
               type="warning"
               variant="solid"
               className="!mt-6"
@@ -298,7 +311,7 @@ export default function ModelsPage(props: {
             />
           )}
 
-          <StyledSectionHeader title="Settings" className="mt-8 mb-4" />
+          <StyledSectionHeader title={t('models:settings.title')} className="mt-8 mb-4" />
           <div className="bg-surface-primary rounded-lg border-2 border-border-subtle p-6">
             <div className="space-y-4">
               <Switch
@@ -307,8 +320,8 @@ export default function ModelsPage(props: {
                   setChatSuggestionsEnabled(newVal)
                   updateSettingMutation.mutate({ key: 'chat.suggestionsEnabled', value: newVal })
                 }}
-                label="Chat Suggestions"
-                description="Display AI-generated conversation starters in the chat interface"
+                label={t('models:settings.chatSuggestions.label')}
+                description={t('models:settings.chatSuggestions.description')}
               />
               <Switch
                 checked={ollamaFlashAttention}
@@ -316,8 +329,8 @@ export default function ModelsPage(props: {
                   setOllamaFlashAttention(newVal)
                   updateSettingMutation.mutate({ key: 'ai.ollamaFlashAttention', value: newVal })
                 }}
-                label="Flash Attention"
-                description="Enables OLLAMA_FLASH_ATTENTION=1 for improved memory efficiency. Disable if you experience instability. Takes effect after reinstalling the AI Assistant."
+                label={t('models:settings.flashAttention.label')}
+                description={t('models:settings.flashAttention.description')}
               />
               <Switch
                 checked={autoThinking}
@@ -325,8 +338,8 @@ export default function ModelsPage(props: {
                   setAutoThinking(newVal)
                   updateSettingMutation.mutate({ key: 'ai.autoThinking', value: newVal })
                 }}
-                label="Use thinking automatically when a model supports it"
-                description="Sets the default for models that can think. You can still turn thinking on or off for an individual model in the chat window."
+                label={t('models:settings.autoThinking.label')}
+                description={t('models:settings.autoThinking.description')}
               />
               <Switch
                 checked={ragEnabled}
@@ -334,14 +347,14 @@ export default function ModelsPage(props: {
                   setRagEnabled(newVal)
                   updateSettingMutation.mutate({ key: 'rag.enabled', value: newVal })
                 }}
-                label="Knowledge Base Retrieval"
-                description="Search your knowledge base for relevant documents before answering. Turn this off to save memory and speed up replies when your knowledge base is small or empty. This is the same switch as the one in the chat window."
+                label={t('models:settings.rag.label')}
+                description={t('models:settings.rag.description')}
               />
               <Input
                 name="aiAssistantCustomName"
-                label="Assistant Name"
-                helpText='Give your AI assistant a custom name that will be used in the chat interface and other areas of the application.'
-                placeholder="AI Assistant"
+                label={t('models:settings.assistantName.label')}
+                helpText={t('models:settings.assistantName.help')}
+                placeholder={t('models:settings.assistantName.placeholder')}
                 value={aiAssistantCustomName}
                 onChange={(e) => setAiAssistantCustomName(e.target.value)}
                 onBlur={() =>
@@ -353,8 +366,8 @@ export default function ModelsPage(props: {
               />
               <Select
                 name="tasksModel"
-                label="Tasks Model"
-                helpText="Small, fast model used for background work like chat titles and suggestions. Leave this set to the chat model to use whichever model the chat is using. Avoid reasoning models here — they are slow at short, aesthetic tasks."
+                label={t('models:settings.tasksModel.label')}
+                helpText={t('models:settings.tasksModel.help')}
                 value={tasksModel}
                 options={tasksModelOptions}
                 onChange={(newVal) => {
@@ -364,8 +377,8 @@ export default function ModelsPage(props: {
               />
               <Select
                 name="minRelevance"
-                label="Knowledge Base Relevance"
-                helpText="How closely a knowledge-base passage has to match your question before it is used in an answer. Stricter settings keep unrelated passages out; too strict and genuinely useful ones get dropped too. When nothing clears the bar, the assistant answers from its own knowledge instead."
+                label={t('models:settings.minRelevance.label')}
+                helpText={t('models:settings.minRelevance.help')}
                 value={minRelevance}
                 options={minRelevanceOptions}
                 disabled={!ragEnabled}
@@ -381,13 +394,13 @@ export default function ModelsPage(props: {
                   setRelevanceCheck(newVal)
                   updateSettingMutation.mutate({ key: 'rag.relevanceCheck', value: newVal })
                 }}
-                label="Double-check knowledge base matches"
-                description="Before answering, ask the Tasks Model whether the passages found are actually about your question, and leave them out (and uncited) when they are not. Helps most with large libraries like Wikipedia or Project Gutenberg, where something always looks similar. Needs a capable Tasks Model (about 8B parameters or larger); smaller models reject too many good matches. Adds a short delay to every reply."
+                label={t('models:settings.relevanceCheck.label')}
+                description={t('models:settings.relevanceCheck.description')}
               />
               <Select
                 name="responseStyle"
-                label="Response Style"
-                helpText="How adventurous the assistant is when picking its next word. Auto follows whatever the model's author recommended and fills in the rest, and suits most people. Focused gives shorter, steadier, more repeatable answers and is the better choice for looking things up. Creative varies its wording more, at some cost to accuracy."
+                label={t('models:settings.responseStyle.label')}
+                helpText={t('models:settings.responseStyle.help')}
                 value={responseStyle}
                 options={responseStyleOptions}
                 onChange={(newVal) => {
@@ -397,8 +410,8 @@ export default function ModelsPage(props: {
               />
               <Select
                 name="contextWindow"
-                label="Context Window"
-                helpText="How much conversation and knowledge-base context each reply can consider. Auto sizes this per model from its trained limit and your available memory. Choosing a value sets an upper limit — it can lower the window to save memory, but never raises it beyond what a model supports."
+                label={t('models:settings.contextWindow.label')}
+                helpText={t('models:settings.contextWindow.help')}
                 value={contextWindow}
                 options={contextWindowOptions}
                 onChange={(newVal) => {
@@ -408,37 +421,37 @@ export default function ModelsPage(props: {
               />
               {Object.keys(resolvedWindows).length > 0 && (
                 <p className="text-xs text-text-muted">
-                  Currently in effect:{' '}
-                  {Object.entries(resolvedWindows)
-                    .map(([name, tokens]) => `${name} → ${formatWindow(tokens)}`)
-                    .join(', ')}
-                  . Changes take effect for new conversations.
+                  {t('models:settings.currentlyInEffect', {
+                    list: Object.entries(resolvedWindows)
+                      .map(([name, tokens]) => `${name} → ${formatWindow(tokens)}`)
+                      .join(', '),
+                  })}
                 </p>
               )}
             </div>
           </div>
 
-          <StyledSectionHeader title="Installed Models" className="mt-12 mb-4" />
+          <StyledSectionHeader title={t('models:installed.title')} className="mt-12 mb-4" />
           <div className="bg-surface-primary rounded-lg border-2 border-border-subtle p-6">
             {props.models.installedModels.length === 0 ? (
               <p className="text-text-muted">
-                No models installed. Browse the model catalog below to get started.
+                {t('models:installed.empty')}
               </p>
             ) : (
               <table className="min-w-full divide-y divide-border-subtle">
                 <thead>
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                      Model
+                      {t('models:installed.columns.model')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                      Parameters
+                      {t('models:installed.columns.parameters')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                      Disk Size
+                      {t('models:installed.columns.diskSize')}
                     </th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider">
-                      Action
+                      {t('models:installed.columns.action')}
                     </th>
                   </tr>
                 </thead>
@@ -450,7 +463,7 @@ export default function ModelsPage(props: {
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm text-text-secondary">
-                          {model.details?.parameter_size || 'N/A'}
+                          {model.details?.parameter_size || t('models:installed.notAvailable')}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -465,7 +478,7 @@ export default function ModelsPage(props: {
                           onClick={() => confirmDeleteModel(model.name)}
                           icon="IconTrash"
                         >
-                          Delete
+                          {t('models:installed.delete')}
                         </StyledButton>
                       </td>
                     </tr>
@@ -475,18 +488,20 @@ export default function ModelsPage(props: {
             )}
           </div>
 
-          <StyledSectionHeader title="Remote Connection" className="mt-8 mb-4" />
+          <StyledSectionHeader title={t('models:remote.title')} className="mt-8 mb-4" />
           <div className="bg-surface-primary rounded-lg border-2 border-border-subtle p-6">
             <p className="text-sm text-text-secondary mb-4">
-              Connect to any OpenAI-compatible API server — Ollama, LM Studio, llama.cpp, and others are all supported.
-              For remote Ollama instances, the host must be started with <code className="bg-surface-secondary px-1 rounded">OLLAMA_HOST=0.0.0.0</code>.
+              <Trans
+                i18nKey="models:remote.intro"
+                components={{ code: <code className="bg-surface-secondary px-1 rounded" /> }}
+              />
             </p>
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <Input
                   name="remoteOllamaUrl"
-                  label="Remote Ollama/OpenAI API URL"
-                  placeholder="http://192.168.1.100:11434  (or :1234 for OpenAI API Compatible Apps)"
+                  label={t('models:remote.urlLabel')}
+                  placeholder={t('models:remote.urlPlaceholder')}
                   value={remoteOllamaUrl}
                   onChange={(e) => {
                     setRemoteOllamaUrl(e.target.value)
@@ -504,7 +519,7 @@ export default function ModelsPage(props: {
                 disabled={remoteOllamaSaving || !remoteOllamaUrl}
                 className="mb-0.5"
               >
-                Save &amp; Test
+                {t('models:remote.saveAndTest')}
               </StyledButton>
               {props.models.settings.remoteOllamaUrl && (
                 <StyledButton
@@ -514,7 +529,7 @@ export default function ModelsPage(props: {
                   disabled={remoteOllamaSaving}
                   className="mb-0.5"
                 >
-                  Clear
+                  {t('models:remote.clear')}
                 </StyledButton>
               )}
             </div>
@@ -522,19 +537,19 @@ export default function ModelsPage(props: {
 
           <ActiveModelDownloads withHeader />
 
-          <StyledSectionHeader title="Models" className="mt-12 mb-4" />
+          <StyledSectionHeader title={t('models:catalog.title')} className="mt-12 mb-4" />
           <Alert
             type="info"
             variant="bordered"
-            title="Model downloading is only supported when using a Ollama backend."
-            message="If you are connected to an OpenAI API host (e.g. LM Studio), please download models directly in that application."
+            title={t('models:catalog.ollamaOnlyTitle')}
+            message={t('models:catalog.ollamaOnlyMessage')}
             className="mb-4"
           />
           <div className="flex justify-start items-center gap-3 mt-4">
             <Input
               name="search"
               label=""
-              placeholder="Search language models.."
+              placeholder={t('models:catalog.searchPlaceholder')}
               value={queryUI}
               onChange={(e) => {
                 setQueryUI(e.target.value)
@@ -550,7 +565,7 @@ export default function ModelsPage(props: {
               loading={isForceRefreshing}
               className='mt-1'
             >
-              Refresh Models
+              {t('models:catalog.refresh')}
             </StyledButton>
           </div>
           <StyledTable<NomadOllamaModel>
@@ -559,7 +574,7 @@ export default function ModelsPage(props: {
             columns={[
               {
                 accessor: 'name',
-                title: 'Name',
+                title: t('models:catalog.columns.name'),
                 render(record) {
                   return (
                     <div className="flex flex-col">
@@ -571,11 +586,11 @@ export default function ModelsPage(props: {
               },
               {
                 accessor: 'estimated_pulls',
-                title: 'Estimated Pulls',
+                title: t('models:catalog.columns.estimatedPulls'),
               },
               {
                 accessor: 'model_last_updated',
-                title: 'Last Updated',
+                title: t('models:catalog.columns.lastUpdated'),
               },
             ]}
             data={availableModelData?.models || []}
@@ -588,19 +603,19 @@ export default function ModelsPage(props: {
                       <thead className="bg-surface-primary">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                            Tag
+                            {t('models:catalog.columns.tag')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                            Input Type
+                            {t('models:catalog.columns.inputType')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                            Context Size
+                            {t('models:catalog.columns.contextSize')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                            Model Size
+                            {t('models:catalog.columns.modelSize')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                            Action
+                            {t('models:catalog.columns.action')}
                           </th>
                         </tr>
                       </thead>
@@ -617,15 +632,15 @@ export default function ModelsPage(props: {
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-text-secondary">{tag.input || 'N/A'}</span>
+                                <span className="text-sm text-text-secondary">{tag.input || t('models:catalog.notAvailable')}</span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span className="text-sm text-text-secondary">
-                                  {tag.context || 'N/A'}
+                                  {tag.context || t('models:catalog.notAvailable')}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <span className="text-sm text-text-secondary">{tag.size || 'N/A'}</span>
+                                <span className="text-sm text-text-secondary">{tag.size || t('models:catalog.notAvailable')}</span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <StyledButton
@@ -639,7 +654,7 @@ export default function ModelsPage(props: {
                                   }}
                                   icon={isInstalled ? 'IconTrash' : 'IconDownload'}
                                 >
-                                  {isInstalled ? 'Delete' : 'Install'}
+                                  {isInstalled ? t('models:catalog.delete') : t('models:catalog.install')}
                                 </StyledButton>
                               </td>
                             </tr>
@@ -660,7 +675,7 @@ export default function ModelsPage(props: {
                   setLimit((prev) => prev + 15)
                 }}
               >
-                Load More
+                {t('models:catalog.loadMore')}
               </StyledButton>
             )}
           </div>

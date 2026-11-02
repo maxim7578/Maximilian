@@ -1,0 +1,206 @@
+{
+  "common": {
+    "drugReference": "Arzneimittel-Referenz",
+    "rx": "Rezeptpflichtig",
+    "otc": "Rezeptfrei",
+    "unknown": "Unbekannt",
+    "unknownDrug": "Unbekanntes Medikament",
+    "searching": "Suche läuft …",
+    "loading": "Wird geladen …",
+    "searchFailed": "Suche fehlgeschlagen",
+    "searchFailedHttp": "Suche fehlgeschlagen: HTTP {{status}}",
+    "noFdaData": "Noch keine FDA-Arzneimitteldaten",
+    "sourceCitation": "<bold>Quelle:</bold> Arzneimittel-Packungsbeilagen der U.S. Food & Drug Administration, über <bold>openFDA</bold> – gemeinfrei (CC0 1.0). NOMAD ist nicht mit der FDA verbunden und wird nicht von ihr unterstützt.",
+    "products_one": "{{count}} Produkt",
+    "products_other": "{{count}} Produkte",
+    "naturalRemedies": "Naturheilmittel"
+  },
+  "drugIndex": {
+    "compareWarnings": "Warnhinweise vergleichen",
+    "intro": "Schlag ein Medikament nach Namen nach oder geh von einem Symptom aus, um rezeptfreie Optionen zu finden – alles aus offline gespeicherten FDA-Packungsbeilagen.",
+    "emptyText": "Lade den openFDA-Datensatz mit Packungsbeilagen herunter, um die Offline-Suche zu aktivieren. Erfordert einen komprimierten Download von ca. 1,7 GB (ca. 8–10 GB nach dem Einlesen).",
+    "buttons": {
+      "downloading": "Wird heruntergeladen …",
+      "indexing": "Wird indexiert …",
+      "starting": "Wird gestartet …",
+      "downloadData": "FDA-Arzneimitteldaten herunterladen",
+      "ingest": "In die Suche einlesen",
+      "restarting": "Wird neu gestartet …",
+      "restartIngest": "Einlesen neu starten",
+      "updateData": "FDA-Daten aktualisieren"
+    },
+    "confirmRestartIngest": "Einlesen neu starten? Dadurch wird der aktuelle (möglicherweise hängende) Einlesevorgang verworfen und mit den bereits heruntergeladenen Dateien neu ausgeführt.",
+    "tabs": {
+      "byDrug": "Nach Medikament suchen",
+      "bySituation": "Nach Situation",
+      "fdaData": "FDA-Daten"
+    },
+    "search": {
+      "placeholder": "Medikament nach Namen suchen – Ibuprofen, Benadryl, Loratadin …",
+      "all": "Alle",
+      "otc": "Rezeptfrei",
+      "prescription": "Rezeptpflichtig",
+      "form": "Darreichungsform",
+      "formLabel": "Darreichungsform (wie du es anwendest)",
+      "anyForm": "Jede Darreichungsform",
+      "sort": "Sortierung",
+      "bestMatch": "Beste Treffer",
+      "az": "A–Z",
+      "hint": "Gib oben einen Medikamentennamen ein, um {{total}} FDA-Packungsbeilagen zu durchsuchen.",
+      "tryTab": "Suchst du stattdessen etwas gegen ein Symptom? Probier den Tab <tabLink>Nach Situation</tabLink>.",
+      "ingredients_one": "{{count}} Wirkstoff",
+      "ingredients_other": "{{count}} Wirkstoffe",
+      "loadMore": "Weitere Produkte laden",
+      "noMatch": "Keine Medikamente passen zu „{{query}}“."
+    },
+    "routes": {
+      "oral": "Zum Einnehmen (Tablette, Flüssigkeit)",
+      "topical": "Äußerlich (Creme, Gel)",
+      "ophthalmic": "Augentropfen",
+      "otic": "Ohrentropfen",
+      "nasal": "Nasenspray",
+      "inhalation": "Inhalator",
+      "sublingual": "Unter die Zunge",
+      "rectal": "Rektal",
+      "vaginal": "Vaginal",
+      "transdermal": "Hautpflaster",
+      "dental": "Für Zähne und Mund"
+    },
+    "situation": {
+      "selected": "Ausgewählt:",
+      "clear": "Zurücksetzen",
+      "addAnother": "Weitere Situation hinzufügen",
+      "pick": "Eine oder mehrere Situationen auswählen",
+      "emptyHint": "Wähle oben eine Situation (oder mehrere), um die rezeptfreien Medikamente zu sehen, in deren FDA-Packungsbeilagen sie aufgeführt ist.",
+      "finding": "Optionen werden gesucht …",
+      "treatsAll": "Behandelt alle {{selected}} ausgewählten",
+      "otcCount": "{{total}} rezeptfrei",
+      "noneTreatsAll": "Keine einzelne Option behandelt alle {{selected}} – hier sind Optionen für jede einzelne Situation.",
+      "noAdditional": "Keine weiteren rezeptfreien Optionen für <bold>{{label}}</bold> gefunden.",
+      "forLabel": "Bei <highlight>„{{label}}“</highlight>",
+      "top": "Top {{limit}}"
+    },
+    "fdaTab": {
+      "title": "FDA-Arzneimitteldaten",
+      "installed": "{{total}} Packungsbeilagen installiert. Beim Aktualisieren wird bei openFDA nach einem neueren Datensatz gesucht und die Offline-Kopie erneuert."
+    },
+    "footerNote": "Die Daten und die Zuordnungen zu Situationen beruhen allein auf dem Text der Packungsbeilagen; verlass dich bei medizinischen Entscheidungen nicht darauf."
+  },
+  "remedy": {
+    "selfCare": "Selbsthilfe",
+    "herb": "Heilpflanze",
+    "source": "Quelle: {{source}}",
+    "usGovernmentSource": "Quelle der US-Regierung",
+    "how": "Anwendung:",
+    "evidence": "Evidenz:",
+    "cautions": "Vorsicht:"
+  },
+  "interactions": {
+    "title": "Warnhinweise vergleichen",
+    "intro": "Sieh dir die Wechselwirkungshinweise aus den FDA-Packungsbeilagen der einzelnen Medikamente nebeneinander an. Wähle bis zu {{max}} Medikamente aus.",
+    "disclaimer": "<bold>Hier werden die Wechselwirkungshinweise aus der FDA-Packungsbeilage jedes Medikaments einzeln angezeigt.</bold> Dies ist <bold>keine</bold> Prüfung auf Wechselwirkungen zwischen Medikamenten und <bold>kein</bold> Ersatz für eine fachliche medizinische Prüfung. Fehlt hier ein Text, heißt das nicht, dass ein Medikament gefahrlos kombiniert werden kann.",
+    "emptyText": "Lade den openFDA-Datensatz mit Packungsbeilagen herunter, um Offline-Suche und Vergleich zu aktivieren.",
+    "goToDownload": "Zur Arzneimittel-Referenz, um Daten herunterzuladen",
+    "selectTitle": "Medikamente zum Vergleichen auswählen",
+    "maxReached": "Maximum von {{max}} Medikamenten erreicht",
+    "removeAria": "{{name}} entfernen",
+    "removeDrugAria": "Medikament {{id}} entfernen",
+    "searchPlaceholder": "Medikament zum Hinzufügen suchen …",
+    "noResults": "Keine Ergebnisse für „{{query}}“",
+    "selectHint": "Wähle oben Medikamente aus, um die Wechselwirkungshinweise aus ihren Packungsbeilagen zu vergleichen.",
+    "footerNote": "Die Daten der Packungsbeilagen werden ohne Gewähr bereitgestellt; verlass dich bei medizinischen Entscheidungen nicht darauf.",
+    "added": "Hinzugefügt",
+    "add": "Hinzufügen"
+  },
+  "interactionColumn": {
+    "removeAria": "{{name}} aus dem Vergleich entfernen",
+    "noText": "Diese Packungsbeilage enthält keinen Text zu Wechselwirkungen."
+  },
+  "show": {
+    "headFallback": "Medikamentendetails",
+    "addToComparison": "Zum Wechselwirkungsvergleich hinzufügen",
+    "manufacturer": "Hersteller:",
+    "route": "Art der Anwendung:",
+    "ndc": "NDC:",
+    "labelDate": "Stand der Packungsbeilage:",
+    "sections": {
+      "boxedWarning": "Boxed Warning (hervorgehobener Warnhinweis)",
+      "indications": "Anwendungsgebiete",
+      "commonlyUsedFor": "Häufig angewendet bei",
+      "dosage": "Dosierung & Anwendung",
+      "warnings": "Warnhinweise",
+      "interactions": "Wechselwirkungen",
+      "interactionsFootnote": "Angaben aus der Packungsbeilage eines einzelnen Medikaments – keine Prüfung auf Wechselwirkungen zwischen Medikamenten",
+      "contraindications": "Gegenanzeigen",
+      "whenUsing": "Während der Anwendung",
+      "stopUse": "Anwendung beenden"
+    },
+    "disclaimer": "Verlass dich bei Entscheidungen über deine medizinische Versorgung nicht auf diese Daten. Obwohl alle Anstrengungen unternommen werden, die Richtigkeit sicherzustellen, solltest du davon ausgehen, dass alle Ergebnisse ungeprüft sind.",
+    "lastRefreshed": "Zuletzt aktualisiert: {{date}}"
+  },
+  "resultRow": {
+    "labels_one": "{{count}} Packungsbeilage",
+    "labels_other": "{{count}} Packungsbeilagen"
+  },
+  "disclaimerModal": {
+    "title": "Bevor du die Arzneimittel-Referenz nutzt",
+    "intro": "Dieses Werkzeug zeigt allgemeine Gesundheitsinformationen aus offiziellen <bold>FDA-Packungsbeilagen</bold> und ordnet Symptomen rezeptfreie Optionen zu. Es dient <bold>ausschließlich der Information</bold>.",
+    "notAdvice": "Es ist <bold>keine medizinische Beratung</bold> und kein Ersatz für Arzt, Apotheker oder Pflegepersonal.",
+    "notChecker": "Es ist <bold>keine Prüfung auf Wechselwirkungen</bold>. Lies immer die vollständige Packungsbeilage jedes Produkts und sprich mit einer Fachperson, bevor du Medikamente kombinierst.",
+    "matches": "Zuordnungen zu Situationen stammen aus dem Text der Packungsbeilagen, nicht aus klinischen Empfehlungen – sie können unvollständig sein oder Produkte enthalten, mit denen du nicht rechnen würdest.",
+    "followProduct": "Halte dich immer an die Anweisungen des <bold>Produkts, das du tatsächlich hast</bold>; Dosierungen und Warnhinweise unterscheiden sich von Produkt zu Produkt.",
+    "emergency": "Im Notfall, bei schweren oder sich verschlimmernden Symptomen oder wenn du unsicher bist, <bold>wende dich an medizinisches Fachpersonal oder ruf den Notruf</bold>.",
+    "dataNote": "Die Daten stammen von openFDA (U.S. FDA, gemeinfrei). NOMAD ist nicht mit der FDA verbunden und wird nicht von ihr unterstützt.",
+    "acknowledge": "Verstanden – weiter"
+  },
+  "ingestStatus": {
+    "downloadTitle": "FDA-Daten herunterladen",
+    "ingestTitle": "In die Suche einlesen",
+    "download": {
+      "failed": "Der Download ist fehlgeschlagen – er wird automatisch wiederholt; schlägt er weiterhin fehl, klicke auf „FDA-Daten herunterladen“, um ihn neu zu starten. Fertige Teile bleiben erhalten und werden dort fortgesetzt, wo sie aufgehört haben.",
+      "completed": "Alle Teile sind gespeichert. Als Nächstes werden sie für die Suche indexiert.",
+      "runningParts": "Lade Teil {{part}} von {{total}} – insgesamt ca. 1,7 GB über alle Teile.",
+      "readingManifest": "Download-Manifest von openFDA wird gelesen …",
+      "notStarted": "Nicht gestartet."
+    },
+    "ingest": {
+      "failed": "Die Indexierung ist fehlgeschlagen – klicke auf „In die Suche einlesen“, um es mit den heruntergeladenen Dateien erneut zu versuchen (kein erneuter Download). Bereits indexierte Packungsbeilagen bleiben erhalten (die Aktualisierung ist idempotent).",
+      "completed": "{{total}} Packungsbeilagen sind jetzt offline durchsuchbar.",
+      "runningParts": "Schreibe Teil {{part}} von {{total}} in die Offline-Datenbank.",
+      "running": "Packungsbeilagen werden in die Offline-Datenbank geschrieben.",
+      "waiting": "Warte auf heruntergeladene Daten."
+    },
+    "elapsed": "Laufzeit {{duration}}",
+    "thisPart": "{{size}} in diesem Teil",
+    "left": "noch ca. {{duration}}",
+    "estimate": "(geschätzt)",
+    "ofLabels": "von ca. {{total}} Packungsbeilagen",
+    "background": "Läuft im Hintergrund – du kannst diese Seite verlassen, der Vorgang läuft weiter. Die Suche wird automatisch aktiviert, sobald das Einlesen abgeschlossen ist.",
+    "version": "FDA-Datenversion {{version}}."
+  },
+  "conditions": {
+    "fallbackLabel": "Beschwerde",
+    "noDrugData": "Noch keine Arzneimitteldaten",
+    "noDrugDataText": "Lade die FDA-Packungsbeilagen in der Arzneimittel-Referenz für die Offline-Nutzung herunter, um Treffer für diese Situation zu sehen.",
+    "goToDrugReference": "Zur Arzneimittel-Referenz",
+    "noMatches": "In den aktuellen Daten der Packungsbeilagen passen keine rezeptfreien Medikamente zu „{{label}}“. Versuch es mit der Suche nach Medikamentennamen in der <link>Arzneimittel-Referenz</link>.",
+    "otcOptions": "Rezeptfreie Optionen",
+    "results_one": "{{count}} Ergebnis",
+    "results_other": "{{count}} Ergebnisse",
+    "remedies_one": "{{count}} Mittel",
+    "remedies_other": "{{count}} Mittel",
+    "remedySources": "Quellen: NCCIH „Herbs at a Glance“ (NIH) und Gesundheitsempfehlungen der US-Regierung (CDC, MedlinePlus/NLM, FDA). Gemeinfrei (Werke der US-Regierung).",
+    "footerNote": "Die Treffer beruhen auf den Anwendungsgebieten in FDA-Packungsbeilagen und sind keine medizinischen Empfehlungen. Verlass dich bei Entscheidungen über deine medizinische Versorgung nicht auf diese Daten."
+  },
+  "safetyBanner": {
+    "title": "Nur zur Information – keine medizinische Beratung.",
+    "notRecommendation": "Diese Ergebnisse ordnen einer Situation die Anwendungsgebiete aus FDA-Packungsbeilagen zu. Sie sind <bold>keine Empfehlung</bold> und <bold>keine Befürwortung durch die FDA</bold>.",
+    "notChecker": "Dies ist <bold>keine Prüfung auf Wechselwirkungen</bold>. Lies die vollständigen Warnhinweise jeder Packungsbeilage und sprich mit Apotheker oder Arzt, bevor du Medikamente kombinierst.",
+    "emergency": "Im Notfall oder bei schweren oder sich verschlimmernden Symptomen <bold>wende dich an medizinisches Fachpersonal oder ruf den Notruf</bold>."
+  },
+  "remedySafetyNote": {
+    "title": "Nur zur Information – keine medizinische Beratung.",
+    "body": "Für diese Mittel gibt es nur begrenzte oder widersprüchliche Belege, sie wurden nicht von der FDA bewertet und sind kein Ersatz für eine fachliche Behandlung. Sprich mit einem Arzt, bevor du eines davon anwendest und bevor du eines mit einem Medikament kombinierst, das du bereits nimmst.",
+    "emergency": "Im Notfall oder bei schweren oder sich verschlimmernden Symptomen <bold>such echte medizinische Hilfe – ruf den Notruf</bold>."
+  }
+}

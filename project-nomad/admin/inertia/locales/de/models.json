@@ -1,0 +1,143 @@
+{
+  "page": {
+    "headTitle": "{{name}}-Einstellungen | Project NOMAD",
+    "intro": "Verwalte ganz einfach die Einstellungen und installierten Modelle von {{name}}. Wir empfehlen, mit kleineren Modellen zu beginnen und zu prüfen, wie sie auf deinem System laufen, bevor du zu größeren wechselst.",
+    "dependenciesMissing": "Die Abhängigkeiten von {{name}} sind nicht installiert. Bitte installiere sie, um KI-Modelle zu verwalten."
+  },
+  "notifications": {
+    "remoteConfigureFailed": "Remote-Ollama konnte nicht konfiguriert werden.",
+    "remoteCleared": "Remote-Ollama-Konfiguration entfernt.",
+    "remoteClearFailed": "Remote-Ollama-Konfiguration konnte nicht entfernt werden.",
+    "listRefreshed": "Modellliste wurde online neu geladen.",
+    "downloadStarted": "Download von {{model}} gestartet. Das kann eine Weile dauern.",
+    "installError": "Beim Installieren des Modells {{model}} ist ein Fehler aufgetreten. Bitte versuche es erneut.",
+    "deleted": "Modell gelöscht: {{model}}.",
+    "deleteError": "Beim Löschen des Modells {{model}} ist ein Fehler aufgetreten. Bitte versuche es erneut.",
+    "settingUpdated": "Einstellung erfolgreich aktualisiert.",
+    "settingError": "Beim Aktualisieren der Einstellung ist ein Fehler aufgetreten. Bitte versuche es erneut."
+  },
+  "deleteModal": {
+    "title": "Modell löschen?",
+    "confirm": "Löschen",
+    "cancel": "Abbrechen",
+    "text": "Möchtest du dieses Modell wirklich löschen? Wenn du es später wieder nutzen willst, musst du es erneut herunterladen."
+  },
+  "options": {
+    "contextAuto": "Automatisch (empfohlen)",
+    "contextTokens": "{{size}} Token",
+    "customRelevance": "Benutzerdefiniert ({{value}})",
+    "useChatModel": "Chat-Modell verwenden",
+    "notInstalled": "{{model}} (nicht installiert)",
+    "relevance": {
+      "off": "Aus – jede gefundene Passage verwenden",
+      "lenient": "Großzügig",
+      "balanced": "Ausgewogen (empfohlen)",
+      "strict": "Streng"
+    },
+    "responseStyle": {
+      "auto": "Automatisch (empfohlen)",
+      "focused": "Fokussiert (sachlich, reproduzierbar)",
+      "creative": "Kreativ (abwechslungsreich, explorativ)",
+      "off": "Backend-Standard (nichts senden)"
+    }
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "chatSuggestions": {
+      "label": "Chat-Vorschläge",
+      "description": "KI-generierte Gesprächseinstiege in der Chat-Oberfläche anzeigen"
+    },
+    "flashAttention": {
+      "label": "Flash Attention",
+      "description": "Aktiviert OLLAMA_FLASH_ATTENTION=1 für eine effizientere Speichernutzung. Deaktiviere es, wenn Instabilitäten auftreten. Wird nach einer Neuinstallation des KI-Assistenten wirksam."
+    },
+    "autoThinking": {
+      "label": "Denkmodus automatisch nutzen, wenn ein Modell ihn unterstützt",
+      "description": "Legt die Voreinstellung für Modelle fest, die denken können. Im Chatfenster kannst du den Denkmodus für einzelne Modelle weiterhin ein- oder ausschalten."
+    },
+    "rag": {
+      "label": "Abruf aus der Wissensdatenbank",
+      "description": "Vor dem Antworten die Wissensdatenbank nach passenden Dokumenten durchsuchen. Schalte das aus, um Speicher zu sparen und Antworten zu beschleunigen, wenn deine Wissensdatenbank klein oder leer ist. Das ist derselbe Schalter wie im Chatfenster."
+    },
+    "assistantName": {
+      "label": "Name des Assistenten",
+      "help": "Gib deinem KI-Assistenten einen eigenen Namen, der in der Chat-Oberfläche und an anderen Stellen der Anwendung verwendet wird.",
+      "placeholder": "KI-Assistent"
+    },
+    "tasksModel": {
+      "label": "Aufgaben-Modell",
+      "help": "Kleines, schnelles Modell für Hintergrundarbeiten wie Chat-Titel und Vorschläge. Lass hier das Chat-Modell eingestellt, um dasselbe Modell wie im Chat zu verwenden. Vermeide hier Reasoning-Modelle – sie sind bei kurzen, gestalterischen Aufgaben langsam."
+    },
+    "minRelevance": {
+      "label": "Relevanz der Wissensdatenbank",
+      "help": "Wie genau eine Passage aus der Wissensdatenbank zu deiner Frage passen muss, bevor sie in einer Antwort verwendet wird. Strengere Einstellungen halten unpassende Passagen fern; ist es zu streng, fallen auch wirklich nützliche weg. Erreicht nichts die Schwelle, antwortet der Assistent stattdessen aus seinem eigenen Wissen."
+    },
+    "relevanceCheck": {
+      "label": "Treffer aus der Wissensdatenbank gegenprüfen",
+      "description": "Vor dem Antworten das Aufgaben-Modell fragen, ob die gefundenen Passagen tatsächlich zu deiner Frage gehören, und sie weglassen (und nicht zitieren), wenn nicht. Hilft vor allem bei großen Bibliotheken wie Wikipedia oder Project Gutenberg, in denen immer etwas ähnlich aussieht. Erfordert ein leistungsfähiges Aufgaben-Modell (etwa 8B Parameter oder größer); kleinere Modelle verwerfen zu viele gute Treffer. Verzögert jede Antwort etwas."
+    },
+    "responseStyle": {
+      "label": "Antwortstil",
+      "help": "Wie experimentierfreudig der Assistent bei der Wahl des nächsten Wortes ist. „Automatisch“ folgt den Empfehlungen des Modellautors, ergänzt den Rest und passt für die meisten. „Fokussiert“ liefert kürzere, beständigere und besser reproduzierbare Antworten und eignet sich besser zum Nachschlagen. „Kreativ“ formuliert abwechslungsreicher, auf Kosten der Genauigkeit."
+    },
+    "contextWindow": {
+      "label": "Kontextfenster",
+      "help": "Wie viel Gesprächs- und Wissensdatenbank-Kontext jede Antwort berücksichtigen kann. „Automatisch“ bemisst das je Modell nach seinem trainierten Limit und deinem verfügbaren Speicher. Ein gewählter Wert ist eine Obergrenze – er kann das Fenster verkleinern, um Speicher zu sparen, hebt es aber nie über das hinaus, was ein Modell unterstützt."
+    },
+    "currentlyInEffect": "Aktuell wirksam: {{list}}. Änderungen gelten für neue Unterhaltungen."
+  },
+  "installed": {
+    "title": "Installierte Modelle",
+    "empty": "Keine Modelle installiert. Stöbere unten im Modellkatalog, um loszulegen.",
+    "columns": {
+      "model": "Modell",
+      "parameters": "Parameter",
+      "diskSize": "Speicherbedarf",
+      "action": "Aktion"
+    },
+    "notAvailable": "k. A.",
+    "delete": "Löschen"
+  },
+  "remote": {
+    "title": "Remote-Verbindung",
+    "intro": "Verbinde dich mit einem beliebigen OpenAI-kompatiblen API-Server – Ollama, LM Studio, llama.cpp und andere werden unterstützt. Bei entfernten Ollama-Instanzen muss der Host mit <code>OLLAMA_HOST=0.0.0.0</code> gestartet werden.",
+    "urlLabel": "Remote-URL für Ollama/OpenAI-API",
+    "urlPlaceholder": "http://192.168.1.100:11434  (oder :1234 für OpenAI-API-kompatible Apps)",
+    "saveAndTest": "Speichern & testen",
+    "clear": "Entfernen"
+  },
+  "catalog": {
+    "title": "Modelle",
+    "ollamaOnlyTitle": "Modelle können nur mit einem Ollama-Backend heruntergeladen werden.",
+    "ollamaOnlyMessage": "Wenn du mit einem OpenAI-API-Host verbunden bist (z. B. LM Studio), lade Modelle bitte direkt in dieser Anwendung herunter.",
+    "searchPlaceholder": "Sprachmodelle suchen …",
+    "refresh": "Modelle aktualisieren",
+    "columns": {
+      "name": "Name",
+      "estimatedPulls": "Geschätzte Downloads",
+      "lastUpdated": "Zuletzt aktualisiert",
+      "tag": "Tag",
+      "inputType": "Eingabetyp",
+      "contextSize": "Kontextgröße",
+      "modelSize": "Modellgröße",
+      "action": "Aktion"
+    },
+    "notAvailable": "k. A.",
+    "install": "Installieren",
+    "delete": "Löschen",
+    "loadMore": "Mehr laden"
+  },
+  "activeDownloads": {
+    "title": "Aktive Modell-Downloads",
+    "cancelModal": {
+      "title": "Download abbrechen?",
+      "confirm": "Download abbrechen",
+      "keep": "Weiter herunterladen",
+      "question": "Download von <model>{{model}}</model> stoppen?",
+      "note": "Bereits heruntergeladene Daten bleiben auf dem Datenträger. Wenn du dieses Modell später erneut herunterlädst, wird dort fortgesetzt, wo der Download aufgehört hat, statt von vorn zu beginnen."
+    },
+    "cancelTooltip": "Download abbrechen",
+    "downloading": "Wird heruntergeladen …",
+    "empty": "Keine aktiven Modell-Downloads"
+  }
+}

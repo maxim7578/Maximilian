@@ -1,0 +1,206 @@
+{
+  "common": {
+    "drugReference": "Drug Reference",
+    "rx": "Rx",
+    "otc": "OTC",
+    "unknown": "Unknown",
+    "unknownDrug": "Unknown Drug",
+    "searching": "Searching…",
+    "loading": "Loading…",
+    "searchFailed": "Search failed",
+    "searchFailedHttp": "Search failed: HTTP {{status}}",
+    "noFdaData": "No FDA drug data yet",
+    "sourceCitation": "<bold>Source:</bold> U.S. Food & Drug Administration drug labeling, via <bold>openFDA</bold> — public domain (CC0 1.0). NOMAD is not affiliated with or endorsed by the FDA.",
+    "products_one": "{{count}} product",
+    "products_other": "{{count}} products",
+    "naturalRemedies": "Natural remedies"
+  },
+  "drugIndex": {
+    "compareWarnings": "Compare label warnings",
+    "intro": "Look up a medicine by name, or start from a symptom to find over-the-counter options — all from offline FDA drug labels.",
+    "emptyText": "Download the openFDA drug-label dataset to enable offline search. Requires ~1.7 GB compressed download (~8–10 GB after ingestion).",
+    "buttons": {
+      "downloading": "Downloading…",
+      "indexing": "Indexing…",
+      "starting": "Starting…",
+      "downloadData": "Download FDA drug data",
+      "ingest": "Ingest into search",
+      "restarting": "Restarting…",
+      "restartIngest": "Restart ingest",
+      "updateData": "Update FDA data"
+    },
+    "confirmRestartIngest": "Restart the ingest? This clears the current (possibly stuck) ingest job and re-runs it from the already-downloaded files.",
+    "tabs": {
+      "byDrug": "Search by drug",
+      "bySituation": "By situation",
+      "fdaData": "FDA data"
+    },
+    "search": {
+      "placeholder": "Search a medicine by name — ibuprofen, Benadryl, loratadine…",
+      "all": "All",
+      "otc": "Over-the-counter",
+      "prescription": "Prescription",
+      "form": "Form",
+      "formLabel": "Form (how you take it)",
+      "anyForm": "Any form",
+      "sort": "Sort",
+      "bestMatch": "Best match",
+      "az": "A–Z",
+      "hint": "Type a medicine name above to search {{total}} FDA drug labels.",
+      "tryTab": "Looking for something to treat a symptom instead? Try the <tabLink>By situation</tabLink> tab.",
+      "ingredients_one": "{{count}} ingredient",
+      "ingredients_other": "{{count}} ingredients",
+      "loadMore": "Load more products",
+      "noMatch": "No medicines match “{{query}}”."
+    },
+    "routes": {
+      "oral": "Oral (pill, liquid)",
+      "topical": "Topical (cream, gel)",
+      "ophthalmic": "Eye drops",
+      "otic": "Ear drops",
+      "nasal": "Nasal spray",
+      "inhalation": "Inhaler",
+      "sublingual": "Under the tongue",
+      "rectal": "Rectal",
+      "vaginal": "Vaginal",
+      "transdermal": "Skin patch",
+      "dental": "Dental"
+    },
+    "situation": {
+      "selected": "Selected:",
+      "clear": "Clear",
+      "addAnother": "Add another situation",
+      "pick": "Pick one or more situations",
+      "emptyHint": "Pick a situation (or a few) above to see the over-the-counter drugs whose FDA labels list it.",
+      "finding": "Finding options…",
+      "treatsAll": "Treats all {{selected}} selected",
+      "otcCount": "{{total}} OTC",
+      "noneTreatsAll": "No single option treats all {{selected}} of these — here are options for each situation.",
+      "noAdditional": "No additional OTC options found for <bold>{{label}}</bold>.",
+      "forLabel": "For <highlight>“{{label}}”</highlight>",
+      "top": "top {{limit}}"
+    },
+    "fdaTab": {
+      "title": "FDA drug data",
+      "installed": "{{total}} drug labels installed. Updating re-checks openFDA for a newer dataset and refreshes the offline copy."
+    },
+    "footerNote": "Label data and situation matches are label-text only; do not rely on them for medical decisions."
+  },
+  "remedy": {
+    "selfCare": "Self-care",
+    "herb": "Herb",
+    "source": "Source: {{source}}",
+    "usGovernmentSource": "US government source",
+    "how": "How:",
+    "evidence": "Evidence:",
+    "cautions": "Cautions:"
+  },
+  "interactions": {
+    "title": "Compare label warnings",
+    "intro": "View each drug's FDA-labeled interaction warnings side by side. Select up to {{max}} drugs.",
+    "disclaimer": "<bold>This shows each drug's own FDA-labeled interaction warnings, individually.</bold> It is <bold>not</bold> a cross-drug interaction checker and is <bold>not</bold> a substitute for professional medical review. Absence of text here does not mean a drug is safe to combine.",
+    "emptyText": "Download the openFDA drug-label dataset to enable offline search and comparison.",
+    "goToDownload": "Go to Drug Reference to download data",
+    "selectTitle": "Select drugs to compare",
+    "maxReached": "Maximum {{max}} drugs reached",
+    "removeAria": "Remove {{name}}",
+    "removeDrugAria": "Remove drug {{id}}",
+    "searchPlaceholder": "Search for a drug to add…",
+    "noResults": "No results for \"{{query}}\"",
+    "selectHint": "Select drugs above to compare their labeled interaction warnings.",
+    "footerNote": "Label data is provided as-is; do not rely on it for medical decisions.",
+    "added": "Added",
+    "add": "Add"
+  },
+  "interactionColumn": {
+    "removeAria": "Remove {{name}} from comparison",
+    "noText": "No labeled interaction text on this label."
+  },
+  "show": {
+    "headFallback": "Drug Detail",
+    "addToComparison": "Add to interaction comparison",
+    "manufacturer": "Manufacturer:",
+    "route": "Route:",
+    "ndc": "NDC:",
+    "labelDate": "Label date:",
+    "sections": {
+      "boxedWarning": "Boxed Warning",
+      "indications": "Indications & Usage",
+      "commonlyUsedFor": "Commonly used for",
+      "dosage": "Dosage & Administration",
+      "warnings": "Warnings",
+      "interactions": "Drug Interactions",
+      "interactionsFootnote": "Single-drug label information — not a cross-drug interaction checker",
+      "contraindications": "Contraindications",
+      "whenUsing": "When Using",
+      "stopUse": "Stop Use"
+    },
+    "disclaimer": "Do not rely on this data to make decisions regarding medical care. While every effort is made to ensure accuracy, you should assume all results are unvalidated.",
+    "lastRefreshed": "Last refreshed: {{date}}"
+  },
+  "resultRow": {
+    "labels_one": "{{count}} label",
+    "labels_other": "{{count}} labels"
+  },
+  "disclaimerModal": {
+    "title": "Before you use the Drug Reference",
+    "intro": "This tool shows general health information from official <bold>FDA drug labels</bold> and matches symptoms to over-the-counter options. It is provided for <bold>information only</bold>.",
+    "notAdvice": "It is <bold>not medical advice</bold> and not a substitute for a doctor, pharmacist, or nurse.",
+    "notChecker": "It is <bold>not a drug-interaction checker</bold>. Always read each product’s full label and check with a professional before combining medicines.",
+    "matches": "Situation matches come from label text, not clinical recommendations — they can be incomplete or include products you wouldn’t expect.",
+    "followProduct": "Always follow the directions on the <bold>actual product you have</bold>; dosages and warnings differ between products.",
+    "emergency": "In an emergency, or if symptoms are severe, worsening, or you’re unsure, <bold>contact a medical professional or call emergency services</bold>.",
+    "dataNote": "Data is from openFDA (U.S. FDA, public domain). NOMAD is not affiliated with or endorsed by the FDA.",
+    "acknowledge": "I understand — continue"
+  },
+  "ingestStatus": {
+    "downloadTitle": "Download FDA data",
+    "ingestTitle": "Ingest into search",
+    "download": {
+      "failed": "The download failed — it retries automatically; if it stays failed, press \"Download FDA data\" to restart. Finished parts are kept and resume where they left off.",
+      "completed": "All parts are on disk. Indexing them into search next.",
+      "runningParts": "Pulling part {{part}} of {{total}} — ~1.7 GB total across all parts.",
+      "readingManifest": "Reading the openFDA download manifest…",
+      "notStarted": "Not started."
+    },
+    "ingest": {
+      "failed": "Indexing failed — press \"Ingest into search\" to retry from the downloaded files (no re-download). Already-indexed labels are kept (the refresh is idempotent).",
+      "completed": "{{total}} labels are now searchable offline.",
+      "runningParts": "Writing part {{part}} of {{total}} into the offline database.",
+      "running": "Writing labels into the offline database.",
+      "waiting": "Waiting for downloaded data."
+    },
+    "elapsed": "Elapsed {{duration}}",
+    "thisPart": "{{size}} this part",
+    "left": "~{{duration}} left",
+    "estimate": "(estimate)",
+    "ofLabels": "of ~{{total}} labels",
+    "background": "Runs in the background — you can leave this page and it keeps going. Search turns on automatically when ingest finishes.",
+    "version": "FDA data version {{version}}."
+  },
+  "conditions": {
+    "fallbackLabel": "Condition",
+    "noDrugData": "No drug data yet",
+    "noDrugDataText": "Download the offline FDA drug labels from Drug Reference to see matches for this situation.",
+    "goToDrugReference": "Go to Drug Reference",
+    "noMatches": "No over-the-counter drugs match “{{label}}” in the current label data. Try searching by drug name in <link>Drug Reference</link>.",
+    "otcOptions": "Over-the-counter options",
+    "results_one": "{{count}} result",
+    "results_other": "{{count}} results",
+    "remedies_one": "{{count}} remedy",
+    "remedies_other": "{{count}} remedies",
+    "remedySources": "Sources: NCCIH “Herbs at a Glance” (NIH) and US-government health guidance (CDC, MedlinePlus/NLM, FDA). Public domain (US government works).",
+    "footerNote": "Matches are FDA label-indication text, not medical recommendations. Do not rely on this data to make decisions regarding medical care."
+  },
+  "safetyBanner": {
+    "title": "Informational reference only — not medical advice.",
+    "notRecommendation": "These results match FDA drug-label indications to a situation. They are <bold>not a recommendation</bold> and <bold>not an FDA endorsement</bold>.",
+    "notChecker": "This is <bold>not a drug-interaction checker</bold>. Read each label’s full warnings, and check with a pharmacist or clinician before combining medicines.",
+    "emergency": "In an emergency, or if symptoms are severe or worsening, <bold>contact a medical professional or call emergency services</bold>."
+  },
+  "remedySafetyNote": {
+    "title": "Informational only — not medical advice.",
+    "body": "These remedies have limited or mixed evidence, are not FDA-evaluated, and are not a substitute for professional care. Check with a clinician before using any of them, and before combining one with a medication you already take.",
+    "emergency": "In an emergency, or if symptoms are severe or worsening, <bold>seek real medical care — call emergency services</bold>."
+  }
+}

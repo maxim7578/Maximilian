@@ -1,4 +1,5 @@
 import { IconAlertTriangle } from '@tabler/icons-react'
+import { Trans, useTranslation } from 'react-i18next'
 
 /**
  * Co-located safety note for AFFIRMATIVE self-care / natural-remedy guidance.
@@ -12,6 +13,7 @@ import { IconAlertTriangle } from '@tabler/icons-react'
  * past. Same amber alert language as SafetyBanner so the two read as one system.
  */
 export default function RemedySafetyNote() {
+  const { t } = useTranslation()
   return (
     <div
       role="alert"
@@ -23,15 +25,10 @@ export default function RemedySafetyNote() {
         aria-hidden="true"
       />
       <div className="space-y-1">
-        <p className="font-bold">Informational only — not medical advice.</p>
+        <p className="font-bold">{t('medical:remedySafetyNote.title')}</p>
+        <p className="text-amber-800">{t('medical:remedySafetyNote.body')}</p>
         <p className="text-amber-800">
-          These remedies have limited or mixed evidence, are not FDA-evaluated, and are not a
-          substitute for professional care. Check with a clinician before using any of them, and
-          before combining one with a medication you already take.
-        </p>
-        <p className="text-amber-800">
-          In an emergency, or if symptoms are severe or worsening,{' '}
-          <strong>seek real medical care — call emergency services</strong>.
+          <Trans i18nKey="medical:remedySafetyNote.emergency" components={{ bold: <strong /> }} />
         </p>
       </div>
     </div>

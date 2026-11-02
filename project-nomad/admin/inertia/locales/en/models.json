@@ -1,0 +1,143 @@
+{
+  "page": {
+    "headTitle": "{{name}} Settings | Project NOMAD",
+    "intro": "Easily manage the {{name}}'s settings and installed models. We recommend starting with smaller models first to see how they perform on your system before moving on to larger ones.",
+    "dependenciesMissing": "{{name}}'s dependencies are not installed. Please install them to manage AI models."
+  },
+  "notifications": {
+    "remoteConfigureFailed": "Failed to configure remote Ollama.",
+    "remoteCleared": "Remote Ollama configuration cleared.",
+    "remoteClearFailed": "Failed to clear remote Ollama.",
+    "listRefreshed": "Model list refreshed from remote.",
+    "downloadStarted": "Model download initiated for {{model}}. It may take some time to complete.",
+    "installError": "There was an error installing the model: {{model}}. Please try again.",
+    "deleted": "Model deleted: {{model}}.",
+    "deleteError": "There was an error deleting the model: {{model}}. Please try again.",
+    "settingUpdated": "Setting updated successfully.",
+    "settingError": "There was an error updating the setting. Please try again."
+  },
+  "deleteModal": {
+    "title": "Delete Model?",
+    "confirm": "Delete",
+    "cancel": "Cancel",
+    "text": "Are you sure you want to delete this model? You will need to download it again if you want to use it in the future."
+  },
+  "options": {
+    "contextAuto": "Auto (recommended)",
+    "contextTokens": "{{size}} tokens",
+    "customRelevance": "Custom ({{value}})",
+    "useChatModel": "Use the chat model",
+    "notInstalled": "{{model}} (not installed)",
+    "relevance": {
+      "off": "Off — use every passage retrieved",
+      "lenient": "Lenient",
+      "balanced": "Balanced (recommended)",
+      "strict": "Strict"
+    },
+    "responseStyle": {
+      "auto": "Auto (recommended)",
+      "focused": "Focused (factual, repeatable)",
+      "creative": "Creative (varied, exploratory)",
+      "off": "Backend defaults (send nothing)"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "chatSuggestions": {
+      "label": "Chat Suggestions",
+      "description": "Display AI-generated conversation starters in the chat interface"
+    },
+    "flashAttention": {
+      "label": "Flash Attention",
+      "description": "Enables OLLAMA_FLASH_ATTENTION=1 for improved memory efficiency. Disable if you experience instability. Takes effect after reinstalling the AI Assistant."
+    },
+    "autoThinking": {
+      "label": "Use thinking automatically when a model supports it",
+      "description": "Sets the default for models that can think. You can still turn thinking on or off for an individual model in the chat window."
+    },
+    "rag": {
+      "label": "Knowledge Base Retrieval",
+      "description": "Search your knowledge base for relevant documents before answering. Turn this off to save memory and speed up replies when your knowledge base is small or empty. This is the same switch as the one in the chat window."
+    },
+    "assistantName": {
+      "label": "Assistant Name",
+      "help": "Give your AI assistant a custom name that will be used in the chat interface and other areas of the application.",
+      "placeholder": "AI Assistant"
+    },
+    "tasksModel": {
+      "label": "Tasks Model",
+      "help": "Small, fast model used for background work like chat titles and suggestions. Leave this set to the chat model to use whichever model the chat is using. Avoid reasoning models here — they are slow at short, aesthetic tasks."
+    },
+    "minRelevance": {
+      "label": "Knowledge Base Relevance",
+      "help": "How closely a knowledge-base passage has to match your question before it is used in an answer. Stricter settings keep unrelated passages out; too strict and genuinely useful ones get dropped too. When nothing clears the bar, the assistant answers from its own knowledge instead."
+    },
+    "relevanceCheck": {
+      "label": "Double-check knowledge base matches",
+      "description": "Before answering, ask the Tasks Model whether the passages found are actually about your question, and leave them out (and uncited) when they are not. Helps most with large libraries like Wikipedia or Project Gutenberg, where something always looks similar. Needs a capable Tasks Model (about 8B parameters or larger); smaller models reject too many good matches. Adds a short delay to every reply."
+    },
+    "responseStyle": {
+      "label": "Response Style",
+      "help": "How adventurous the assistant is when picking its next word. Auto follows whatever the model's author recommended and fills in the rest, and suits most people. Focused gives shorter, steadier, more repeatable answers and is the better choice for looking things up. Creative varies its wording more, at some cost to accuracy."
+    },
+    "contextWindow": {
+      "label": "Context Window",
+      "help": "How much conversation and knowledge-base context each reply can consider. Auto sizes this per model from its trained limit and your available memory. Choosing a value sets an upper limit — it can lower the window to save memory, but never raises it beyond what a model supports."
+    },
+    "currentlyInEffect": "Currently in effect: {{list}}. Changes take effect for new conversations."
+  },
+  "installed": {
+    "title": "Installed Models",
+    "empty": "No models installed. Browse the model catalog below to get started.",
+    "columns": {
+      "model": "Model",
+      "parameters": "Parameters",
+      "diskSize": "Disk Size",
+      "action": "Action"
+    },
+    "notAvailable": "N/A",
+    "delete": "Delete"
+  },
+  "remote": {
+    "title": "Remote Connection",
+    "intro": "Connect to any OpenAI-compatible API server — Ollama, LM Studio, llama.cpp, and others are all supported. For remote Ollama instances, the host must be started with <code>OLLAMA_HOST=0.0.0.0</code>.",
+    "urlLabel": "Remote Ollama/OpenAI API URL",
+    "urlPlaceholder": "http://192.168.1.100:11434  (or :1234 for OpenAI API Compatible Apps)",
+    "saveAndTest": "Save & Test",
+    "clear": "Clear"
+  },
+  "catalog": {
+    "title": "Models",
+    "ollamaOnlyTitle": "Model downloading is only supported when using a Ollama backend.",
+    "ollamaOnlyMessage": "If you are connected to an OpenAI API host (e.g. LM Studio), please download models directly in that application.",
+    "searchPlaceholder": "Search language models..",
+    "refresh": "Refresh Models",
+    "columns": {
+      "name": "Name",
+      "estimatedPulls": "Estimated Pulls",
+      "lastUpdated": "Last Updated",
+      "tag": "Tag",
+      "inputType": "Input Type",
+      "contextSize": "Context Size",
+      "modelSize": "Model Size",
+      "action": "Action"
+    },
+    "notAvailable": "N/A",
+    "install": "Install",
+    "delete": "Delete",
+    "loadMore": "Load More"
+  },
+  "activeDownloads": {
+    "title": "Active Model Downloads",
+    "cancelModal": {
+      "title": "Cancel Download?",
+      "confirm": "Cancel Download",
+      "keep": "Keep Downloading",
+      "question": "Stop downloading <model>{{model}}</model>?",
+      "note": "Any data already downloaded will remain on disk. If you re-download this model later, it will resume from where it left off rather than starting over."
+    },
+    "cancelTooltip": "Cancel download",
+    "downloading": "Downloading...",
+    "empty": "No active model downloads"
+  }
+}
