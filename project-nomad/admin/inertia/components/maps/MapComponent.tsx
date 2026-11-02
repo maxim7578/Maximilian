@@ -16,6 +16,7 @@ maplibregl.setWorkerUrl(maplibreWorkerUrl)
 
 import { Protocol } from 'pmtiles'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { useMapMarkers } from '~/hooks/useMapMarkers'
 
@@ -140,6 +141,7 @@ export default function MapComponent({
                                        isHoveringUI = false,
                                        showCoordinatesEnabled = true,
                                      }: MapComponentProps) {
+  const { t } = useTranslation()
   const mapRef = useRef<MapRef>(null)
   const animationFrameRef = useRef<number | null>(null)
   const handledMapCommandIdRef = useRef<number | null>(null)
@@ -193,8 +195,8 @@ export default function MapComponent({
 
   const confirmDiscardMarkerChanges = useCallback(() => {
     if (!hasUnsavedMarkerChanges) return true
-    return window.confirm('Discard unsaved marker changes?')
-  }, [hasUnsavedMarkerChanges])
+    return window.confirm(t('maps:map.discardChangesConfirm'))
+  }, [hasUnsavedMarkerChanges, t])
 
   useEffect(() => {
     const protocol = new Protocol()

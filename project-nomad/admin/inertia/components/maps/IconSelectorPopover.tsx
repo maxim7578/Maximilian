@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { MARKER_ICONS } from './marker_icons'
 
 type IconSelectorPopoverProps = {
@@ -18,6 +19,7 @@ export default function IconSelectorPopover({
   onSelect,
   onClose,
 }: IconSelectorPopoverProps) {
+  const { t } = useTranslation()
   return (
     <div
       className="absolute left-0 top-7 z-50 w-72 rounded-md border border-border-subtle bg-surface-primary p-2 shadow-lg"
@@ -30,8 +32,8 @@ export default function IconSelectorPopover({
           <button
             key={name}
             type="button"
-            title={label}
-            aria-label={label}
+            title={t(label)}
+            aria-label={t(label)}
             onClick={() => {
               onSelect(name)
               onClose()
@@ -51,7 +53,7 @@ export default function IconSelectorPopover({
           onClick={onClose}
           className="rounded bg-[#424420] px-2 py-1 text-xs text-white hover:bg-[#525530]"
         >
-          Close
+          {t('maps:actions.close')}
         </button>
       </div>
     </div>

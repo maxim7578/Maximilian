@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useLayoutEffect, useRef, useState} from 'react'
 import {Popup} from 'react-map-gl/maplibre'
 import {IconPalette} from '@tabler/icons-react'
+import {useTranslation} from 'react-i18next'
 
 import {IconIcons} from '@tabler/icons-react'
 import IconSelectorPopover from './IconSelectorPopover'
@@ -39,6 +40,7 @@ export default function MapMarkerFormPopup({
                                                onDirtyChange,
                                                onMouseEnter,
                                            }: MapMarkerFormPopupProps) {
+    const {t} = useTranslation()
     const [name, setName] = useState(initialMarker?.name ?? '')
     const [notes, setNotes] = useState(initialMarker?.notes ?? '')
     const [color, setColor] = useState<PinColorId>(initialMarker?.color ?? 'orange')
@@ -120,7 +122,7 @@ export default function MapMarkerFormPopup({
                     ref={nameInputRef}
                     autoFocus
                     type="text"
-                    placeholder="Name this location"
+                    placeholder={t('maps:markerForm.namePlaceholder')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onKeyDown={(e) => {
@@ -132,7 +134,7 @@ export default function MapMarkerFormPopup({
 
                 <textarea
                     ref={textareaRef}
-                    placeholder="Add notes (optional)"
+                    placeholder={t('maps:markerForm.notesPlaceholder')}
                     value={notes}
                     rows={2}
                     maxLength={MAX_MARKER_NOTES_LENGTH}
@@ -156,7 +158,7 @@ export default function MapMarkerFormPopup({
                                 setColor(pinColor.id)
                                 setCustomColor(null)
                             }}
-                            title={pinColor.label}
+                            title={t(pinColor.label)}
                             className="rounded-full p-0.5 transition-transform"
                             style={{
                                 outline:
@@ -172,8 +174,8 @@ export default function MapMarkerFormPopup({
 
                     <button
                         type="button"
-                        title="Choose custom marker color"
-                        aria-label="Choose custom marker color"
+                        title={t('maps:markerForm.chooseColor')}
+                        aria-label={t('maps:markerForm.chooseColor')}
                         onClick={() => colorInputRef.current?.click()}
                         className="rounded-full p-0.5 transition-transform"
                         style={{
@@ -192,8 +194,8 @@ export default function MapMarkerFormPopup({
                     <div className="relative">
                         <button
                             type="button"
-                            title="Choose custom marker icon"
-                            aria-label="Choose custom marker icon"
+                            title={t('maps:markerForm.chooseIcon')}
+                            aria-label={t('maps:markerForm.chooseIcon')}
                             onClick={() => setShowIconSelector((prev) => !prev)}
                             className="rounded-full p-0.5 transition-transform"
                             style={{
@@ -222,7 +224,7 @@ export default function MapMarkerFormPopup({
                         value={customColor ?? '#a84a12'}
                         onChange={(e) => setCustomColor(e.target.value)}
                         className="sr-only"
-                        aria-label="Choose custom marker color"
+                        aria-label={t('maps:markerForm.chooseColor')}
                     />
                 </div>
 
@@ -233,7 +235,7 @@ export default function MapMarkerFormPopup({
                         disabled={isSaving}
                         className="text-xs bg-[#424420] text-white rounded px-2.5 py-1 hover:bg-[#525530] disabled:opacity-40 transition-colors"
                     >
-                        Cancel
+                        {t('maps:actions.cancel')}
                     </button>
 
                     <button
@@ -242,7 +244,7 @@ export default function MapMarkerFormPopup({
                         disabled={!name.trim() || isSaving}
                         className="text-xs bg-[#424420] text-white rounded px-2.5 py-1 hover:bg-[#525530] disabled:opacity-40 transition-colors"
                     >
-                        {isSaving ? 'Saving...' : 'Save'}
+                        {isSaving ? t('maps:actions.saving') : t('maps:actions.save')}
                     </button>
                 </div>
             </div>

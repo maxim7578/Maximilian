@@ -39,6 +39,7 @@ import {
 } from '@tabler/icons-react'
 import type { IconProps } from '@tabler/icons-react'
 import type { ComponentType } from 'react'
+import { tk } from '~/i18n/language'
 
 /**
  * The marker icon set: a curated 36, laid out as six rows of six.
@@ -56,7 +57,7 @@ import type { ComponentType } from 'react'
 export type MarkerIconEntry = {
   /** Stored on the marker row, e.g. `tabler:IconDroplet`. */
   name: string
-  /** Shown as the button tooltip. */
+  /** Translation key (maps namespace) of the button tooltip. */
   label: string
   Icon: ComponentType<IconProps>
 }
@@ -69,52 +70,52 @@ const entry = (
 
 export const MARKER_ICONS: MarkerIconEntry[] = [
   // Water and food
-  entry(IconDroplet, 'IconDroplet', 'Water'),
-  entry(IconBarrel, 'IconBarrel', 'Water storage'),
-  entry(IconToolsKitchen2, 'IconToolsKitchen2', 'Food'),
-  entry(IconWheat, 'IconWheat', 'Grain or crops'),
-  entry(IconMeat, 'IconMeat', 'Meat or game'),
-  entry(IconFish, 'IconFish', 'Fishing'),
+  entry(IconDroplet, 'IconDroplet', tk('maps:markerIcons.water')),
+  entry(IconBarrel, 'IconBarrel', tk('maps:markerIcons.waterStorage')),
+  entry(IconToolsKitchen2, 'IconToolsKitchen2', tk('maps:markerIcons.food')),
+  entry(IconWheat, 'IconWheat', tk('maps:markerIcons.grainOrCrops')),
+  entry(IconMeat, 'IconMeat', tk('maps:markerIcons.meatOrGame')),
+  entry(IconFish, 'IconFish', tk('maps:markerIcons.fishing')),
 
   // Shelter and living
-  entry(IconHome, 'IconHome', 'Building'),
-  entry(IconTent, 'IconTent', 'Camp'),
-  entry(IconBed, 'IconBed', 'Shelter'),
-  entry(IconDoor, 'IconDoor', 'Entrance'),
-  entry(IconCampfire, 'IconCampfire', 'Fire'),
-  entry(IconSeeding, 'IconSeeding', 'Garden'),
+  entry(IconHome, 'IconHome', tk('maps:markerIcons.building')),
+  entry(IconTent, 'IconTent', tk('maps:markerIcons.camp')),
+  entry(IconBed, 'IconBed', tk('maps:markerIcons.shelter')),
+  entry(IconDoor, 'IconDoor', tk('maps:markerIcons.entrance')),
+  entry(IconCampfire, 'IconCampfire', tk('maps:markerIcons.fire')),
+  entry(IconSeeding, 'IconSeeding', tk('maps:markerIcons.garden')),
 
   // Medical
-  entry(IconFirstAidKit, 'IconFirstAidKit', 'First aid'),
-  entry(IconBuildingHospital, 'IconBuildingHospital', 'Hospital'),
-  entry(IconStethoscope, 'IconStethoscope', 'Clinic'),
-  entry(IconPill, 'IconPill', 'Medication'),
-  entry(IconBandage, 'IconBandage', 'Supplies'),
-  entry(IconAmbulance, 'IconAmbulance', 'Ambulance'),
+  entry(IconFirstAidKit, 'IconFirstAidKit', tk('maps:markerIcons.firstAid')),
+  entry(IconBuildingHospital, 'IconBuildingHospital', tk('maps:markerIcons.hospital')),
+  entry(IconStethoscope, 'IconStethoscope', tk('maps:markerIcons.clinic')),
+  entry(IconPill, 'IconPill', tk('maps:markerIcons.medication')),
+  entry(IconBandage, 'IconBandage', tk('maps:markerIcons.supplies')),
+  entry(IconAmbulance, 'IconAmbulance', tk('maps:markerIcons.ambulance')),
 
   // Power and communications
-  entry(IconBolt, 'IconBolt', 'Power'),
-  entry(IconSolarPanel, 'IconSolarPanel', 'Solar'),
-  entry(IconBattery, 'IconBattery', 'Battery'),
-  entry(IconAntenna, 'IconAntenna', 'Antenna'),
-  entry(IconRadio, 'IconRadio', 'Radio'),
-  entry(IconWifi, 'IconWifi', 'Network'),
+  entry(IconBolt, 'IconBolt', tk('maps:markerIcons.power')),
+  entry(IconSolarPanel, 'IconSolarPanel', tk('maps:markerIcons.solar')),
+  entry(IconBattery, 'IconBattery', tk('maps:markerIcons.battery')),
+  entry(IconAntenna, 'IconAntenna', tk('maps:markerIcons.antenna')),
+  entry(IconRadio, 'IconRadio', tk('maps:markerIcons.radio')),
+  entry(IconWifi, 'IconWifi', tk('maps:markerIcons.network')),
 
   // Transport and supply
-  entry(IconGasStation, 'IconGasStation', 'Fuel'),
-  entry(IconCar, 'IconCar', 'Vehicle'),
-  entry(IconTruck, 'IconTruck', 'Truck'),
-  entry(IconTractor, 'IconTractor', 'Machinery'),
-  entry(IconPackage, 'IconPackage', 'Cache or supplies'),
-  entry(IconTool, 'IconTool', 'Tools'),
+  entry(IconGasStation, 'IconGasStation', tk('maps:markerIcons.fuel')),
+  entry(IconCar, 'IconCar', tk('maps:markerIcons.vehicle')),
+  entry(IconTruck, 'IconTruck', tk('maps:markerIcons.truck')),
+  entry(IconTractor, 'IconTractor', tk('maps:markerIcons.machinery')),
+  entry(IconPackage, 'IconPackage', tk('maps:markerIcons.cacheOrSupplies')),
+  entry(IconTool, 'IconTool', tk('maps:markerIcons.tools')),
 
   // Terrain, routes and hazards
-  entry(IconMountain, 'IconMountain', 'High ground'),
-  entry(IconTrees, 'IconTrees', 'Woodland'),
-  entry(IconRoute, 'IconRoute', 'Route'),
-  entry(IconFlag, 'IconFlag', 'Rally point'),
-  entry(IconAlertTriangle, 'IconAlertTriangle', 'Hazard'),
-  entry(IconSkull, 'IconSkull', 'Danger'),
+  entry(IconMountain, 'IconMountain', tk('maps:markerIcons.highGround')),
+  entry(IconTrees, 'IconTrees', tk('maps:markerIcons.woodland')),
+  entry(IconRoute, 'IconRoute', tk('maps:markerIcons.route')),
+  entry(IconFlag, 'IconFlag', tk('maps:markerIcons.rallyPoint')),
+  entry(IconAlertTriangle, 'IconAlertTriangle', tk('maps:markerIcons.hazard')),
+  entry(IconSkull, 'IconSkull', tk('maps:markerIcons.danger')),
 ]
 
 /** The pin used when a marker has no icon, or names one no longer in the set. */
