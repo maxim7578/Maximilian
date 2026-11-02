@@ -8,15 +8,21 @@ import Switch from '~/components/inputs/Switch'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNotifications } from '~/context/NotificationContext'
 import { useAutoUpdateStatus } from '~/hooks/useAutoUpdateStatus'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
+import { formatDateTime } from '~/i18n'
 
-const COOLOFF_OPTIONS = [
-  { value: 24, label: '24 hours (1 day)' },
-  { value: 48, label: '48 hours (2 days)' },
-  { value: 72, label: '72 hours (3 days)' },
-  { value: 168, label: '7 days' },
-]
+function cooloffOptions(t: TFunction) {
+  return [
+    { value: 24, label: t('updates:schedule.cooloff24') },
+    { value: 48, label: t('updates:schedule.cooloff48') },
+    { value: 72, label: t('updates:schedule.cooloff72') },
+    { value: 168, label: t('updates:schedule.cooloff168') },
+  ]
+}
 
 export default function CoreAutoUpdateSection() {
+  const { t } = useTranslation()
   const { addNotification } = useNotifications()
   const queryClient = useQueryClient()
   const { data: status, isLoading } = useAutoUpdateStatus()
@@ -40,7 +46,7 @@ export default function CoreAutoUpdateSection() {
       queryClient.invalidateQueries({ queryKey: ['auto-update-status'] })
     },
     onError: () => {
-      addNotification({ type: 'error', message: 'Failed to update auto-update setting.' })
+      addNotification({ type: 'error', message: t('updates:coreAutoUpdate.toggleError') })
     },
   })
 
@@ -55,7 +61,7 @@ export default function CoreAutoUpdateSection() {
           queryClient.invalidateQueries({ queryKey: ['auto-update-status'] })
           addNotification({
             type: 'success',
-            message: value ? 'Automatic updates enabled.' : 'Automatic updates disabled.',
+            message: value ? t('updates:coreAutoUpdate.enabledNotification') : t('updates:coreAutoUpdate.disabledNotification'),
           })
         },
       }
@@ -68,21 +74,21 @@ export default function CoreAutoUpdateSection() {
       await api.updateSetting('autoUpdate.windowEnd', windowEnd)
       await api.updateSetting('autoUpdate.cooloffHours', String(cooloff))
       queryClient.invalidateQueries({ queryKey: ['auto-update-status'] })
-      addNotification({ type: 'success', message: 'Auto-update schedule saved.' })
+      addNotification({ type: 'success', message: t('updates:coreAutoUpdate.scheduleSaved') })
     } catch {
-      addNotification({ type: 'error', message: 'Failed to save auto-update schedule.' })
+      addNotification({ type: 'error', message: t('updates:coreAutoUpdate.scheduleSaveError') })
     }
   }
 
   return (
     <>
-      <StyledSectionHeader title="Automatic Core Updates" className="mt-8" />
+      <StyledSectionHeader title={t('updates:coreAutoUpdate.title')} className="mt-8" />
       <div className="bg-surface-primary rounded-lg border shadow-md overflow-hidden mt-6 p-6">
         {autoDisabled && (
           <Alert
             type="warning"
-            title="Automatic Core Updates Disabled"
-            message={status?.autoDisabledReason || 'Automatic core updates were disabled after repeated failures.'}
+            title={t('updates:coreAutoUpdate.autoDisabledTitle')}
+            message={status?.autoDisabledReason || t('updates:coreAutoUpdate.autoDisabledFallback')}
             variant="bordered"
             className="mb-4"
           />
@@ -92,37 +98,37 @@ export default function CoreAutoUpdateSection() {
           checked={enabled}
           onChange={handleToggle}
           disabled={saveMutation.isPending || isLoading}
-          label="Enable Automatic Core Updates"
-          description="Automatically install minor and patch updates during your chosen window. Major versions always require a manual update due to their potentially breaking nature."
+          label={t('updates:coreAutoUpdate.enableLabel')}
+          description={t('updates:coreAutoUpdate.enableDescription')}
         />
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
           <Input
             name="autoUpdateWindowStart"
-            label="Window Start"
+            label={t('updates:schedule.windowStart')}
             type="time"
             value={windowStart}
             onChange={(e) => setWindowStart(e.target.value)}
             disabled={!enabled}
-            helpText="Local server time"
+            helpText={t('updates:schedule.localServerTime')}
           />
           <Input
             name="autoUpdateWindowEnd"
-            label="Window End"
+            label={t('updates:schedule.windowEnd')}
             type="time"
             value={windowEnd}
             onChange={(e) => setWindowEnd(e.target.value)}
             disabled={!enabled}
-            helpText="Local server time"
+            helpText={t('updates:schedule.localServerTime')}
           />
           <div>
             <label
               htmlFor="autoUpdateCooloff"
               className="block text-base/6 font-medium text-text-primary"
             >
-              Cool-off Period
+              {t('updates:schedule.cooloffPeriod')}
             </label>
-            <p className="mt-1 text-sm text-text-muted">Delay after a release is published</p>
+            <p className="mt-1 text-sm text-text-muted">{t('updates:coreAutoUpdate.cooloffHelp')}</p>
             <select
               id="autoUpdateCooloff"
               value={cooloff}
@@ -130,7 +136,7 @@ export default function CoreAutoUpdateSection() {
               disabled={!enabled}
               className="mt-1.5 block w-full rounded-md bg-surface-primary px-3 py-2 text-base text-text-primary border border-border-default focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-primary sm:text-sm/6 disabled:opacity-50"
             >
-              {COOLOFF_OPTIONS.map((opt) => (
+              {cooloffOptions(t).map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
@@ -146,34 +152,34 @@ export default function CoreAutoUpdateSection() {
             onClick={handleSaveWindow}
             disabled={!enabled}
           >
-            Save Schedule
+            {t('updates:schedule.saveSchedule')}
           </StyledButton>
         </div>
 
         {enabled && status && (
           <div className="mt-6 pt-4 border-t border-desert-stone-light text-sm space-y-1">
             <p className="text-desert-stone-dark">
-              <span className="font-medium">Status: </span>
+              <span className="font-medium">{t('updates:coreAutoUpdate.statusLabel')} </span>
               {status.eligibleTarget
-                ? `Eligible update ready: ${status.eligibleTarget.version}`
-                : 'No eligible update — system is current or the latest release is a major version / still in cool-off.'}
+                ? t('updates:coreAutoUpdate.eligibleReady', { version: status.eligibleTarget.version })
+                : t('updates:coreAutoUpdate.noEligible')}
             </p>
             <p className="text-desert-stone">
-              <span className="font-medium">Update window: </span>
-              {status.withinWindow ? 'Currently inside the window' : 'Currently outside the window'}
+              <span className="font-medium">{t('updates:schedule.updateWindowLabel')} </span>
+              {status.withinWindow ? t('updates:coreAutoUpdate.insideWindow') : t('updates:coreAutoUpdate.outsideWindow')}
             </p>
             {status.lastResult && (
               <p className="text-desert-stone">
-                <span className="font-medium">Last check: </span>
+                <span className="font-medium">{t('updates:coreAutoUpdate.lastCheckLabel')} </span>
                 {status.lastResult}
                 {status.lastAttemptAt
-                  ? ` (${new Date(status.lastAttemptAt).toLocaleString()})`
+                  ? ` (${formatDateTime(status.lastAttemptAt)})`
                   : ''}
               </p>
             )}
             {status.lastError && (
               <p className="text-desert-red">
-                <span className="font-medium">Last error: </span>
+                <span className="font-medium">{t('updates:schedule.lastErrorLabel')} </span>
                 {status.lastError}
               </p>
             )}

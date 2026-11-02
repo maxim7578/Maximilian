@@ -8,6 +8,7 @@ import {
   parseBuilderTag,
   buildBuilderTag,
 } from '~/lib/builderTagWords'
+import { useTranslation } from 'react-i18next'
 
 interface BuilderTagSelectorProps {
   value: string | null
@@ -20,6 +21,7 @@ export default function BuilderTagSelector({
   onChange,
   disabled = false,
 }: BuilderTagSelectorProps) {
+  const { t } = useTranslation()
   const [adjective, setAdjective] = useState<string>(ADJECTIVES[0])
   const [noun, setNoun] = useState<string>(NOUNS[0])
   const [number, setNumber] = useState<string>(generateRandomNumber())
@@ -116,14 +118,14 @@ export default function BuilderTagSelector({
           onClick={handleRandomize}
           disabled={disabled}
           className="p-2 text-desert-stone-dark hover:text-desert-green hover:bg-desert-stone-lighter rounded-lg transition-colors disabled:opacity-50"
-          title="Randomize"
+          title={t('benchmark:builderTag.randomize')}
         >
           <IconRefresh className="w-5 h-5" />
         </button>
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="text-sm text-desert-stone-dark">Your Builder Tag:</span>
+        <span className="text-sm text-desert-stone-dark">{t('benchmark:builderTag.yourTag')}</span>
         <span className="font-mono font-bold text-desert-green">{currentTag}</span>
       </div>
     </div>

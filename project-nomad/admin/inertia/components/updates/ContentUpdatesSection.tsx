@@ -9,8 +9,11 @@ import api from '~/lib/api'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNotifications } from '~/context/NotificationContext'
 import { formatBytes } from '~/lib/util'
+import { useTranslation } from 'react-i18next'
+import { formatDateTime } from '~/i18n'
 
 export default function ContentUpdatesSection() {
+  const { t } = useTranslation()
   const { addNotification } = useNotifications()
   const queryClient = useQueryClient()
   const [checkResult, setCheckResult] = useState<ContentUpdateCheckResult | null>(null)
@@ -29,7 +32,7 @@ export default function ContentUpdatesSection() {
       setCheckResult({
         updates: [],
         checked_at: new Date().toISOString(),
-        error: 'Failed to check for content updates',
+        error: t('updates:contentUpdates.checkFailed'),
       })
     } finally {
       setIsChecking(false)
@@ -41,7 +44,7 @@ export default function ContentUpdatesSection() {
     try {
       const result = await api.applyContentUpdate(update)
       if (result?.success) {
-        addNotification({ type: 'success', message: `Update started for ${update.resource_id}` })
+        addNotification({ type: 'success', message: t('updates:contentUpdates.updateStarted', { name: update.resource_id }) })
         // Remove from the updates list
         setCheckResult((prev) =>
           prev
@@ -52,10 +55,10 @@ export default function ContentUpdatesSection() {
         // idle poll fires, so without this the user wouldn't see them.
         queryClient.invalidateQueries({ queryKey: ['download-jobs'] })
       } else {
-        addNotification({ type: 'error', message: result?.error || 'Failed to start update' })
+        addNotification({ type: 'error', message: result?.error || t('updates:contentUpdates.startFailed') })
       }
     } catch {
-      addNotification({ type: 'error', message: `Failed to start update for ${update.resource_id}` })
+      addNotification({ type: 'error', message: t('updates:contentUpdates.startFailedFor', { name: update.resource_id }) })
     } finally {
       setApplyingIds((prev) => {
         const next = new Set(prev)
@@ -74,10 +77,10 @@ export default function ContentUpdatesSection() {
         const succeeded = result.results.filter((r) => r.success).length
         const failed = result.results.filter((r) => !r.success).length
         if (succeeded > 0) {
-          addNotification({ type: 'success', message: `Started ${succeeded} update(s)` })
+          addNotification({ type: 'success', message: t('updates:contentUpdates.startedCount', { count: succeeded }) })
         }
         if (failed > 0) {
-          addNotification({ type: 'error', message: `${failed} update(s) could not be started` })
+          addNotification({ type: 'error', message: t('updates:contentUpdates.failedCount', { count: failed }) })
         }
         // Remove successful updates from the list
         const successIds = new Set(result.results.filter((r) => r.success).map((r) => r.resource_id))
@@ -91,7 +94,7 @@ export default function ContentUpdatesSection() {
         }
       }
     } catch {
-      addNotification({ type: 'error', message: 'Failed to apply updates' })
+      addNotification({ type: 'error', message: t('updates:contentUpdates.applyFailed') })
     } finally {
       setIsApplyingAll(false)
     }
@@ -99,12 +102,12 @@ export default function ContentUpdatesSection() {
 
   return (
     <div className="mt-8">
-      <StyledSectionHeader title="Manual Content Updates" />
+      <StyledSectionHeader title={t('updates:contentUpdates.title')} />
 
       <div className="bg-surface-primary rounded-lg border shadow-md overflow-hidden p-6">
         <div className="flex items-center justify-between">
           <p className="text-desert-stone-dark">
-            Check if newer versions of your installed ZIM files and maps are available.
+            {t('updates:contentUpdates.description')}
           </p>
           <StyledButton
             variant="primary"
@@ -112,14 +115,14 @@ export default function ContentUpdatesSection() {
             onClick={handleCheck}
             loading={isChecking}
           >
-            Check for Content Updates
+            {t('updates:contentUpdates.checkButton')}
           </StyledButton>
         </div>
 
         {checkResult?.error && (
           <Alert
             type="warning"
-            title="Update Check Issue"
+            title={t('updates:contentUpdates.checkIssueTitle')}
             message={checkResult.error}
             variant="bordered"
             className="my-4"
@@ -129,8 +132,8 @@ export default function ContentUpdatesSection() {
         {checkResult && !checkResult.error && checkResult.updates.length === 0 && (
           <Alert
             type="success"
-            title="All Content Up to Date"
-            message="All your installed content is running the latest available version."
+            title={t('updates:contentUpdates.allUpToDateTitle')}
+            message={t('updates:contentUpdates.allUpToDateMessage')}
             variant="bordered"
             className="my-4"
           />
@@ -140,7 +143,7 @@ export default function ContentUpdatesSection() {
           <div className="mt-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm text-desert-stone-dark">
-                {checkResult.updates.length} update(s) available
+                {t('updates:contentUpdates.availableCount', { count: checkResult.updates.length })}
               </p>
               <StyledButton
                 variant="primary"
@@ -149,7 +152,7 @@ export default function ContentUpdatesSection() {
                 onClick={handleApplyAll}
                 loading={isApplyingAll}
               >
-                Update All ({checkResult.updates.length})
+                {t('updates:contentUpdates.updateAll', { count: checkResult.updates.length })}
               </StyledButton>
             </div>
             <StyledTable
@@ -157,14 +160,14 @@ export default function ContentUpdatesSection() {
               columns={[
                 {
                   accessor: 'resource_id',
-                  title: 'Title',
+                  title: t('updates:contentUpdates.columnTitle'),
                   render: (record) => (
                     <span className="font-medium text-desert-green">{record.resource_id}</span>
                   ),
                 },
                 {
                   accessor: 'resource_type',
-                  title: 'Type',
+                  title: t('updates:contentUpdates.columnType'),
                   render: (record) => (
                     <span
                       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${record.resource_type === 'zim'
@@ -172,13 +175,13 @@ export default function ContentUpdatesSection() {
                         : 'bg-emerald-100 text-emerald-800'
                         }`}
                     >
-                      {record.resource_type === 'zim' ? 'ZIM' : 'Map'}
+                      {record.resource_type === 'zim' ? 'ZIM' : t('updates:contentUpdates.typeMap')}
                     </span>
                   ),
                 },
                 {
                   accessor: 'size_bytes',
-                  title: 'Size',
+                  title: t('updates:contentUpdates.columnSize'),
                   render: (record) => (
                     <span className="text-desert-stone-dark">
                       {record.size_bytes ? formatBytes(record.size_bytes, 1) : '—'}
@@ -187,7 +190,7 @@ export default function ContentUpdatesSection() {
                 },
                 {
                   accessor: 'installed_version',
-                  title: 'Version',
+                  title: t('updates:contentUpdates.columnVersion'),
                   render: (record) => (
                     <span className="text-desert-stone-dark">
                       {record.installed_version} → {record.latest_version}
@@ -205,7 +208,7 @@ export default function ContentUpdatesSection() {
                       onClick={() => handleApply(record)}
                       loading={applyingIds.has(record.resource_id)}
                     >
-                      Update
+                      {t('updates:contentUpdates.update')}
                     </StyledButton>
                   ),
                 },
@@ -216,7 +219,7 @@ export default function ContentUpdatesSection() {
 
         {checkResult?.checked_at && (
           <p className="text-xs text-desert-stone mt-3">
-            Last checked: {new Date(checkResult.checked_at).toLocaleString()}
+            {t('updates:contentUpdates.lastChecked', { date: formatDateTime(checkResult.checked_at) })}
           </p>
         )}
       </div>

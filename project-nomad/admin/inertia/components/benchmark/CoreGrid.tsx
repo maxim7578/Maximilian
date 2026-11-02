@@ -1,4 +1,5 @@
 import classNames from '~/lib/classNames'
+import { useTranslation } from 'react-i18next'
 
 interface CoreGridProps {
   /** Per-thread load, 0-100. */
@@ -19,6 +20,7 @@ function cellClass(load: number): string {
 }
 
 export default function CoreGrid({ loads }: CoreGridProps) {
+  const { t } = useTranslation()
   // Fold very high core counts down to MAX_CELLS by averaging groups.
   let cells = loads
   let grouped = 1
@@ -42,7 +44,7 @@ export default function CoreGrid({ loads }: CoreGridProps) {
         {cells.map((load, i) => (
           <div
             key={i}
-            title={`Thread ${i + 1}: ${Math.round(load)}%`}
+            title={t('benchmark:coreGrid.threadLoad', { number: i + 1, load: Math.round(load) })}
             className={classNames(
               'aspect-square rounded-sm transition-colors duration-300',
               cellClass(load)
@@ -51,8 +53,8 @@ export default function CoreGrid({ loads }: CoreGridProps) {
         ))}
       </div>
       <div className="text-xs text-desert-stone-dark font-mono">
-        {loads.length} thread{loads.length === 1 ? '' : 's'}
-        {grouped > 1 ? ` (${grouped}/cell)` : ''}
+        {t('benchmark:coreGrid.threads', { count: loads.length })}
+        {grouped > 1 ? ` ${t('benchmark:coreGrid.perCell', { grouped })}` : ''}
       </div>
     </div>
   )

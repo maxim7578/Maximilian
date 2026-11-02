@@ -26,6 +26,8 @@ import { useBenchmarkRun } from '~/hooks/useBenchmarkRun'
 import BenchmarkRunView from '~/components/benchmark/BenchmarkRunView'
 import ScoreReveal from '~/components/benchmark/ScoreReveal'
 import { getScoreDisplay } from '~/lib/benchmarkScore'
+import { Trans, useTranslation } from 'react-i18next'
+import { formatDate, formatDateTime, formatNumber } from '~/i18n'
 
 export default function BenchmarkPage(props: {
   benchmark: {
@@ -34,6 +36,7 @@ export default function BenchmarkPage(props: {
     currentBenchmarkId: string | null
   }
 }) {
+  const { t } = useTranslation()
   const { aiAssistantName } = usePage<{ aiAssistantName: string }>().props
   const queryClient = useQueryClient()
   const aiInstalled = useServiceInstalledStatus(SERVICE_NAMES.OLLAMA)
@@ -69,7 +72,7 @@ export default function BenchmarkPage(props: {
         refetchLatest()
         setRevealing(true)
       } else {
-        setErrorMsg(message || 'Benchmark failed')
+        setErrorMsg(message || t('benchmark:page.benchmarkFailedFallback'))
       }
     },
   })
@@ -102,12 +105,12 @@ export default function BenchmarkPage(props: {
       // drives the rest (see useBenchmarkRun's onFinished).
       if (!data?.success) {
         setIsRunning(false)
-        setErrorMsg('Failed to start benchmark')
+        setErrorMsg(t('benchmark:page.failedToStart'))
       }
     },
     onError: (error) => {
       setIsRunning(false)
-      setErrorMsg(error.message || 'Failed to start benchmark')
+      setErrorMsg(error.message || t('benchmark:page.failedToStart'))
     },
   })
 
@@ -123,7 +126,7 @@ export default function BenchmarkPage(props: {
     }) => {
       const res = await api.updateBuilderTag(benchmarkId, builderTag)
       if (!res || !res.success) {
-        throw new Error(res?.error || 'Failed to update builder tag')
+        throw new Error(res?.error || t('benchmark:page.failedToUpdateTag'))
       }
       return res
     },
@@ -152,7 +155,7 @@ export default function BenchmarkPage(props: {
 
       const res = await api.submitBenchmark(benchmarkId, anonymous)
       if (!res || !res.success) {
-        throw new Error(res?.error || 'Failed to submit benchmark')
+        throw new Error(res?.error || t('benchmark:page.failedToSubmit'))
       }
       return res
     },
@@ -163,7 +166,7 @@ export default function BenchmarkPage(props: {
     onError: (error: any) => {
       // Check if this is a 409 Conflict error (already submitted)
       if (error.status === 409) {
-        setSubmitError('A benchmark for this system with the same or higher score has already been submitted.')
+        setSubmitError(t('benchmark:page.alreadySubmitted'))
       } else {
         setSubmitError(error.message)
       }
@@ -192,6 +195,13 @@ export default function BenchmarkPage(props: {
     runBenchmark.mutate('full')
   }
 
+  const benchmarkTypeLabel = (type: string) =>
+    ({
+      full: t('benchmark:page.types.full'),
+      system: t('benchmark:page.types.system'),
+      ai: t('benchmark:page.types.ai'),
+    })[type] ?? type
+
   const formatBytes = (bytes: number) => {
     const gb = bytes / (1024 * 1024 * 1024)
     return `${gb.toFixed(1)} GB`
@@ -213,13 +223,13 @@ export default function BenchmarkPage(props: {
 
   return (
     <SettingsLayout>
-      <Head title="System Benchmark" />
+      <Head title={t('benchmark:page.title')} />
       <div className="xl:pl-72 w-full">
         <main className="px-6 lg:px-12 py-6 lg:py-8">
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-desert-green mb-2">System Benchmark</h1>
+            <h1 className="text-4xl font-bold text-desert-green mb-2">{t('benchmark:page.title')}</h1>
             <p className="text-desert-stone-dark">
-              Measure your server's performance and compare with the NOMAD community
+              {t('benchmark:page.subtitle')}
             </p>
           </div>
 
@@ -227,7 +237,7 @@ export default function BenchmarkPage(props: {
           <section className="mb-12">
             <h2 className="text-2xl font-bold text-desert-green mb-6 flex items-center gap-2">
               <div className="w-1 h-6 bg-desert-green" />
-              Run Benchmark
+              {t('benchmark:page.runBenchmark')}
             </h2>
 
             {isRunning ? (
@@ -244,7 +254,7 @@ export default function BenchmarkPage(props: {
                   <div className="bg-desert-white rounded-lg p-8 border border-desert-stone-light shadow-sm">
                     <div className="flex items-center justify-center gap-3 text-desert-green animate-pulse">
                       <div className="animate-spin h-6 w-6 border-2 border-desert-green border-t-transparent rounded-full" />
-                      <span className="text-lg font-medium">Compiling report...</span>
+                      <span className="text-lg font-medium">{t('benchmark:page.compilingReport')}</span>
                     </div>
                   </div>
                 )
@@ -255,7 +265,7 @@ export default function BenchmarkPage(props: {
                   {errorMsg && (
                     <Alert
                       type="error"
-                      title="Benchmark Failed"
+                      title={t('benchmark:page.benchmarkFailedTitle')}
                       message={errorMsg}
                       variant="bordered"
                       dismissible
@@ -265,8 +275,8 @@ export default function BenchmarkPage(props: {
                   {showAIRequiredAlert && (
                     <Alert
                       type="warning"
-                      title={`${aiAssistantName} Required`}
-                      message={`Full benchmark requires ${aiAssistantName} to be installed. Install it to measure your complete NOMAD capability and share results with the community.`}
+                      title={t('benchmark:page.aiRequiredTitle', { name: aiAssistantName })}
+                      message={t('benchmark:page.aiRequiredMessage', { name: aiAssistantName })}
                       variant="bordered"
                       dismissible
                       onDismiss={() => setShowAIRequiredAlert(false)}
@@ -275,13 +285,12 @@ export default function BenchmarkPage(props: {
                         href="/settings/apps"
                         className="text-sm text-desert-green hover:underline mt-2 inline-block font-medium"
                       >
-                        Go to Apps to install {aiAssistantName} →
+                        {t('benchmark:page.goToApps', { name: aiAssistantName })}
                       </Link>
                     </Alert>
                   )}
                   <p className="text-desert-stone-dark">
-                    Run a benchmark to measure your system's CPU, memory, disk, and AI inference
-                    performance. The benchmark takes approximately 3-6 minutes to complete.
+                    {t('benchmark:page.runDescription')}
                   </p>
                   <div className="flex flex-wrap gap-4">
                     <StyledButton
@@ -289,7 +298,7 @@ export default function BenchmarkPage(props: {
                       disabled={runBenchmark.isPending}
                       icon="IconPlayerPlay"
                     >
-                      Run Full Benchmark
+                      {t('benchmark:page.runFull')}
                     </StyledButton>
                     <StyledButton
                       variant="secondary"
@@ -297,7 +306,7 @@ export default function BenchmarkPage(props: {
                       disabled={runBenchmark.isPending}
                       icon="IconCpu"
                     >
-                      System Only
+                      {t('benchmark:page.systemOnly')}
                     </StyledButton>
                     <StyledButton
                       variant="secondary"
@@ -306,24 +315,28 @@ export default function BenchmarkPage(props: {
                       icon="IconWand"
                       title={
                         !aiInstalled
-                          ? `${aiAssistantName} must be installed to run AI benchmark`
+                          ? t('benchmark:page.aiMustBeInstalled', { name: aiAssistantName })
                           : undefined
                       }
                     >
-                      AI Only
+                      {t('benchmark:page.aiOnly')}
                     </StyledButton>
                   </div>
                   {!aiInstalled && (
                     <p className="text-sm text-desert-stone-dark">
-                      <span className="text-amber-600">Note:</span> {aiAssistantName} is not
-                      installed.
-                      <Link
-                        href="/settings/apps"
-                        className="text-desert-green hover:underline ml-1"
-                      >
-                        Install it
-                      </Link>{' '}
-                      to run full benchmarks and share results with the community.
+                      <Trans
+                        i18nKey="benchmark:page.aiNotInstalledNote"
+                        values={{ name: aiAssistantName }}
+                        components={{
+                          note: <span className="text-amber-600" />,
+                          link: (
+                            <Link
+                              href="/settings/apps"
+                              className="text-desert-green hover:underline ml-1"
+                            />
+                          ),
+                        }}
+                      />
                     </p>
                   )}
                 </div>
@@ -337,10 +350,10 @@ export default function BenchmarkPage(props: {
               <section className="mb-12">
                 <h2 className="text-2xl font-bold text-desert-green mb-6 flex items-center gap-2">
                   <div className="w-1 h-6 bg-desert-green" />
-                  {scoreInfo?.label ?? 'NOMAD Score'}
+                  {scoreInfo?.label ?? t('benchmark:score.nomadScore')}
                   {scoreInfo?.isPartial && (
                     <span className="ml-1 px-2 py-0.5 rounded-full bg-desert-stone-light text-desert-stone-dark text-xs font-semibold uppercase tracking-wide">
-                      Partial
+                      {t('benchmark:page.partial')}
                     </span>
                   )}
                 </h2>
@@ -350,10 +363,10 @@ export default function BenchmarkPage(props: {
                     <div className="shrink-0">
                       <CircularGauge
                         value={latestResult.nomad_score}
-                        label={latestResult.nomad_score_v2 != null ? 'Legacy Score' : 'NOMAD Score'}
+                        label={latestResult.nomad_score_v2 != null ? t('benchmark:page.legacyScore') : t('benchmark:score.nomadScore')}
                         size="lg"
                         variant="cpu"
-                        subtext="out of 100"
+                        subtext={t('benchmark:scoreReveal.outOf100')}
                         muted={scoreInfo?.isPartial}
                         icon={<IconChartBar className="w-8 h-8" />}
                       />
@@ -366,14 +379,14 @@ export default function BenchmarkPage(props: {
                               {latestResult.nomad_score_v2.toFixed(1)}
                             </div>
                             <div className="text-sm text-desert-stone-dark flex items-center gap-1">
-                              NOMAD Score
-                              <InfoTooltip text="NOMAD Score v2 is an uncapped index versus the NOMAD Reference Build, which scores exactly 1000. Higher is better, and there is no ceiling." />
+                              {t('benchmark:score.nomadScore')}
+                              <InfoTooltip text={t('benchmark:page.scoreV2Tooltip')} />
                             </div>
                           </div>
                           <p className="text-sm text-desert-stone-dark">
-                            Reference Build = 1000.{' '}
+                            {t('benchmark:page.referenceBuild')}{' '}
                             <span className="text-desert-stone">
-                              Legacy scale: {latestResult.nomad_score.toFixed(1)} / 100
+                              {t('benchmark:page.legacyScale', { score: latestResult.nomad_score.toFixed(1) })}
                             </span>
                           </p>
                         </>
@@ -391,14 +404,14 @@ export default function BenchmarkPage(props: {
                             </div>
                         {scoreInfo?.isPartial && (
                           <span className="px-2 py-1 rounded-md bg-desert-stone-light text-desert-stone-dark text-xs font-semibold uppercase tracking-wide">
-                            Partial
+                            {t('benchmark:page.partial')}
                           </span>
                         )}
                       </div>
                           <p className="text-desert-stone-dark">
                             {scoreInfo?.isPartial
                           ? scoreInfo.cta
-                          : 'Your NOMAD Score is a weighted composite of all benchmark results.'}
+                          : t('benchmark:scoreReveal.compositeExplanation')}
                           </p>
                         </>
                       )}
@@ -406,16 +419,15 @@ export default function BenchmarkPage(props: {
                       {/* Share with Community - Only for full benchmarks with AI data */}
                       {canShareBenchmark && (
                         <div className="space-y-4 mt-6 pt-6 border-t border-desert-stone-light">
-                          <h3 className="font-semibold text-desert-green">Share with Community</h3>
+                          <h3 className="font-semibold text-desert-green">{t('benchmark:page.shareTitle')}</h3>
                           <p className="text-sm text-desert-stone-dark">
-                            Share your benchmark on the community leaderboard. Choose a Builder Tag
-                            to claim your spot, or share anonymously.
+                            {t('benchmark:page.shareDescription')}
                           </p>
 
                           {/* Builder Tag Selector */}
                           <div className="space-y-2">
                             <label className="block text-sm font-medium text-desert-stone-dark">
-                              Your Builder Tag
+                              {t('benchmark:page.yourBuilderTag')}
                             </label>
                             <BuilderTagSelector
                               value={currentBuilderTag}
@@ -434,7 +446,7 @@ export default function BenchmarkPage(props: {
                               className="w-4 h-4 rounded border-desert-stone-light text-desert-green focus:ring-desert-green"
                             />
                             <span className="text-sm text-desert-stone-dark">
-                              Share anonymously (no Builder Tag shown on leaderboard)
+                              {t('benchmark:page.shareAnonymously')}
                             </span>
                           </label>
 
@@ -448,12 +460,12 @@ export default function BenchmarkPage(props: {
                             disabled={submitResult.isPending}
                             icon="IconCloudUpload"
                           >
-                            {submitResult.isPending ? 'Submitting...' : 'Share with Community'}
+                            {submitResult.isPending ? t('benchmark:page.submitting') : t('benchmark:page.shareTitle')}
                           </StyledButton>
                           {submitError && (
                             <Alert
                               type="error"
-                              title="Submission Failed"
+                              title={t('benchmark:page.submissionFailed')}
                               message={submitError}
                               variant="bordered"
                               dismissible
@@ -469,8 +481,8 @@ export default function BenchmarkPage(props: {
                         !canShareBenchmark && (
                           <Alert
                             type="info"
-                            title="Partial Benchmark"
-                            message={`This ${latestResult.benchmark_type} benchmark cannot be shared with the community. Run a Full Benchmark with ${aiAssistantName} installed to share your results.`}
+                            title={t('benchmark:page.partialBenchmarkTitle')}
+                            message={t('benchmark:page.partialBenchmarkMessage', { type: benchmarkTypeLabel(latestResult.benchmark_type), name: aiAssistantName })}
                             variant="bordered"
                           />
                         )}
@@ -478,8 +490,8 @@ export default function BenchmarkPage(props: {
                       {latestResult.submitted_to_repository && (
                         <Alert
                           type="success"
-                          title="Shared with Community"
-                          message="Your benchmark has been submitted to the community leaderboard. Thanks for contributing!"
+                          title={t('benchmark:page.sharedTitle')}
+                          message={t('benchmark:page.sharedMessage')}
                           variant="bordered"
                         >
                           <a
@@ -488,7 +500,7 @@ export default function BenchmarkPage(props: {
                             rel="noopener noreferrer"
                             className="text-sm text-desert-green hover:underline mt-2 inline-block"
                           >
-                            View the leaderboard →
+                            {t('benchmark:page.viewLeaderboard')}
                           </a>
                         </Alert>
                       )}
@@ -500,14 +512,14 @@ export default function BenchmarkPage(props: {
               <section className="mb-12">
                 <h2 className="text-2xl font-bold text-desert-green mb-6 flex items-center gap-2">
                   <div className="w-1 h-6 bg-desert-green" />
-                  System Performance
+                  {t('benchmark:page.systemPerformance')}
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="bg-desert-white rounded-lg p-6 border border-desert-stone-light shadow-sm">
                     <CircularGauge
                       value={latestResult.cpu_score * 100}
-                      label="CPU"
+                      label={t('benchmark:scoreReveal.cpu')}
                       size="md"
                       variant="cpu"
                       icon={<IconCpu className="w-6 h-6" />}
@@ -516,7 +528,7 @@ export default function BenchmarkPage(props: {
                   <div className="bg-desert-white rounded-lg p-6 border border-desert-stone-light shadow-sm">
                     <CircularGauge
                       value={latestResult.memory_score * 100}
-                      label="Memory"
+                      label={t('benchmark:scoreReveal.memory')}
                       size="md"
                       variant="memory"
                       icon={<IconDatabase className="w-6 h-6" />}
@@ -525,7 +537,7 @@ export default function BenchmarkPage(props: {
                   <div className="bg-desert-white rounded-lg p-6 border border-desert-stone-light shadow-sm">
                     <CircularGauge
                       value={latestResult.disk_read_score * 100}
-                      label="Disk Read"
+                      label={t('benchmark:scoreReveal.diskRead')}
                       size="md"
                       variant="disk"
                       icon={<IconServer className="w-6 h-6" />}
@@ -534,7 +546,7 @@ export default function BenchmarkPage(props: {
                   <div className="bg-desert-white rounded-lg p-6 border border-desert-stone-light shadow-sm">
                     <CircularGauge
                       value={latestResult.disk_write_score * 100}
-                      label="Disk Write"
+                      label={t('benchmark:scoreReveal.diskWrite')}
                       size="md"
                       variant="disk"
                       icon={<IconServer className="w-6 h-6" />}
@@ -547,7 +559,7 @@ export default function BenchmarkPage(props: {
               <section className="mb-12">
                 <h2 className="text-2xl font-bold text-desert-green mb-6 flex items-center gap-2">
                   <div className="w-1 h-6 bg-desert-green" />
-                  AI Performance
+                  {t('benchmark:page.aiPerformance')}
                 </h2>
 
                 {latestResult.ai_tokens_per_second ? (
@@ -555,7 +567,7 @@ export default function BenchmarkPage(props: {
                     <div className="bg-desert-white rounded-lg p-6 border border-desert-stone-light shadow-sm">
                       <CircularGauge
                         value={getAIScore(latestResult.ai_tokens_per_second)}
-                        label="AI Score"
+                        label={t('benchmark:score.aiScore')}
                         size="md"
                         variant="cpu"
                         icon={<IconRobot className="w-6 h-6" />}
@@ -569,8 +581,8 @@ export default function BenchmarkPage(props: {
                             {latestResult.ai_tokens_per_second.toFixed(1)}
                           </div>
                           <div className="text-sm text-desert-stone-dark flex items-center gap-1">
-                            Tokens per Second
-                            <InfoTooltip text="How fast the AI generates text. Higher is better. 30+ tokens/sec feels responsive, 60+ feels instant." />
+                            {t('benchmark:runView.tokensPerSecond')}
+                            <InfoTooltip text={t('benchmark:page.tokensPerSecondTooltip')} />
                           </div>
                         </div>
                       </div>
@@ -580,11 +592,11 @@ export default function BenchmarkPage(props: {
                         <IconRobot className="w-10 h-10 text-desert-green" />
                         <div>
                           <div className="text-3xl font-bold text-desert-green">
-                            {latestResult.ai_time_to_first_token?.toFixed(0) || 'N/A'} ms
+                            {latestResult.ai_time_to_first_token?.toFixed(0) || t('benchmark:page.notAvailable')} ms
                           </div>
                           <div className="text-sm text-desert-stone-dark flex items-center gap-1">
-                            Time to First Token
-                            <InfoTooltip text="How quickly the AI starts responding after you send a message. Lower is better. Under 500ms feels instant." />
+                            {t('benchmark:page.timeToFirstToken')}
+                            <InfoTooltip text={t('benchmark:page.timeToFirstTokenTooltip')} />
                           </div>
                         </div>
                       </div>
@@ -594,10 +606,9 @@ export default function BenchmarkPage(props: {
                   <div className="bg-desert-white rounded-lg p-6 border border-desert-stone-light shadow-sm">
                     <div className="text-center text-desert-stone-dark">
                       <IconRobot className="w-12 h-12 mx-auto mb-3 opacity-40" />
-                      <p className="font-medium">No AI Benchmark Data</p>
+                      <p className="font-medium">{t('benchmark:page.noAiData')}</p>
                       <p className="text-sm mt-1">
-                        Run a Full Benchmark or AI Only benchmark to measure AI inference
-                        performance.
+                        {t('benchmark:page.noAiDataDescription')}
                       </p>
                     </div>
                   </div>
@@ -607,28 +618,28 @@ export default function BenchmarkPage(props: {
               <section className="mb-12">
                 <h2 className="text-2xl font-bold text-desert-green mb-6 flex items-center gap-2">
                   <div className="w-1 h-6 bg-desert-green" />
-                  Hardware Information
+                  {t('benchmark:page.hardwareInformation')}
                 </h2>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <InfoCard
-                    title="Processor"
+                    title={t('benchmark:page.processor')}
                     icon={<IconCpu className="w-6 h-6" />}
                     variant="elevated"
                     data={[
-                      { label: 'Model', value: latestResult.cpu_model },
-                      { label: 'Cores', value: latestResult.cpu_cores },
-                      { label: 'Threads', value: latestResult.cpu_threads },
+                      { label: t('benchmark:page.model'), value: latestResult.cpu_model },
+                      { label: t('benchmark:page.cores'), value: latestResult.cpu_cores },
+                      { label: t('benchmark:page.threads'), value: latestResult.cpu_threads },
                     ]}
                   />
                   <InfoCard
-                    title="System"
+                    title={t('benchmark:page.system')}
                     icon={<IconServer className="w-6 h-6" />}
                     variant="elevated"
                     data={[
-                      { label: 'RAM', value: formatBytes(latestResult.ram_bytes) },
-                      { label: 'Disk Type', value: latestResult.disk_type.toUpperCase() },
-                      { label: 'GPU', value: latestResult.gpu_model || 'Not detected' },
+                      { label: t('benchmark:page.ram'), value: formatBytes(latestResult.ram_bytes) },
+                      { label: t('benchmark:page.diskType'), value: latestResult.disk_type.toUpperCase() },
+                      { label: t('benchmark:page.gpu'), value: latestResult.gpu_model || t('benchmark:page.notDetected') },
                     ]}
                   />
                 </div>
@@ -637,7 +648,7 @@ export default function BenchmarkPage(props: {
               <section>
                 <h2 className="text-2xl font-bold text-desert-green mb-6 flex items-center gap-2">
                   <div className="w-1 h-6 bg-desert-green" />
-                  Benchmark Details
+                  {t('benchmark:page.benchmarkDetails')}
                 </h2>
 
                 <div className="bg-desert-white rounded-lg border border-desert-stone-light shadow-sm overflow-hidden">
@@ -648,25 +659,23 @@ export default function BenchmarkPage(props: {
                   >
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-left flex-1">
                       <div>
-                        <div className="text-desert-stone-dark">Benchmark ID</div>
+                        <div className="text-desert-stone-dark">{t('benchmark:page.benchmarkId')}</div>
                         <div className="font-mono text-xs">
                           {latestResult.benchmark_id.slice(0, 8)}...
                         </div>
                       </div>
                       <div>
-                        <div className="text-desert-stone-dark">Type</div>
-                        <div className="capitalize">{latestResult.benchmark_type}</div>
+                        <div className="text-desert-stone-dark">{t('benchmark:page.type')}</div>
+                        <div className="capitalize">{benchmarkTypeLabel(latestResult.benchmark_type)}</div>
                       </div>
                       <div>
-                        <div className="text-desert-stone-dark">Date</div>
+                        <div className="text-desert-stone-dark">{t('benchmark:page.date')}</div>
                         <div>
-                          {new Date(
-                            latestResult.created_at as unknown as string
-                          ).toLocaleDateString()}
+                          {formatDate(latestResult.created_at as unknown as string)}
                         </div>
                       </div>
                       <div>
-                        <div className="text-desert-stone-dark">NOMAD Score</div>
+                        <div className="text-desert-stone-dark">{t('benchmark:score.nomadScore')}</div>
                         <div className="font-bold text-desert-green">
                           {(latestResult.nomad_score_v2 ?? latestResult.nomad_score).toFixed(1)}
                         </div>
@@ -683,28 +692,28 @@ export default function BenchmarkPage(props: {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Raw Scores */}
                         <div>
-                          <h4 className="font-semibold text-desert-green mb-3">Raw Scores</h4>
+                          <h4 className="font-semibold text-desert-green mb-3">{t('benchmark:page.rawScores')}</h4>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-desert-stone-dark">CPU Score</span>
+                              <span className="text-desert-stone-dark">{t('benchmark:page.cpuScore')}</span>
                               <span className="font-mono">
                                 {(latestResult.cpu_score * 100).toFixed(1)}%
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-desert-stone-dark">Memory Score</span>
+                              <span className="text-desert-stone-dark">{t('benchmark:page.memoryScore')}</span>
                               <span className="font-mono">
                                 {(latestResult.memory_score * 100).toFixed(1)}%
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-desert-stone-dark">Disk Read Score</span>
+                              <span className="text-desert-stone-dark">{t('benchmark:page.diskReadScore')}</span>
                               <span className="font-mono">
                                 {(latestResult.disk_read_score * 100).toFixed(1)}%
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-desert-stone-dark">Disk Write Score</span>
+                              <span className="text-desert-stone-dark">{t('benchmark:page.diskWriteScore')}</span>
                               <span className="font-mono">
                                 {(latestResult.disk_write_score * 100).toFixed(1)}%
                               </span>
@@ -712,17 +721,17 @@ export default function BenchmarkPage(props: {
                             {latestResult.ai_tokens_per_second && (
                               <>
                                 <div className="flex justify-between">
-                                  <span className="text-desert-stone-dark">AI Tokens/sec</span>
+                                  <span className="text-desert-stone-dark">{t('benchmark:page.aiTokensPerSec')}</span>
                                   <span className="font-mono">
                                     {latestResult.ai_tokens_per_second.toFixed(1)}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span className="text-desert-stone-dark">
-                                    AI Time to First Token
+                                    {t('benchmark:page.aiTimeToFirstToken')}
                                   </span>
                                   <span className="font-mono">
-                                    {latestResult.ai_time_to_first_token?.toFixed(0) || 'N/A'} ms
+                                    {latestResult.ai_time_to_first_token?.toFixed(0) || t('benchmark:page.notAvailable')} ms
                                   </span>
                                 </div>
                               </>
@@ -732,45 +741,43 @@ export default function BenchmarkPage(props: {
 
                         {/* Benchmark Info */}
                         <div>
-                          <h4 className="font-semibold text-desert-green mb-3">Benchmark Info</h4>
+                          <h4 className="font-semibold text-desert-green mb-3">{t('benchmark:page.benchmarkInfo')}</h4>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-desert-stone-dark">Full Benchmark ID</span>
+                              <span className="text-desert-stone-dark">{t('benchmark:page.fullBenchmarkId')}</span>
                               <span className="font-mono text-xs">{latestResult.benchmark_id}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-desert-stone-dark">Benchmark Type</span>
-                              <span className="capitalize">{latestResult.benchmark_type}</span>
+                              <span className="text-desert-stone-dark">{t('benchmark:page.benchmarkType')}</span>
+                              <span className="capitalize">{benchmarkTypeLabel(latestResult.benchmark_type)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-desert-stone-dark">Run Date</span>
+                              <span className="text-desert-stone-dark">{t('benchmark:page.runDate')}</span>
                               <span>
-                                {new Date(
-                                  latestResult.created_at as unknown as string
-                                ).toLocaleString()}
+                                {formatDateTime(latestResult.created_at as unknown as string)}
                               </span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-desert-stone-dark">Builder Tag</span>
+                              <span className="text-desert-stone-dark">{t('benchmark:page.builderTag')}</span>
                               <span className="font-mono">
-                                {latestResult.builder_tag || 'Not set'}
+                                {latestResult.builder_tag || t('benchmark:page.notSet')}
                               </span>
                             </div>
                             {latestResult.ai_model_used && (
                               <div className="flex justify-between">
-                                <span className="text-desert-stone-dark">AI Model Used</span>
+                                <span className="text-desert-stone-dark">{t('benchmark:page.aiModelUsed')}</span>
                                 <span>{latestResult.ai_model_used}</span>
                               </div>
                             )}
                             <div className="flex justify-between">
                               <span className="text-desert-stone-dark">
-                                Submitted to Repository
+                                {t('benchmark:page.submittedToRepository')}
                               </span>
-                              <span>{latestResult.submitted_to_repository ? 'Yes' : 'No'}</span>
+                              <span>{latestResult.submitted_to_repository ? t('benchmark:page.yes') : t('benchmark:page.no')}</span>
                             </div>
                             {latestResult.repository_id && (
                               <div className="flex justify-between">
-                                <span className="text-desert-stone-dark">Repository ID</span>
+                                <span className="text-desert-stone-dark">{t('benchmark:page.repositoryId')}</span>
                                 <span className="font-mono text-xs">
                                   {latestResult.repository_id}
                                 </span>
@@ -785,18 +792,18 @@ export default function BenchmarkPage(props: {
                         <div className="mt-6 pt-6 border-t border-desert-stone-light grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
                             <h4 className="font-semibold text-desert-green mb-3">
-                              Measured Performance (v2)
+                              {t('benchmark:page.measuredPerformance')}
                             </h4>
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
-                                <span className="text-desert-stone-dark">CPU single-thread</span>
+                                <span className="text-desert-stone-dark">{t('benchmark:page.cpuSingleThread')}</span>
                                 <span className="font-mono">
                                   {latestResult.cpu_events_single?.toFixed(1)} events/s
                                 </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-desert-stone-dark">
-                                  CPU multi-thread ({latestResult.cpu_benchmark_threads}T)
+                                  {t('benchmark:page.cpuMultiThread', { threads: latestResult.cpu_benchmark_threads })}
                                 </span>
                                 <span className="font-mono">
                                   {latestResult.cpu_events_multi?.toFixed(1)} events/s
@@ -804,15 +811,15 @@ export default function BenchmarkPage(props: {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-desert-stone-dark">
-                                  Memory ({latestResult.memory_threads}T)
+                                  {t('benchmark:page.memoryThreads', { threads: latestResult.memory_threads })}
                                 </span>
                                 <span className="font-mono">
-                                  {latestResult.memory_ops_per_sec?.toLocaleString()} ops/s
+                                  {latestResult.memory_ops_per_sec != null && formatNumber(latestResult.memory_ops_per_sec)} ops/s
                                 </span>
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-desert-stone-dark">
-                                  Disk read (O_DIRECT)
+                                  {t('benchmark:page.diskReadDirect')}
                                 </span>
                                 <span className="font-mono">
                                   {latestResult.disk_read_mb_per_sec?.toFixed(1)} MB/s
@@ -820,7 +827,7 @@ export default function BenchmarkPage(props: {
                               </div>
                               <div className="flex justify-between">
                                 <span className="text-desert-stone-dark">
-                                  Disk write (O_DIRECT)
+                                  {t('benchmark:page.diskWriteDirect')}
                                 </span>
                                 <span className="font-mono">
                                   {latestResult.disk_write_mb_per_sec?.toFixed(1)} MB/s
@@ -830,28 +837,28 @@ export default function BenchmarkPage(props: {
                           </div>
 
                           <div>
-                            <h4 className="font-semibold text-desert-green mb-3">Environment</h4>
+                            <h4 className="font-semibold text-desert-green mb-3">{t('benchmark:page.environment')}</h4>
                             <div className="space-y-2 text-sm">
                               <div className="flex justify-between">
-                                <span className="text-desert-stone-dark">Run environment</span>
+                                <span className="text-desert-stone-dark">{t('benchmark:page.runEnvironment')}</span>
                                 <span className="font-mono">
-                                  {latestResult.run_environment || 'Unknown'}
+                                  {latestResult.run_environment || t('benchmark:page.unknown')}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-desert-stone-dark">Storage backend</span>
+                                <span className="text-desert-stone-dark">{t('benchmark:page.storageBackend')}</span>
                                 <span className="font-mono">
-                                  {latestResult.storage_path_type || 'Unknown'}
+                                  {latestResult.storage_path_type || t('benchmark:page.unknown')}
                                 </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-desert-stone-dark">GPU compute</span>
+                                <span className="text-desert-stone-dark">{t('benchmark:page.gpuCompute')}</span>
                                 <span className="font-mono">
                                   {latestResult.gpu_compute_detected == null
-                                    ? 'Unknown'
+                                    ? t('benchmark:page.unknown')
                                     : latestResult.gpu_compute_detected
-                                      ? 'Detected'
-                                      : 'Not detected'}
+                                      ? t('benchmark:page.detected')
+                                      : t('benchmark:page.notDetected')}
                                 </span>
                               </div>
                               {latestResult.sysbench_digest && (
@@ -884,7 +891,7 @@ export default function BenchmarkPage(props: {
                 <section className="mb-12">
                   <h2 className="text-2xl font-bold text-desert-green mb-6 flex items-center gap-2">
                     <div className="w-1 h-6 bg-desert-green" />
-                    Benchmark History
+                    {t('benchmark:page.history')}
                   </h2>
 
                   <div className="bg-desert-white rounded-lg border border-desert-stone-light shadow-sm overflow-hidden">
@@ -895,8 +902,7 @@ export default function BenchmarkPage(props: {
                       <div className="flex items-center gap-2">
                         <IconClock className="w-5 h-5 text-desert-stone-dark" />
                         <span className="font-medium text-desert-green">
-                          {benchmarkHistory.length} benchmark
-                          {benchmarkHistory.length !== 1 ? 's' : ''} recorded
+                          {t('benchmark:page.benchmarksRecorded', { count: benchmarkHistory.length })}
                         </span>
                       </div>
                       <IconChevronDown
@@ -911,19 +917,19 @@ export default function BenchmarkPage(props: {
                             <thead className="bg-desert-stone-lighter/50">
                               <tr>
                                 <th className="text-left p-3 font-medium text-desert-stone-dark">
-                                  Date
+                                  {t('benchmark:page.date')}
                                 </th>
                                 <th className="text-left p-3 font-medium text-desert-stone-dark">
-                                  Type
+                                  {t('benchmark:page.type')}
                                 </th>
                                 <th className="text-left p-3 font-medium text-desert-stone-dark">
-                                  Score
+                                  {t('benchmark:page.score')}
                                 </th>
                                 <th className="text-left p-3 font-medium text-desert-stone-dark">
-                                  Builder Tag
+                                  {t('benchmark:page.builderTag')}
                                 </th>
                                 <th className="text-left p-3 font-medium text-desert-stone-dark">
-                                  Shared
+                                  {t('benchmark:page.shared')}
                                 </th>
                               </tr>
                             </thead>
@@ -938,11 +944,9 @@ export default function BenchmarkPage(props: {
                                   }`}
                                 >
                                   <td className="p-3">
-                                    {new Date(
-                                      result.created_at as unknown as string
-                                    ).toLocaleDateString()}
+                                    {formatDate(result.created_at as unknown as string)}
                                   </td>
-                                  <td className="p-3 capitalize">{result.benchmark_type}</td>
+                                  <td className="p-3 capitalize">{benchmarkTypeLabel(result.benchmark_type)}</td>
                                   {/*
                                     Show the v2 score when the run has one.
 
@@ -998,8 +1002,8 @@ export default function BenchmarkPage(props: {
           {!latestResult && !isRunning && (
             <Alert
               type="info"
-              title="No Benchmark Results"
-              message="Run your first benchmark to see your server's performance scores."
+              title={t('benchmark:page.noResultsTitle')}
+              message={t('benchmark:page.noResultsMessage')}
               variant="bordered"
             />
           )}

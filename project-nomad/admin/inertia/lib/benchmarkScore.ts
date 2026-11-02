@@ -1,4 +1,5 @@
 import type { BenchmarkType } from '../../types/benchmark'
+import i18n from '~/i18n'
 
 /**
  * How a benchmark result's headline score should be presented. A partial run
@@ -17,15 +18,15 @@ export function getScoreDisplay(type: BenchmarkType): {
   switch (type) {
     case 'system':
       return {
-        label: 'System Score',
+        label: i18n.t('benchmark:score.systemScore'),
         isPartial: true,
-        cta: 'This is a partial result, not your NOMAD Score. Run a Full Benchmark to get your NOMAD Score.',
+        cta: i18n.t('benchmark:score.partialCta'),
       }
     case 'ai':
       return {
-        label: 'AI Score',
+        label: i18n.t('benchmark:score.aiScore'),
         isPartial: true,
-        cta: 'This is a partial result, not your NOMAD Score. Run a Full Benchmark to get your NOMAD Score.',
+        cta: i18n.t('benchmark:score.partialCta'),
       }
     default:
       return { label: 'NOMAD Score', isPartial: false, cta: '' }
