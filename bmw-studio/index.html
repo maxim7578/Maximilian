@@ -1,20 +1,19 @@
 <title>Drehzahl Studio</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Prototyp einer Scroll-Website für eine unabhängige BMW-Werkstatt: Diagnose, Codierung, Leistung, Fahrwerk.">
+<meta name="description" content="Prototyp einer Scroll-Website mit 3D-Animationen für eine unabhängige BMW-Werkstatt.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: eine klebende Bühne (Canvas) füllt den Bildschirm, die Kapiteltexte scrollen links darüber; danach ruhige Info-Abschnitte. */
+/* Layout: eine klebende 3D-Bühne (WebGL) füllt den Bildschirm, Kapiteltexte scrollen links darüber, die Objekte wandern mit; danach ruhige Info-Abschnitte. */
 :root {
-  --bg: #E7EAED;
-  --surface: #F6F7F8;
+  --bg: #E9EAEC;
+  --surface: #F7F7F8;
   --fg: #101317;
   --muted: #535B65;
-  --line: #C5CBD2;
+  --line: #C6CBD1;
   --accent: #D4470C;
   --steel: #1B4A88;
-  --tire: #16191D;
   --f-display: "Archivo", "Arial Narrow", Arial, sans-serif;
   --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -24,12 +23,12 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0D1013; --surface: #161A1F; --fg: #E6E9ED; --muted: #98A1AC;
-    --line: #2B323A; --accent: #FF6B2C; --steel: #6C9BDB; --tire: #050608; color-scheme: dark;
+    --line: #2B323A; --accent: #FF6B2C; --steel: #6C9BDB; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0D1013; --surface: #161A1F; --fg: #E6E9ED; --muted: #98A1AC;
-  --line: #2B323A; --accent: #FF6B2C; --steel: #6C9BDB; --tire: #050608; color-scheme: dark;
+  --line: #2B323A; --accent: #FF6B2C; --steel: #6C9BDB; color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -59,16 +58,10 @@ a { color: inherit; }
 /* ---------- Kopfzeile ---------- */
 .top {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
 }
 .top .wrap { display: flex; align-items: center; gap: 24px; min-height: 64px; }
-@media (max-width: 520px) {
-  .top .wrap { gap: 12px; }
-  .proto { display: none; }
-  .top .btn { padding: .75em 1.05em; font-size: .9rem; }
-}
 .brand {
   font: 800 1.05rem/1 var(--f-display); font-stretch: 78%;
   letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
@@ -87,6 +80,11 @@ a { color: inherit; }
   .nav { display: flex; }
   .top .btn { margin-left: 8px; }
 }
+@media (max-width: 520px) {
+  .top .wrap { gap: 12px; }
+  .proto { display: none; }
+  .top .btn { padding: .75em 1.05em; font-size: .9rem; }
+}
 
 .btn {
   display: inline-flex; align-items: center; gap: .55em;
@@ -100,12 +98,24 @@ a { color: inherit; }
 .btn.ghost:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .btn svg { width: 1em; height: 1em; }
 
-/* ---------- Scroll-Geschichte ---------- */
+/* ---------- 3D-Geschichte ---------- */
 .story { position: relative; }
 .stage {
   position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden;
 }
-.stage canvas { display: block; width: 100%; height: 100%; }
+#gl { display: block; width: 100%; height: 100%; }
+.no-webgl #gl { display: none; }
+.leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.leaders line { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
+.leaders circle { fill: var(--accent); }
+.hs {
+  position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 14px; display: grid; gap: 2px; white-space: nowrap;
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--fg) 12%, transparent);
+}
+.hs small { font: 600 .66rem/1.3 var(--f-mono); letter-spacing: .12em; color: var(--muted); }
+.hs b { font: 600 .98rem/1.3 var(--f-body); }
 .rail {
   position: absolute; right: max(18px, env(safe-area-inset-right, 0px)); top: 50%;
   transform: translateY(-50%); display: none; flex-direction: column; gap: 10px;
@@ -120,6 +130,7 @@ a { color: inherit; }
 .chapters { position: relative; margin-top: -100vh; margin-top: -100svh; }
 .chapter { min-height: 100vh; min-height: 100svh; display: flex; align-items: center; }
 .copy { max-width: 31rem; display: grid; gap: 18px; padding-block: 96px 48px; }
+.num { font: 800 1.6rem/1 var(--f-display); font-stretch: 75%; }
 .eyebrow {
   font: 600 .74rem/1.2 var(--f-mono); letter-spacing: .14em; text-transform: uppercase;
   display: flex; align-items: center; gap: .8em;
@@ -133,6 +144,8 @@ a { color: inherit; }
 }
 .copy p { margin: 0; color: var(--muted); max-width: 40ch; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 6px; }
+.rpm { font: 600 .9rem/1 var(--f-mono); display: flex; align-items: baseline; gap: .5em; color: var(--muted); }
+.rpm b { font: 850 2.6rem/1 var(--f-display); font-stretch: 75%; color: var(--fg); font-variant-numeric: tabular-nums; min-width: 4.2ch; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
 .chips li {
   font: 500 .8rem/1 var(--f-mono); padding: .55em .8em; border-radius: 6px;
@@ -142,12 +155,14 @@ a { color: inherit; }
 @media (max-width: 899px) {
   .chapter { align-items: flex-end; }
   .copy {
-    padding: 20px; margin-bottom: 5vh; gap: 14px;
+    padding: 20px; margin-bottom: 4vh; gap: 12px;
     background: color-mix(in srgb, var(--surface) 90%, transparent);
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     border: 1px solid var(--line); border-radius: 16px;
   }
-  .display { font-size: clamp(2.5rem, 12vw, 4rem); }
+  .display { font-size: clamp(2.4rem, 11vw, 3.8rem); }
+  .hs { padding: 7px 10px; }
+  .hs b { font-size: .85rem; }
 }
 
 /* ---------- Info-Abschnitte ---------- */
@@ -167,10 +182,7 @@ a { color: inherit; }
 
 .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 32px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); counter-reset: s; }
 .steps li { counter-increment: s; display: grid; gap: 10px; min-width: 0; }
-.steps li::before {
-  content: counter(s); font: 850 3.4rem/1 var(--f-display); font-stretch: 70%;
-  color: var(--accent);
-}
+.steps li::before { content: counter(s); font: 850 3.4rem/1 var(--f-display); font-stretch: 70%; color: var(--accent); }
 .steps h3 { margin: 0; font: 600 1.15rem/1.3 var(--f-body); }
 .steps p { margin: 0; color: var(--muted); }
 
@@ -202,6 +214,7 @@ fieldset legend { width: 100%; margin-bottom: 8px; }
 .check span {
   display: inline-block; font-size: .92rem; padding: .5em .9em; border-radius: 999px;
   border: 1px solid var(--line); background: var(--bg); cursor: pointer; user-select: none;
+  text-transform: none; letter-spacing: 0; font-family: var(--f-body); font-weight: 500; color: var(--fg);
 }
 .check input:checked + span { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .check input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -228,8 +241,8 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
     <a class="brand" href="#start">Drehzahl<span>/ Studio</span></a>
     <span class="proto">Prototyp</span>
     <nav class="nav" aria-label="Hauptnavigation">
-      <a href="#kap-codierung">Codierung</a>
       <a href="#kap-leistung">Leistung</a>
+      <a href="#kap-codierung">Codierung</a>
       <a href="#leistungen">Leistungen</a>
       <a href="#ablauf">Ablauf</a>
     </nav>
@@ -240,11 +253,15 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
 <main id="start">
   <section class="story" id="story" aria-label="Unsere Arbeit in vier Kapiteln">
     <div class="stage">
-      <canvas id="stage" role="img" aria-label="Animation: Reihensechszylinder, Codierung über die OBD-Buchse, Leistungskurve auf dem Prüfstand und ein Rad mit Bremse"></canvas>
+      <canvas id="gl" role="img" aria-label="3D-Animation: Ein Rad zerlegt sich in Reifen, Felge, Bremsscheibe und Sattel; ein Reihensechszylinder läuft hoch; ein Funkschlüssel wird codiert; das fertige Rad mit Info-Karten."></canvas>
+      <svg class="leaders" aria-hidden="true"></svg>
+      <div class="hs" aria-hidden="true"><small>FELGE</small><b>19″ Doppelspeiche</b></div>
+      <div class="hs" aria-hidden="true"><small>BREMSE</small><b>4-Kolben-Festsattel</b></div>
+      <div class="hs" aria-hidden="true"><small>FAHRWERK</small><b>−30 mm, eingetragen</b></div>
       <nav class="rail" aria-label="Kapitel">
         <button type="button" data-ch="0" aria-label="Diagnose"></button>
-        <button type="button" data-ch="1" aria-label="Codierung"></button>
-        <button type="button" data-ch="2" aria-label="Leistung"></button>
+        <button type="button" data-ch="1" aria-label="Leistung"></button>
+        <button type="button" data-ch="2" aria-label="Codierung"></button>
         <button type="button" data-ch="3" aria-label="Fahrwerk und Optik"></button>
       </nav>
     </div>
@@ -254,8 +271,8 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
         <div class="wrap">
           <div class="copy">
             <div class="eyebrow">BMW-Spezialist · Diagnose</div>
-            <h1 class="display">Weck den Reihen&shy;sechser</h1>
-            <p>Fehlerspeicher auslesen, Service zurückstellen, Ursachen finden statt Teile tauschen. Wir arbeiten mit Händler-Software und erklären dir jeden Befund.</p>
+            <h1 class="display">Bis zur letzten Schraube</h1>
+            <p>Fehlerspeicher auslesen, Bauteile prüfen, Ursachen finden statt Teile tauschen. Wir arbeiten mit Händler-Software und erklären dir jeden Befund.</p>
             <div class="actions">
               <a class="btn" href="#termin">Termin buchen
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
@@ -266,9 +283,22 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
         </div>
       </article>
 
+      <article class="chapter" id="kap-leistung">
+        <div class="wrap">
+          <div class="copy">
+            <div class="num">2.</div>
+            <div class="eyebrow">Leistung</div>
+            <h2 class="display">Lass ihn atmen</h2>
+            <div class="rpm" aria-hidden="true"><b id="rpm">800</b>U/min</div>
+            <p>Softwareoptimierung auf dem Prüfstand: messen, abstimmen, nochmal messen. Du bekommst beide Kurven schwarz auf weiß und auf Wunsch die Eintragung.</p>
+          </div>
+        </div>
+      </article>
+
       <article class="chapter" id="kap-codierung">
         <div class="wrap">
           <div class="copy">
+            <div class="num">3.</div>
             <div class="eyebrow">Codierung</div>
             <h2 class="display">Frei&shy;schalten, was schon drin ist</h2>
             <p>Viele Funktionen sind im Steuergerät angelegt und nur abgeschaltet. Wir codieren sie über die OBD-Buchse frei, mit Backup vorher und Protokoll nachher.</p>
@@ -276,18 +306,8 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
               <li>Begrüßungslicht</li>
               <li>Digitaltacho</li>
               <li>Spiegel anklappen</li>
-              <li>Start-Stopp merken</li>
+              <li>Komfortöffnen</li>
             </ul>
-          </div>
-        </div>
-      </article>
-
-      <article class="chapter" id="kap-leistung">
-        <div class="wrap">
-          <div class="copy">
-            <div class="eyebrow">Leistung</div>
-            <h2 class="display">Lass ihn atmen</h2>
-            <p>Softwareoptimierung auf dem Prüfstand: messen, abstimmen, nochmal messen. Du bekommst beide Kurven schwarz auf weiß und auf Wunsch die Eintragung.</p>
           </div>
         </div>
       </article>
@@ -295,6 +315,7 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
       <article class="chapter" id="kap-fahrwerk">
         <div class="wrap">
           <div class="copy">
+            <div class="num">4.</div>
             <div class="eyebrow">Fahrwerk &amp; Optik</div>
             <h2 class="display">Mach ihn zu deinem</h2>
             <p>Felgen, Tieferlegung, Bremse und Folierung, aufeinander abgestimmt und mit Gutachten. Wir planen den Umbau mit dir, bevor ein Teil bestellt wird.</p>
@@ -354,7 +375,7 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
         </div>
         <div class="field">
           <label for="fin">FIN, letzte 7 Stellen</label>
-          <input id="fin" name="fin" maxlength="7" inputmode="text" autocomplete="off" placeholder="z. B. AB12345" aria-describedby="fin-hint">
+          <input id="fin" name="fin" maxlength="7" autocomplete="off" placeholder="z. B. AB12345" aria-describedby="fin-hint">
           <span class="hint" id="fin-hint">Steht im Fahrzeugschein, Feld E.</span>
         </div>
         <fieldset class="field full">
@@ -377,7 +398,7 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
   <div class="wrap">
     <strong>Drehzahl / Studio</strong>
     <span>Unabhängige Werkstatt. BMW und MINI sind Marken der BMW AG; wir sind kein BMW-Vertragspartner.</span>
-    <span>Prototyp: Name, Adresse, Zeiten und Animationen sind Platzhalter.</span>
+    <span>Prototyp: Name, Adresse, Zeiten und 3D-Modelle sind Platzhalter.</span>
   </div>
 </footer>
 
@@ -386,383 +407,8 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
 </a>
 
 <script>
+/* Formular (Prototyp: wird nicht verschickt) */
 (() => {
-  const canvas = document.getElementById("stage");
-  const ctx = canvas.getContext("2d");
-  const story = document.getElementById("story");
-  const chapters = [...document.querySelectorAll(".chapter")];
-  const dots = [...document.querySelectorAll(".rail button")];
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
-
-  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
-  const rad = (d) => d * Math.PI / 180;
-
-  let W = 0, H = 0, dpr = 1, cx = 0, cy = 0, S = 0;
-  let col = {}, fonts = {};
-  let cur = 0, clock = 0, crankDeg = 0, last = performance.now();
-
-  function readTheme() {
-    const cs = getComputedStyle(document.documentElement);
-    const v = (n) => cs.getPropertyValue(n).trim();
-    col = { bg: v("--bg"), surface: v("--surface"), fg: v("--fg"), muted: v("--muted"), line: v("--line"), accent: v("--accent"), steel: v("--steel"), tire: v("--tire") };
-    fonts = { mono: v("--f-mono"), body: v("--f-body"), display: v("--f-display") };
-  }
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const r = canvas.getBoundingClientRect();
-    W = r.width; H = r.height;
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    const wide = W >= 900;
-    cx = wide ? W * 0.66 : W * 0.5;
-    cy = wide ? H * 0.55 : H * 0.3;
-    S = wide ? Math.min(W * 0.5, H * 0.76) : Math.min(W * 0.92, H * 0.46);
-  }
-  function progress() {
-    const r = story.getBoundingClientRect();
-    const total = r.height - window.innerHeight;
-    return total > 0 ? clamp(-r.top / total, 0, 1) : 0;
-  }
-
-  function font(weight, size, family) { return `${weight} ${Math.max(9, size).toFixed(1)}px ${family}`; }
-  function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
-
-  /* ---------- Szene 1: Reihensechszylinder ---------- */
-  const PISTON_OFF = [0, 120, 240, 240, 120, 0];      // Kurbelwinkel je Zylinder (Paare 1/6, 2/5, 3/4)
-  const FIRE_OFF = [0, 480, 240, 600, 120, 360];      // Zündfolge 1-5-3-6-2-4 im 720°-Takt
-
-  function sceneEngine(t, dt) {
-    if (!reduce.matches) crankDeg += (90 + t * 620) * dt;
-    const angle = crankDeg + t * 720;
-    const blockW = S * 0.92, cylW = blockW / 6, boreW = cylW * 0.64;
-    const top = -S * 0.26, headH = S * 0.075;
-    const boreTop = top + headH;
-    const pH = S * 0.07, rodL = S * 0.15, crankR = S * 0.045;
-    const crankY = boreTop + S * 0.012 + pH + rodL + crankR;
-    const boreBottom = crankY + crankR - rodL + pH * 0.5 + S * 0.02;
-
-    // Zylinderkopf mit Nockenwelle
-    ctx.fillStyle = col.fg;
-    roundRect(-blockW / 2, top, blockW, headH, S * 0.014); ctx.fill();
-    ctx.fillStyle = col.bg;
-    for (let i = 0; i < 12; i++) {
-      const x = -blockW / 2 + (blockW / 12) * (i + 0.5);
-      const lift = Math.max(0, Math.sin(rad(angle / 2 + i * 60)));
-      ctx.beginPath(); ctx.arc(x, top + headH * 0.5 - lift * headH * 0.12, headH * 0.16, 0, Math.PI * 2); ctx.fill();
-    }
-
-    // Motorblock und Kurbelgehäuse
-    ctx.fillStyle = col.surface; ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.006;
-    roundRect(-blockW / 2, boreTop, blockW, boreBottom - boreTop, [0, 0, S * 0.02, S * 0.02]); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = col.line; ctx.lineWidth = S * 0.004;
-    roundRect(-blockW / 2 + S * 0.02, crankY - crankR * 1.8, blockW - S * 0.04, crankR * 3.8, S * 0.04); ctx.stroke();
-
-    for (let k = 0; k < 6; k++) {
-      const x = -blockW / 2 + cylW * (k + 0.5);
-      const a = rad(angle - PISTON_OFF[k]);
-      const pinX = x + crankR * Math.sin(a);
-      const pinY = crankY - crankR * Math.cos(a);
-      const pistonPinY = pinY - Math.sqrt(rodL * rodL - (pinX - x) ** 2);
-      const pistonTop = pistonPinY - pH * 0.6;
-
-      ctx.fillStyle = col.bg;
-      ctx.fillRect(x - boreW / 2, boreTop, boreW, boreBottom - boreTop - S * 0.02);
-
-      const cyc = (((angle - FIRE_OFF[k]) % 720) + 720) % 720;
-      if (cyc < 50) {
-        const f = 1 - cyc / 50;
-        const g = ctx.createRadialGradient(x, boreTop, 0, x, boreTop, boreW * 0.9);
-        g.addColorStop(0, col.accent); g.addColorStop(1, "transparent");
-        ctx.globalAlpha *= 1; ctx.save(); ctx.globalAlpha *= f;
-        ctx.fillStyle = g; ctx.fillRect(x - boreW / 2, boreTop, boreW, pistonTop - boreTop);
-        ctx.restore();
-      }
-      // Zündkerze
-      ctx.strokeStyle = col.accent; ctx.lineWidth = S * 0.006;
-      ctx.beginPath(); ctx.moveTo(x, top + headH * 0.15); ctx.lineTo(x, boreTop + S * 0.008); ctx.stroke();
-
-      // Pleuel
-      ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.013; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(x, pistonPinY); ctx.lineTo(pinX, pinY); ctx.stroke();
-      // Kolben mit Ringen
-      ctx.fillStyle = col.fg;
-      roundRect(x - boreW / 2 + S * 0.004, pistonTop, boreW - S * 0.008, pH, [S * 0.006, S * 0.006, S * 0.012, S * 0.012]); ctx.fill();
-      ctx.strokeStyle = col.bg; ctx.lineWidth = S * 0.0035;
-      for (let r = 1; r <= 2; r++) {
-        ctx.beginPath(); ctx.moveTo(x - boreW / 2 + S * 0.006, pistonTop + pH * 0.16 * r); ctx.lineTo(x + boreW / 2 - S * 0.006, pistonTop + pH * 0.16 * r); ctx.stroke();
-      }
-      // Hubzapfen
-      ctx.fillStyle = col.steel; ctx.beginPath(); ctx.arc(pinX, pinY, S * 0.012, 0, Math.PI * 2); ctx.fill();
-    }
-    // Kurbelwelle
-    ctx.strokeStyle = col.muted; ctx.lineWidth = S * 0.008;
-    ctx.beginPath(); ctx.moveTo(-blockW / 2 + S * 0.03, crankY); ctx.lineTo(blockW / 2 - S * 0.03, crankY); ctx.stroke();
-
-    // Drehzahl
-    const rpm = Math.round((800 + t * 6200) / 50) * 50;
-    const ry = top - S * 0.08;
-    ctx.fillStyle = col.muted; ctx.font = font(600, S * 0.024, fonts.mono); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    ctx.fillText("U/MIN", -blockW / 2, ry - S * 0.1);
-    ctx.fillStyle = col.fg; ctx.font = font(800, S * 0.1, fonts.display);
-    ctx.fillText(rpm.toLocaleString("de-DE"), -blockW / 2, ry - S * 0.012);
-    const barW = blockW * 0.42, barX = blockW / 2 - barW;
-    ctx.fillStyle = col.line; ctx.fillRect(barX, ry - S * 0.03, barW, S * 0.012);
-    ctx.fillStyle = col.accent; ctx.fillRect(barX + barW * (6500 / 7000), ry - S * 0.03, barW * (500 / 7000), S * 0.012);
-    ctx.fillStyle = col.fg; ctx.fillRect(barX, ry - S * 0.03, barW * Math.min(rpm, 6500) / 7000, S * 0.012);
-    ctx.fillStyle = col.muted; ctx.font = font(400, S * 0.022, fonts.mono); ctx.textAlign = "right";
-    ctx.fillText("R6 · 2.998 cm³ · Zündfolge 1-5-3-6-2-4", blockW / 2, crankY + crankR * 2.2 + S * 0.07);
-  }
-
-  /* ---------- Szene 2: Codierung über OBD ---------- */
-  const OPTIONS = ["Begrüßungslicht", "Start-Stopp merken", "Digitaltacho", "Spiegel anklappen"];
-  function hexLine(i) {
-    let h = (i * 2654435761) >>> 0, s = "";
-    for (let k = 0; k < 6; k++) { h = (h ^ (h << 13)) >>> 0; h = (h ^ (h >>> 17)) >>> 0; h = (h ^ (h << 5)) >>> 0; s += (h & 0xff).toString(16).padStart(2, "0").toUpperCase() + " "; }
-    return s.trim();
-  }
-  function sceneCoding(t) {
-    const sw = S * 0.96, sh = S * 0.56, sx = -sw / 2, sy = -sh / 2 - S * 0.1, pad = S * 0.04;
-    ctx.fillStyle = col.fg; roundRect(sx, sy, sw, sh, S * 0.03); ctx.fill();
-
-    // Hex-Datenstrom
-    const colW = sw * 0.36, lh = S * 0.04;
-    ctx.save(); ctx.beginPath(); ctx.rect(sx + pad, sy + pad, colW, sh - pad * 2); ctx.clip();
-    const scroll = (reduce.matches ? 0 : clock * 26) + t * 420;
-    const first = Math.floor(scroll / lh);
-    ctx.font = font(400, S * 0.022, fonts.mono); ctx.textAlign = "left"; ctx.textBaseline = "top";
-    for (let i = 0; i < Math.ceil(sh / lh) + 1; i++) {
-      const n = first + i, y = sy + pad + i * lh - (scroll % lh);
-      ctx.fillStyle = n % 7 === 3 ? col.accent : col.bg;
-      ctx.globalAlpha = n % 7 === 3 ? 1 : 0.5;
-      ctx.fillText(hexLine(n), sx + pad, y);
-    }
-    ctx.restore();
-
-    ctx.strokeStyle = col.bg; ctx.globalAlpha *= 0.25; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(sx + pad * 1.5 + colW, sy + pad); ctx.lineTo(sx + pad * 1.5 + colW, sy + sh - pad); ctx.stroke();
-    ctx.globalAlpha /= 0.25;
-
-    // Schalter
-    const lx = sx + pad * 2.2 + colW, rx = sx + sw - pad;
-    ctx.fillStyle = col.bg; ctx.font = font(600, S * 0.02, fonts.mono); ctx.textBaseline = "top";
-    ctx.save(); ctx.globalAlpha *= 0.6; ctx.fillText("STEUERGERÄT · BDC_BODY", lx, sy + pad); ctx.restore();
-    const rowH = (sh - pad * 3.4) / OPTIONS.length;
-    OPTIONS.forEach((label, k) => {
-      const y = sy + pad * 2.1 + rowH * k + rowH / 2;
-      const on = smooth(0.16 + k * 0.18, 0.24 + k * 0.18, t);
-      ctx.fillStyle = col.bg; ctx.font = font(500, S * 0.03, fonts.body); ctx.textBaseline = "middle"; ctx.textAlign = "left";
-      ctx.fillText(label, lx, y);
-      const tw = S * 0.08, th = S * 0.042, tx = rx - tw;
-      ctx.save(); ctx.globalAlpha *= 0.25 + 0.75 * on; ctx.fillStyle = on > 0.5 ? col.accent : col.bg;
-      roundRect(tx, y - th / 2, tw, th, th / 2); ctx.fill(); ctx.restore();
-      ctx.save(); ctx.globalAlpha *= 0.25; ctx.strokeStyle = col.bg; ctx.lineWidth = 1; roundRect(tx, y - th / 2, tw, th, th / 2); ctx.stroke(); ctx.restore();
-      ctx.fillStyle = on > 0.5 ? "#fff" : col.bg;
-      ctx.beginPath(); ctx.arc(tx + th / 2 + (tw - th) * on, y, th * 0.36, 0, Math.PI * 2); ctx.fill();
-    });
-
-    // Fortschritt
-    const py = sy + sh - pad * 0.9;
-    ctx.save(); ctx.globalAlpha *= 0.2; ctx.fillStyle = col.bg; ctx.fillRect(lx, py, rx - lx, S * 0.008); ctx.restore();
-    ctx.fillStyle = col.accent; ctx.fillRect(lx, py, (rx - lx) * t, S * 0.008);
-
-    // OBD-Stecker und Kabel
-    const plugY = sy + sh + S * 0.2, pw = S * 0.26, pwb = S * 0.21, ph = S * 0.1;
-    const cable = [0, sy + sh, 0, sy + sh + S * 0.1, -S * 0.02, plugY - S * 0.06, 0, plugY];
-    ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.014; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(cable[0], cable[1]); ctx.bezierCurveTo(cable[2], cable[3], cable[4], cable[5], cable[6], cable[7]); ctx.stroke();
-    const bez = (u, a, b, c, d) => (1 - u) ** 3 * a + 3 * (1 - u) ** 2 * u * b + 3 * (1 - u) * u * u * c + u ** 3 * d;
-    ctx.fillStyle = col.accent;
-    for (let i = 0; i < 3; i++) {
-      const u = 1 - (((reduce.matches ? 0 : clock * 0.7) + t * 2 + i / 3) % 1);
-      ctx.beginPath(); ctx.arc(bez(u, cable[0], cable[2], cable[4], cable[6]), bez(u, cable[1], cable[3], cable[5], cable[7]), S * 0.011, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.fillStyle = col.surface; ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.007; ctx.lineJoin = "round";
-    ctx.beginPath(); ctx.moveTo(-pw / 2, plugY); ctx.lineTo(pw / 2, plugY); ctx.lineTo(pwb / 2, plugY + ph); ctx.lineTo(-pwb / 2, plugY + ph); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = col.fg;
-    for (let r = 0; r < 2; r++) for (let i = 0; i < 8; i++) {
-      const rowW = (r === 0 ? pw : pwb) * 0.78, x = -rowW / 2 + rowW / 7 * i;
-      ctx.fillRect(x - S * 0.006, plugY + ph * (0.28 + r * 0.38), S * 0.012, ph * 0.18);
-    }
-    ctx.fillStyle = col.muted; ctx.font = font(400, S * 0.022, fonts.mono); ctx.textAlign = "left"; ctx.textBaseline = "middle";
-    ctx.fillText("OBD-II · 16 Pin", pw / 2 + S * 0.04, plugY + ph / 2);
-    ctx.textAlign = "right";
-    ctx.fillText(`Codierung ${Math.round(t * 100)} %`, -pw / 2 - S * 0.04, plugY + ph / 2);
-  }
-
-  /* ---------- Szene 3: Prüfstand ---------- */
-  const serie = (r) => 340 * Math.max(0, 1 - ((r - 6000) / 5000) ** 2);
-  const stage1 = (r) => 410 * Math.max(0, 1 - ((r - 5800) / 4800) ** 2);
-  function sceneDyno(t) {
-    const pw = S * 0.98, ph = S * 0.62;
-    const x0 = -pw / 2 + S * 0.08, x1 = pw / 2, y0 = ph / 2 - S * 0.04, y1 = -ph / 2;
-    const X = (r) => x0 + (r - 1000) / 6000 * (x1 - x0);
-    const Y = (ps) => y0 - ps / 450 * (y0 - y1);
-
-    ctx.strokeStyle = col.line; ctx.lineWidth = 1;
-    ctx.fillStyle = col.muted; ctx.font = font(400, S * 0.022, fonts.mono);
-    for (let r = 1000; r <= 7000; r += 1000) {
-      ctx.beginPath(); ctx.moveTo(X(r), y0); ctx.lineTo(X(r), y1); ctx.stroke();
-      ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText(String(r / 1000), X(r), y0 + S * 0.016);
-    }
-    for (let ps = 0; ps <= 400; ps += 100) {
-      ctx.beginPath(); ctx.moveTo(x0, Y(ps)); ctx.lineTo(x1, Y(ps)); ctx.stroke();
-      ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(String(ps), x0 - S * 0.016, Y(ps));
-    }
-    ctx.textAlign = "right"; ctx.textBaseline = "top"; ctx.fillText("× 1.000 U/min", x1, y0 + S * 0.06);
-    ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("PS", x0 - S * 0.06, y1 - S * 0.02);
-
-    const rEnd = 1000 + 6000 * clamp(t * 1.12, 0, 1);
-    const path = (fn) => { ctx.beginPath(); for (let r = 1000; r <= rEnd; r += 50) { r === 1000 ? ctx.moveTo(X(r), Y(fn(r))) : ctx.lineTo(X(r), Y(fn(r))); } };
-
-    path(stage1); ctx.lineTo(X(rEnd), Y(0)); ctx.lineTo(X(1000), Y(0)); ctx.closePath();
-    ctx.save(); ctx.globalAlpha *= 0.12; ctx.fillStyle = col.accent; ctx.fill(); ctx.restore();
-    ctx.lineJoin = "round"; ctx.lineCap = "round";
-    path(serie); ctx.strokeStyle = col.muted; ctx.lineWidth = S * 0.007; ctx.stroke();
-    path(stage1); ctx.strokeStyle = col.accent; ctx.lineWidth = S * 0.011; ctx.stroke();
-
-    ctx.fillStyle = col.accent; ctx.beginPath(); ctx.arc(X(rEnd), Y(stage1(rEnd)), S * 0.016, 0, Math.PI * 2); ctx.fill();
-
-    const peak = (r, fn, color, label, dy) => {
-      if (rEnd < r) return;
-      ctx.fillStyle = color; ctx.font = font(800, S * 0.05, fonts.display); ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-      ctx.fillText(label, X(r), Y(fn(r)) - dy);
-    };
-    peak(6000, serie, col.muted, "340 PS", S * 0.02);
-    peak(5800, stage1, col.accent, "410 PS", S * 0.03);
-
-    ctx.font = font(600, S * 0.022, fonts.mono); ctx.textBaseline = "middle"; ctx.textAlign = "left";
-    const ly = y1 + S * 0.03;
-    ctx.fillStyle = col.muted; ctx.fillRect(x0 + S * 0.03, ly - 1, S * 0.05, S * 0.007); ctx.fillText("Serie", x0 + S * 0.1, ly);
-    ctx.fillStyle = col.accent; ctx.fillRect(x0 + S * 0.03, ly + S * 0.045 - 1, S * 0.05, S * 0.009); ctx.fillText("Stage 1", x0 + S * 0.1, ly + S * 0.045);
-    ctx.fillStyle = col.muted; ctx.font = font(400, S * 0.02, fonts.mono); ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.fillText("Beispielkurve zur Darstellung, kein Messwert", x0, y0 + S * 0.11);
-  }
-
-  /* ---------- Szene 4: Rad, Bremse, Fahrwerk ---------- */
-  const CARDS = [
-    { at: 0.12, title: "FELGE", value: "19″ Doppelspeiche", ang: -2.4, rr: 0.9, dx: -1.35, dy: -0.95 },
-    { at: 0.38, title: "BREMSE", value: "4-Kolben-Festsattel", ang: -0.55, rr: 0.66, dx: 0.62, dy: -1.12 },
-    { at: 0.64, title: "FAHRWERK", value: "−30 mm, eingetragen", ang: 1.0, rr: 1.0, dx: 0.7, dy: 0.62 },
-  ];
-  function sceneWheel(t) {
-    const R = S * 0.4, rimR = R * 0.72;
-    const rot = t * Math.PI * 3 + (reduce.matches ? 0 : clock * 0.5);
-    const drop = smooth(0.55, 0.85, t) * S * 0.03;
-    ctx.save(); ctx.translate(0, drop);
-
-    ctx.save(); ctx.globalAlpha *= 0.14; ctx.fillStyle = col.fg;
-    ctx.beginPath(); ctx.ellipse(0, R + S * 0.035 - drop, R * 0.92, S * 0.028, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-
-    // Reifen
-    ctx.fillStyle = col.tire; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = col.line; ctx.lineWidth = S * 0.003;
-    ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = col.muted;
-    ctx.beginPath(); ctx.arc(0, 0, R * 0.9, 0, Math.PI * 2); ctx.stroke();
-    // Felgenbett und Bremsscheibe
-    ctx.fillStyle = col.bg; ctx.beginPath(); ctx.arc(0, 0, rimR, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = col.line; ctx.beginPath(); ctx.arc(0, 0, rimR * 0.8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = col.bg;
-    for (let i = 0; i < 30; i++) {
-      const a = rot + i * Math.PI * 2 / 30, rr = rimR * (i % 2 ? 0.6 : 0.7);
-      ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, S * 0.006, 0, Math.PI * 2); ctx.fill();
-    }
-    // Bremssattel (dreht nicht mit)
-    ctx.fillStyle = col.accent;
-    ctx.beginPath(); ctx.arc(0, 0, rimR * 0.86, -1.05, -0.05); ctx.arc(0, 0, rimR * 0.5, -0.05, -1.05, true); ctx.closePath(); ctx.fill();
-    // Doppelspeichen
-    ctx.fillStyle = col.surface; ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.004; ctx.lineJoin = "round";
-    for (let i = 0; i < 5; i++) {
-      const a = rot + i * Math.PI * 2 / 5;
-      for (const side of [-1, 1]) {
-        const h1 = a + side * 0.2, r1 = a + side * 0.13;
-        ctx.beginPath();
-        ctx.moveTo(Math.cos(h1 - 0.12) * rimR * 0.2, Math.sin(h1 - 0.12) * rimR * 0.2);
-        ctx.lineTo(Math.cos(r1 - 0.06) * rimR * 0.97, Math.sin(r1 - 0.06) * rimR * 0.97);
-        ctx.lineTo(Math.cos(r1 + 0.06) * rimR * 0.97, Math.sin(r1 + 0.06) * rimR * 0.97);
-        ctx.lineTo(Math.cos(h1 + 0.12) * rimR * 0.2, Math.sin(h1 + 0.12) * rimR * 0.2);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-      }
-    }
-    ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.014;
-    ctx.beginPath(); ctx.arc(0, 0, rimR, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = col.surface; ctx.lineWidth = S * 0.004;
-    ctx.beginPath(); ctx.arc(0, 0, rimR * 0.22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = col.fg;
-    for (let i = 0; i < 5; i++) {
-      const a = rot + Math.PI / 5 + i * Math.PI * 2 / 5;
-      ctx.beginPath(); ctx.arc(Math.cos(a) * rimR * 0.14, Math.sin(a) * rimR * 0.14, S * 0.009, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.beginPath(); ctx.arc(0, 0, rimR * 0.07, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-
-    // Info-Karten
-    CARDS.forEach((c) => {
-      const a = smooth(c.at, c.at + 0.12, t);
-      if (a <= 0) return;
-      const ax = Math.cos(c.ang) * R * c.rr, ay = Math.sin(c.ang) * R * c.rr + drop;
-      const fT = font(600, S * 0.02, fonts.mono), fV = font(600, S * 0.032, fonts.body);
-      ctx.font = fT; const w1 = ctx.measureText(c.title).width;
-      ctx.font = fV; const w2 = ctx.measureText(c.value).width;
-      const pad = S * 0.026, cw = Math.max(w1, w2) + pad * 2, ch = S * 0.12;
-      let x = R * c.dx, y = R * c.dy + (1 - a) * S * 0.04;
-      x = clamp(x, -cx + 12, W - cx - 12 - cw);
-      y = clamp(y, -cy + 72, H - cy - 12 - ch);
-      ctx.save(); ctx.globalAlpha *= a;
-      const ex = clamp(ax, x, x + cw), ey = clamp(ay, y, y + ch);
-      ctx.strokeStyle = col.muted; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = col.accent; ctx.beginPath(); ctx.arc(ax, ay, S * 0.01, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = col.surface; ctx.strokeStyle = col.line;
-      roundRect(x, y, cw, ch, S * 0.02); ctx.fill(); ctx.stroke();
-      ctx.textAlign = "left"; ctx.textBaseline = "top";
-      ctx.fillStyle = col.muted; ctx.font = fT; ctx.fillText(c.title, x + pad, y + pad * 0.9);
-      ctx.fillStyle = col.fg; ctx.font = fV; ctx.fillText(c.value, x + pad, y + pad * 0.9 + S * 0.034);
-      ctx.restore();
-    });
-  }
-
-  const SCENES = [sceneEngine, sceneCoding, sceneDyno, sceneWheel];
-
-  function draw(p, dt) {
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    const c = p * (SCENES.length - 1);
-    SCENES.forEach((fn, i) => {
-      const a = 1 - smooth(0.25, 0.75, Math.abs(c - i));
-      if (a <= 0.01) return;
-      const t = i === 0 ? clamp(c * 2, 0, 1)
-        : i === SCENES.length - 1 ? clamp((c - i + 0.5) * 2, 0, 1)
-        : clamp(c - i + 0.5, 0, 1);
-      ctx.save();
-      ctx.globalAlpha = a;
-      ctx.translate(cx, cy + (c < i ? 1 : -1) * (1 - a) * S * 0.12);
-      fn(t, dt);
-      ctx.restore();
-    });
-    const active = Math.round(c);
-    dots.forEach((d, i) => d.setAttribute("aria-current", String(i === active)));
-  }
-
-  function frame(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    const target = progress();
-    cur = reduce.matches ? target : cur + (target - cur) * Math.min(1, dt * 7);
-    if (!reduce.matches) clock += dt;
-    draw(cur, dt);
-    requestAnimationFrame(frame);
-  }
-
-  dots.forEach((d) => d.addEventListener("click", () => chapters[+d.dataset.ch].scrollIntoView({ behavior: reduce.matches ? "auto" : "smooth" })));
-
-  readTheme(); resize();
-  addEventListener("resize", resize);
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", readTheme);
-  new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  if (document.fonts) document.fonts.ready.then(readTheme);
-  requestAnimationFrame(frame);
-
-  /* ---------- Formular (Prototyp: wird nicht verschickt) ---------- */
   const form = document.getElementById("booking-form");
   const status = document.getElementById("form-status");
   const fin = document.getElementById("fin");
@@ -777,4 +423,475 @@ footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretc
     status.textContent = `Danke, ${name}. Im Prototyp wird die Anfrage nicht verschickt; in der fertigen Seite geht sie direkt an die Werkstatt.`;
   });
 })();
+</script>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+const rad = (d) => d * Math.PI / 180;
+const V2 = (x, y) => new THREE.Vector2(x, y);
+
+const canvas = document.getElementById("gl");
+const story = document.getElementById("story");
+const stage = canvas.parentElement;
+const chapters = [...document.querySelectorAll(".chapter")];
+const dots = [...document.querySelectorAll(".rail button")];
+const cards = [...document.querySelectorAll(".hs")];
+const leaders = document.querySelector(".leaders");
+const rpmEl = document.getElementById("rpm");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+const darkMq = matchMedia("(prefers-color-scheme: dark)");
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+} catch (err) {
+  document.documentElement.classList.add("no-webgl");
+}
+
+if (renderer) start();
+
+function start() {
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+
+  const scene = new THREE.Scene();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+  const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(-4, 6, 5); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xffd2b8, 0.8); rim.position.set(5, -2, -4); scene.add(rim);
+
+  const FOV = 35, CAM_Z = 9;
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
+  camera.position.set(0, 0, CAM_Z);
+
+  /* ---------- Texturen ---------- */
+  function canvasTex(size, draw) {
+    const c = document.createElement("canvas"); c.width = c.height = size;
+    draw(c.getContext("2d"), size);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+    return t;
+  }
+  const discTex = canvasTex(512, (g, s) => {
+    const m = s / 2;
+    g.fillStyle = "#a7abb1"; g.fillRect(0, 0, s, s);
+    for (let r = m * 0.38; r < m; r += 2) {
+      g.strokeStyle = `rgba(${Math.random() < 0.5 ? "60,62,66" : "230,232,236"},${0.05 + Math.random() * 0.08})`;
+      g.beginPath(); g.arc(m, m, r, 0, Math.PI * 2); g.stroke();
+    }
+    g.fillStyle = "#2a2c30";
+    for (let i = 0; i < 36; i++) {
+      const a = i / 36 * Math.PI * 2, rr = m * (0.58 + (i % 3) * 0.1);
+      g.beginPath(); g.arc(m + Math.cos(a) * rr, m + Math.sin(a) * rr, m * 0.022, 0, Math.PI * 2); g.fill();
+    }
+  });
+  const shadowTex = canvasTex(256, (g, s) => {
+    const gr = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    gr.addColorStop(0, "rgba(0,0,0,0.55)"); gr.addColorStop(0.55, "rgba(0,0,0,0.18)"); gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  });
+  const sparkTex = canvasTex(64, (g, s) => {
+    const gr = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    gr.addColorStop(0, "rgba(255,255,255,1)"); gr.addColorStop(0.35, "rgba(255,255,255,0.7)"); gr.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = gr; g.fillRect(0, 0, s, s);
+  });
+
+  /* ---------- Materialien ---------- */
+  const M = {
+    tire: new THREE.MeshStandardMaterial({ color: 0x141619, roughness: 0.86, metalness: 0, side: THREE.DoubleSide }),
+    rim: new THREE.MeshPhysicalMaterial({ color: 0xc3c7cd, metalness: 1, roughness: 0.2, clearcoat: 0.6, clearcoatRoughness: 0.15, side: THREE.DoubleSide }),
+    barrel: new THREE.MeshStandardMaterial({ color: 0x3a3e44, metalness: 1, roughness: 0.4, side: THREE.DoubleSide }),
+    disc: new THREE.MeshStandardMaterial({ color: 0xffffff, map: discTex, metalness: 0.85, roughness: 0.42, emissive: 0xff4a12, emissiveIntensity: 0 }),
+    discEdge: new THREE.MeshStandardMaterial({ color: 0x6d7177, metalness: 0.9, roughness: 0.5 }),
+    caliper: new THREE.MeshPhysicalMaterial({ color: 0xd4470c, roughness: 0.28, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.08 }),
+    chrome: new THREE.MeshPhysicalMaterial({ color: 0xeef0f2, metalness: 1, roughness: 0.07 }),
+    steel: new THREE.MeshStandardMaterial({ color: 0x6a7079, metalness: 1, roughness: 0.32 }),
+    black: new THREE.MeshPhysicalMaterial({ color: 0x0c0d10, metalness: 0.3, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.05 }),
+    matte: new THREE.MeshStandardMaterial({ color: 0x1c1e22, metalness: 0.1, roughness: 0.7 }),
+    glass: new THREE.MeshPhysicalMaterial({ color: 0xdfe6ee, metalness: 0, roughness: 0.08, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide }),
+  };
+  const glowMat = () => new THREE.MeshBasicMaterial({ color: 0xff6b2c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+
+  function shadow(w, d) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, opacity: 0.55 }));
+    m.rotation.x = -Math.PI / 2; m.scale.set(w, d, 1);
+    return m;
+  }
+  const lathe = (pts, seg, mat) => {
+    const g = new THREE.LatheGeometry(pts.map(([r, z]) => V2(r, z)), seg);
+    g.rotateX(Math.PI / 2);
+    return new THREE.Mesh(g, mat);
+  };
+
+  /* ---------- Rad ---------- */
+  function makeWheel() {
+    const group = new THREE.Group();
+    const spin = new THREE.Group(); group.add(spin);
+
+    const tire = lathe([[0.64, -0.24], [0.8, -0.275], [0.93, -0.265], [0.975, -0.21], [0.985, -0.13], [0.968, -0.1], [0.985, -0.07],
+      [0.985, 0.07], [0.968, 0.1], [0.985, 0.13], [0.975, 0.21], [0.93, 0.265], [0.8, 0.275], [0.64, 0.24]], 120, M.tire);
+    const barrel = lathe([[0.6, -0.24], [0.62, -0.22], [0.62, 0.12], [0.64, 0.15]], 96, M.barrel);
+    const lip = lathe([[0.62, 0.13], [0.665, 0.17], [0.685, 0.205], [0.67, 0.225], [0.63, 0.22]], 96, M.rim);
+
+    const face = new THREE.Group();
+    const spokeShape = new THREE.Shape();
+    spokeShape.moveTo(0.15, -0.04); spokeShape.lineTo(0.63, -0.026);
+    spokeShape.quadraticCurveTo(0.645, 0, 0.63, 0.026); spokeShape.lineTo(0.15, 0.04); spokeShape.closePath();
+    const spokeGeo = new THREE.ExtrudeGeometry(spokeShape, { depth: 0.05, bevelEnabled: true, bevelThickness: 0.018, bevelSize: 0.012, bevelSegments: 3, curveSegments: 6 });
+    for (let i = 0; i < 5; i++) {
+      for (const side of [-1, 1]) {
+        const pivot = new THREE.Group(); pivot.rotation.z = i * Math.PI * 2 / 5 + side * 0.13 + Math.PI / 2;
+        const s = new THREE.Mesh(spokeGeo, M.rim); s.rotation.y = -0.17; s.position.z = 0.0;
+        pivot.add(s); face.add(pivot);
+      }
+    }
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.1, 48).rotateX(Math.PI / 2), M.rim); hub.position.z = 0.04; face.add(hub);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.03, 40).rotateX(Math.PI / 2), M.black); cap.position.z = 0.1; face.add(cap);
+
+    const bolts = [];
+    for (let i = 0; i < 5; i++) {
+      const b = new THREE.Group();
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 6).rotateX(Math.PI / 2), M.chrome);
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.14, 12).rotateX(Math.PI / 2), M.steel); shaft.position.z = -0.08;
+      b.add(head, shaft);
+      const a = i * Math.PI * 2 / 5 + Math.PI / 5;
+      b.userData.base = new THREE.Vector3(Math.cos(a) * 0.115, Math.sin(a) * 0.115, 0.1);
+      b.position.copy(b.userData.base);
+      bolts.push(b); spin.add(b);
+    }
+
+    const disc = new THREE.Group();
+    const discFace = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.53, 96, 1), M.disc); discFace.position.z = 0.03;
+    const discBack = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.53, 96, 1), M.disc); discBack.rotation.y = Math.PI; discBack.position.z = -0.03;
+    const discEdge = new THREE.Mesh(new THREE.CylinderGeometry(0.53, 0.53, 0.06, 96, 1, true).rotateX(Math.PI / 2), M.discEdge);
+    const discHat = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.12, 48, 1, true).rotateX(Math.PI / 2), M.discEdge); discHat.position.z = 0.07;
+    disc.add(discFace, discBack, discEdge, discHat);
+
+    const calShape = new THREE.Shape();
+    calShape.absarc(0, 0, 0.6, 0.2, 1.15, false); calShape.absarc(0, 0, 0.38, 1.15, 0.2, true); calShape.closePath();
+    const caliper = new THREE.Mesh(new THREE.ExtrudeGeometry(calShape, { depth: 0.18, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.025, bevelSegments: 4, curveSegments: 24 }), M.caliper);
+    caliper.geometry.translate(0, 0, -0.09);
+
+    spin.add(tire, barrel, lip, face, disc);
+    group.add(caliper);
+
+    const parts = { tire, barrel, lip, face, disc, caliper, bolts };
+    const base = { tire: 0, barrel: 0, lip: 0, face: 0.02, disc: -0.13, caliper: -0.13 };
+    function explode(e, time) {
+      tire.position.z = base.tire - 1.9 * e;
+      barrel.position.z = base.barrel - 0.6 * e;
+      lip.position.z = base.lip + 0.45 * e;
+      face.position.z = base.face + 1.0 * e;
+      disc.position.z = base.disc - 1.15 * e;
+      caliper.position.set(0.45 * e, 0.5 * e, base.caliper - 0.85 * e);
+      caliper.rotation.z = -0.25 * e;
+      bolts.forEach((b, i) => {
+        b.position.copy(b.userData.base).multiplyScalar(1 + 2.2 * e);
+        b.position.z += 1.7 * e + i * 0.08 * e;
+        b.rotation.z = e * (2 + i) + time * e;
+      });
+      M.disc.emissiveIntensity = 0.0;
+    }
+    explode(0, 0);
+    return { group, spin, parts, explode };
+  }
+
+  /* ---------- Reihensechszylinder ---------- */
+  const PISTON_OFF = [0, 120, 240, 240, 120, 0];
+  const FIRE_OFF = [0, 480, 240, 600, 120, 360];
+  function makeEngine() {
+    const group = new THREE.Group();
+    const N = 6, pitch = 0.44, cr = 0.15, L = 0.52;
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, pitch * N + 0.3, 24).rotateZ(Math.PI / 2), M.steel);
+    group.add(shaft);
+    const pistonGeo = new THREE.LatheGeometry([[0, 0.135], [0.1, 0.138], [0.17, 0.122], [0.172, 0.1], [0.162, 0.094], [0.172, 0.088], [0.172, 0.074],
+      [0.162, 0.068], [0.172, 0.062], [0.172, -0.1], [0.152, -0.125], [0, -0.125]].map(([r, y]) => V2(r, y)), 56);
+    const wristGeo = new THREE.CylinderGeometry(0.032, 0.032, 0.2, 16).rotateZ(Math.PI / 2);
+    const rodGeo = new THREE.CapsuleGeometry(0.032, L - 0.06, 4, 14);
+    const pinGeo = new THREE.CylinderGeometry(0.052, 0.052, 0.13, 24).rotateZ(Math.PI / 2);
+    const webGeo = new RoundedBoxGeometry(0.04, cr + 0.2, 0.24, 3, 0.016);
+    const linerGeo = new THREE.CylinderGeometry(0.188, 0.188, 0.72, 48, 1, true);
+    const glowGeo = new THREE.CircleGeometry(0.17, 40).rotateX(-Math.PI / 2);
+
+    const cyl = [];
+    for (let k = 0; k < N; k++) {
+      const x = (k - (N - 1) / 2) * pitch;
+      const crank = new THREE.Group(); crank.position.x = x;
+      const pin = new THREE.Mesh(pinGeo, M.steel); pin.position.y = cr; crank.add(pin);
+      for (const s of [-1, 1]) { const w = new THREE.Mesh(webGeo, M.steel); w.position.set(s * 0.085, cr / 2 - 0.06, 0); crank.add(w); }
+      const piston = new THREE.Mesh(pistonGeo, M.chrome); piston.position.x = x;
+      const wrist = new THREE.Mesh(wristGeo, M.steel); wrist.position.x = x;
+      const rod = new THREE.Mesh(rodGeo, M.steel); rod.position.x = x;
+      const liner = new THREE.Mesh(linerGeo, M.glass); liner.position.set(x, 0.64, 0);
+      const glow = new THREE.Mesh(glowGeo, glowMat()); glow.position.x = x;
+      group.add(crank, piston, wrist, rod, liner, glow);
+      cyl.push({ crank, piston, wrist, rod, glow });
+    }
+    const head = new THREE.Mesh(new RoundedBoxGeometry(pitch * N + 0.12, 0.12, 0.46, 4, 0.04), M.black);
+    head.position.y = 1.06; group.add(head);
+    const cams = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, pitch * N, 16).rotateZ(Math.PI / 2), M.chrome);
+    cams.position.set(0, 1.15, 0.1); group.add(cams);
+
+    function update(angleDeg) {
+      cyl.forEach((c, k) => {
+        const a = rad(angleDeg - PISTON_OFF[k]);
+        c.crank.rotation.x = a;
+        const pinY = cr * Math.cos(a), pinZ = cr * Math.sin(a);
+        const pp = pinY + Math.sqrt(L * L - pinZ * pinZ);
+        c.wrist.position.y = pp;
+        c.piston.position.y = pp + 0.04;
+        c.rod.position.set(c.rod.position.x, (pinY + pp) / 2, pinZ / 2);
+        c.rod.rotation.x = Math.atan2(-pinZ, pp - pinY);
+        const cyc = (((angleDeg - FIRE_OFF[k]) % 720) + 720) % 720;
+        c.glow.position.y = pp + 0.04 + 0.14;
+        c.glow.material.opacity = cyc < 70 ? (1 - cyc / 70) * 0.95 : 0;
+      });
+    }
+    update(0);
+    return { group, update };
+  }
+
+  /* ---------- Funkschlüssel ---------- */
+  function makeKey() {
+    const group = new THREE.Group();
+    const body = new THREE.Mesh(new RoundedBoxGeometry(0.66, 1.18, 0.22, 8, 0.1), M.black);
+    const band = new THREE.Mesh(new RoundedBoxGeometry(0.685, 1.205, 0.06, 8, 0.03), M.chrome);
+    group.add(body, band);
+    for (let i = 0; i < 3; i++) {
+      const y = 0.26 - i * 0.26;
+      const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.088, 0.088, 0.03, 40).rotateX(Math.PI / 2), M.matte); btn.position.set(0, y, 0.11);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.094, 0.009, 12, 48), M.chrome); ring.position.set(0, y, 0.115);
+      group.add(btn, ring);
+    }
+    const led = new THREE.Mesh(new THREE.CircleGeometry(0.018, 20), glowMat()); led.position.set(0, 0.49, 0.112); group.add(led);
+
+    const waves = [];
+    for (let i = 0; i < 3; i++) {
+      const arc = Math.PI * 0.55;
+      const g = new THREE.TorusGeometry(0.5, 0.012, 8, 64, arc); g.rotateZ(Math.PI / 2 - arc / 2);
+      const w = new THREE.Mesh(g, glowMat()); w.position.y = 0.5; waves.push(w); group.add(w);
+    }
+    const bits = [];
+    const bitGeo = new RoundedBoxGeometry(0.075, 0.075, 0.075, 2, 0.016);
+    for (let i = 0; i < 18; i++) {
+      const b = new THREE.Mesh(bitGeo, i % 3 === 0 ? M.caliper : M.chrome);
+      b.userData = { r: 1.05 + (i * 0.37 % 0.55), sp: 0.35 + (i * 0.13 % 0.4), ph: i * 2.1, y: ((i * 0.61) % 1.6) - 0.8 };
+      bits.push(b); group.add(b);
+    }
+    function update(t, time) {
+      const pull = smooth(0.15, 0.85, t);
+      waves.forEach((w, i) => {
+        const ph = (time * 0.55 + t * 1.6 + i / 3) % 1;
+        const s = 0.35 + ph * 1.7;
+        w.scale.set(s, s, 1); w.position.y = 0.5 + ph * 0.05;
+        w.material.opacity = (1 - ph) * 0.9 * (0.4 + 0.6 * pull);
+      });
+      led.material.opacity = 0.4 + 0.6 * Math.abs(Math.sin(time * 4 + t * 10));
+      bits.forEach((b) => {
+        const d = b.userData, a = d.ph + time * d.sp + t * 3;
+        const r = d.r * (1 - 0.88 * pull);
+        b.position.set(Math.cos(a) * r, d.y * (1 - pull), Math.sin(a) * r * 0.6);
+        b.rotation.set(a, a * 0.7, 0);
+        const sc = 1 - smooth(0.7, 0.95, pull); b.scale.setScalar(Math.max(0.001, sc));
+      });
+    }
+    update(0, 0);
+    return { group, update };
+  }
+
+  /* ---------- Szenenaufbau ---------- */
+  const holders = [0, 1, 2, 3].map(() => { const h = new THREE.Group(); scene.add(h); return h; });
+  const wheelA = makeWheel(), engine = makeEngine(), keyFob = makeKey(), wheelB = makeWheel();
+  const objs = [wheelA.group, engine.group, keyFob.group, wheelB.group];
+  const floors = [shadow(2.6, 0.7), shadow(3.4, 0.9), shadow(1.6, 0.5), shadow(2.6, 0.7)];
+  const floorY = [-1.15, -0.55, -0.95, -1.15];
+  holders.forEach((h, i) => { h.add(objs[i]); floors[i].position.y = floorY[i]; h.add(floors[i]); });
+  engine.group.position.y = -0.45;
+  engine.group.scale.setScalar(0.92);
+
+  /* ---------- Funken ---------- */
+  const SP = 900;
+  const sPos = new Float32Array(SP * 3), sCol = new Float32Array(SP * 3), sVel = new Float32Array(SP * 3), sLife = new Float32Array(SP), sMax = new Float32Array(SP);
+  const sGeo = new THREE.BufferGeometry();
+  sGeo.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
+  sGeo.setAttribute("color", new THREE.BufferAttribute(sCol, 3));
+  const sMat = new THREE.PointsMaterial({ size: 0.085, map: sparkTex, vertexColors: true, transparent: true, depthWrite: false, sizeAttenuation: true });
+  const sparks = new THREE.Points(sGeo, sMat); sparks.frustumCulled = false; scene.add(sparks);
+  for (let i = 0; i < SP; i++) sPos[i * 3 + 1] = -999;
+  let sNext = 0;
+  const hot = new THREE.Color(0xffb15c), warm = new THREE.Color(0xff5a14), fade = new THREE.Color();
+  function emit(p, v, life) {
+    const i = sNext; sNext = (sNext + 1) % SP;
+    sPos.set([p.x, p.y, p.z], i * 3); sVel.set([v.x, v.y, v.z], i * 3);
+    sLife[i] = life; sMax[i] = life;
+  }
+  function stepSparks(dt) {
+    const dark = sMat.blending === THREE.AdditiveBlending;
+    for (let i = 0; i < SP; i++) {
+      if (sLife[i] <= 0) { sPos[i * 3 + 1] = -999; continue; }
+      sLife[i] -= dt;
+      sVel[i * 3 + 1] -= 4.2 * dt;
+      sVel[i * 3] *= 0.995; sVel[i * 3 + 2] *= 0.995;
+      sPos[i * 3] += sVel[i * 3] * dt; sPos[i * 3 + 1] += sVel[i * 3 + 1] * dt; sPos[i * 3 + 2] += sVel[i * 3 + 2] * dt;
+      const k = clamp(sLife[i] / sMax[i], 0, 1);
+      const c = hot.clone().lerp(warm, 1 - k);
+      if (dark) c.multiplyScalar(k); else c.lerp(fade, (1 - k) * 0.85);
+      sCol[i * 3] = c.r; sCol[i * 3 + 1] = c.g; sCol[i * 3 + 2] = c.b;
+    }
+    sGeo.attributes.position.needsUpdate = true; sGeo.attributes.color.needsUpdate = true;
+  }
+
+  /* ---------- Theme ---------- */
+  function readTheme() {
+    const dark = document.documentElement.dataset.theme === "dark" || (document.documentElement.dataset.theme !== "light" && darkMq.matches);
+    sMat.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending; sMat.needsUpdate = true;
+    fade.set(getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#e9eaec");
+    floors.forEach((f) => { f.material.opacity = dark ? 0.9 : 0.55; });
+  }
+  readTheme();
+  darkMq.addEventListener("change", readTheme);
+  new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  /* ---------- Layout ---------- */
+  let W = 1, H = 1, vh = 1, vw = 1, wide = true, objX = 0, objY = 0, objS = 1;
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    renderer.setSize(W, H, false);
+    camera.aspect = W / H; camera.updateProjectionMatrix();
+    vh = 2 * CAM_Z * Math.tan(rad(FOV / 2)); vw = vh * camera.aspect;
+    wide = W >= 900;
+    objX = wide ? vw * 0.2 : 0;
+    objY = wide ? -0.05 : vh * 0.2;
+    objS = wide ? Math.min(1.4, vw * 0.135) : Math.min(1, vw * 0.34);
+    leaders.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  }
+  resize();
+  addEventListener("resize", resize);
+
+  function progress() {
+    const r = story.getBoundingClientRect();
+    const total = r.height - window.innerHeight;
+    return total > 0 ? clamp(-r.top / total, 0, 1) : 0;
+  }
+  const hold = (d) => Math.sign(d) * Math.max(0, Math.abs(d) - 0.22) / 0.78;
+
+  /* ---------- Info-Karten im letzten Kapitel ---------- */
+  const ANCH = [
+    { p: new THREE.Vector3(-0.52, 0.5, 0.2), dx: -1, dy: -0.8 },
+    { p: new THREE.Vector3(0.42, 0.42, -0.05), dx: 1, dy: -1 },
+    { p: new THREE.Vector3(0.25, -0.94, 0.1), dx: 1, dy: 0.5 },
+  ];
+  leaders.innerHTML = ANCH.map(() => '<line x1="0" y1="0" x2="0" y2="0"/><circle r="4" cx="-20" cy="-20"/>').join("");
+  const lines = [...leaders.querySelectorAll("line")], marks = [...leaders.querySelectorAll("circle")];
+  const tmp = new THREE.Vector3();
+  function placeCards(t, vis) {
+    wheelB.group.updateMatrixWorld();
+    ANCH.forEach((a, i) => {
+      const o = smooth(0.12 + i * 0.16, 0.26 + i * 0.16, t) * vis;
+      const el = cards[i];
+      el.style.opacity = o.toFixed(3);
+      lines[i].style.opacity = marks[i].style.opacity = o.toFixed(3);
+      if (o <= 0.001) return;
+      tmp.copy(a.p).applyMatrix4(wheelB.group.matrixWorld).project(camera);
+      const sx = (tmp.x + 1) / 2 * W, sy = (1 - tmp.y) / 2 * H;
+      const w = el.offsetWidth, h = el.offsetHeight, gap = wide ? 90 : 40;
+      let x = sx + a.dx * gap - (a.dx < 0 ? w : 0), y = sy + a.dy * gap - h / 2 + (1 - o) * 12;
+      x = clamp(x, 12, W - w - 12); y = clamp(y, 76, H - h - 12);
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      const ex = clamp(sx, x, x + w), ey = clamp(sy, y, y + h);
+      lines[i].setAttribute("x1", sx); lines[i].setAttribute("y1", sy);
+      lines[i].setAttribute("x2", ex); lines[i].setAttribute("y2", ey);
+      marks[i].setAttribute("cx", sx); marks[i].setAttribute("cy", sy);
+    });
+  }
+
+  /* ---------- Animation ---------- */
+  let cur = progress(), clock = 0, crankDeg = 0, last = performance.now(), visible = true, emitAcc = 0, streamAcc = 0;
+  new IntersectionObserver((e) => { visible = e[0].isIntersecting; }).observe(story);
+  const P = new THREE.Vector3(), Vv = new THREE.Vector3();
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!visible) return;
+    const still = reduce.matches;
+    const target = progress();
+    cur = still ? target : cur + (target - cur) * Math.min(1, dt * 6);
+    if (!still) clock += dt;
+    const c = cur * 3;
+
+    holders.forEach((h, i) => {
+      const d = c - i;
+      h.visible = Math.abs(d) < 1.15;
+      h.position.set(objX, objY + hold(d) * vh, 0);
+      h.scale.setScalar(objS);
+    });
+
+    // 1: Rad zerlegt sich
+    const t0 = clamp(c / 0.55, 0, 1);
+    const e = smooth(0.08, 0.95, t0);
+    wheelA.explode(e, clock);
+    wheelA.spin.rotation.z = -(clock * 0.6 + c * 4);
+    wheelA.group.rotation.set(0.12 + 0.12 * e, -0.45 - 0.75 * e, 0);
+
+    // 2: Motor läuft hoch
+    const t1 = clamp(c - 0.5, 0, 1);
+    if (!still) crankDeg += (160 + t1 * 900) * dt;
+    engine.update(crankDeg + t1 * 1440);
+    engine.group.rotation.set(0.32, -0.62 + 0.25 * t1, 0);
+    rpmEl.textContent = (Math.round((800 + t1 * 6200) / 50) * 50).toLocaleString("de-DE");
+
+    // 3: Schlüssel wird codiert
+    const t2 = clamp(c - 1.5, 0, 1);
+    keyFob.update(t2, clock);
+    keyFob.group.rotation.set(0.18, -0.5 + t2 * Math.PI * 1.1 + Math.sin(clock * 0.8) * 0.06, -0.12);
+
+    // 4: fertiges Rad mit Karten
+    const t3 = clamp((c - 2.5) / 0.5, 0, 1);
+    wheelB.spin.rotation.z = -(clock * 0.5 + c * 3);
+    wheelB.group.rotation.set(0.08, -0.7 + 0.42 * smooth(0, 1, t3), 0);
+    placeCards(t3, 1 - smooth(0.25, 0.6, Math.abs(c - 3)));
+
+    // Funken: Schleiffunken an der Bremsscheibe, danach ein Strom nach unten zum Motor
+    if (!still && holders[0].visible) {
+      wheelA.group.updateMatrixWorld();
+      emitAcc += dt * (60 + e * 420);
+      while (emitAcc > 1) {
+        emitAcc -= 1;
+        const a = Math.random() * Math.PI * 2;
+        P.set(Math.cos(a) * 0.53, Math.sin(a) * 0.53, 0).applyMatrix4(wheelA.parts.disc.matrixWorld);
+        Vv.set(Math.sin(a) * 1.6 + (Math.random() - 0.5) * 0.6, -Math.cos(a) * 1.6 + Math.random() * 1.2, (Math.random() - 0.2) * 1.4);
+        emit(P, Vv, 0.6 + Math.random() * 0.7);
+      }
+      const pour = smooth(0.2, 0.45, c) * (1 - smooth(0.9, 1.15, c));
+      streamAcc += dt * pour * 520;
+      while (streamAcc > 1) {
+        streamAcc -= 1;
+        P.set((Math.random() - 0.5) * 0.12, -0.98, 0.1).applyMatrix4(wheelA.group.matrixWorld);
+        Vv.set((Math.random() - 0.5) * 0.25, -1.2 - Math.random() * 0.8, (Math.random() - 0.5) * 0.2);
+        emit(P, Vv, 1.3 + Math.random() * 0.6);
+      }
+    }
+    stepSparks(dt);
+
+    const active = Math.round(c);
+    dots.forEach((d, i) => d.setAttribute("aria-current", String(i === active)));
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(frame);
+
+  dots.forEach((d) => d.addEventListener("click", () => chapters[+d.dataset.ch].scrollIntoView({ behavior: reduce.matches ? "auto" : "smooth" })));
+}
 </script>
