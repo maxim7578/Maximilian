@@ -1,0 +1,780 @@
+<title>Drehzahl Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Prototyp einer Scroll-Website für eine unabhängige BMW-Werkstatt: Diagnose, Codierung, Leistung, Fahrwerk.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: eine klebende Bühne (Canvas) füllt den Bildschirm, die Kapiteltexte scrollen links darüber; danach ruhige Info-Abschnitte. */
+:root {
+  --bg: #E7EAED;
+  --surface: #F6F7F8;
+  --fg: #101317;
+  --muted: #535B65;
+  --line: #C5CBD2;
+  --accent: #D4470C;
+  --steel: #1B4A88;
+  --tire: #16191D;
+  --f-display: "Archivo", "Arial Narrow", Arial, sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1013; --surface: #161A1F; --fg: #E6E9ED; --muted: #98A1AC;
+    --line: #2B323A; --accent: #FF6B2C; --steel: #6C9BDB; --tire: #050608; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1013; --surface: #161A1F; --fg: #E6E9ED; --muted: #98A1AC;
+  --line: #2B323A; --accent: #FF6B2C; --steel: #6C9BDB; --tire: #050608; color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 400 1.0625rem/1.6 var(--f-body);
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg);
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 4px; }
+
+.wrap {
+  width: 100%; max-width: 1320px; margin-inline: auto;
+  padding-left: var(--gutter-l); padding-right: var(--gutter-r);
+}
+@media (min-width: 900px) {
+  .wrap { padding-left: max(40px, env(safe-area-inset-left, 0px)); padding-right: max(40px, env(safe-area-inset-right, 0px)); }
+}
+
+/* ---------- Kopfzeile ---------- */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.top .wrap { display: flex; align-items: center; gap: 24px; min-height: 64px; }
+@media (max-width: 520px) {
+  .top .wrap { gap: 12px; }
+  .proto { display: none; }
+  .top .btn { padding: .75em 1.05em; font-size: .9rem; }
+}
+.brand {
+  font: 800 1.05rem/1 var(--f-display); font-stretch: 78%;
+  letter-spacing: .06em; text-transform: uppercase; text-decoration: none;
+  display: flex; align-items: baseline; gap: .35em; white-space: nowrap;
+}
+.brand span { color: var(--muted); font-weight: 500; }
+.proto {
+  font: 600 .66rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .35em .7em;
+}
+.nav { display: none; gap: 26px; margin-left: auto; font-size: .95rem; font-weight: 500; }
+.nav a { text-decoration: none; color: var(--muted); }
+.nav a:hover { color: var(--fg); }
+.top .btn { margin-left: auto; }
+@media (min-width: 980px) {
+  .nav { display: flex; }
+  .top .btn { margin-left: 8px; }
+}
+
+.btn {
+  display: inline-flex; align-items: center; gap: .55em;
+  background: var(--fg); color: var(--bg);
+  font: 600 .95rem/1 var(--f-body); text-decoration: none;
+  padding: .85em 1.3em; border-radius: 999px; border: 1px solid var(--fg);
+  cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.ghost { background: transparent; color: var(--fg); }
+.btn.ghost:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.btn svg { width: 1em; height: 1em; }
+
+/* ---------- Scroll-Geschichte ---------- */
+.story { position: relative; }
+.stage {
+  position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden;
+}
+.stage canvas { display: block; width: 100%; height: 100%; }
+.rail {
+  position: absolute; right: max(18px, env(safe-area-inset-right, 0px)); top: 50%;
+  transform: translateY(-50%); display: none; flex-direction: column; gap: 10px;
+}
+@media (min-width: 900px) { .rail { display: flex; } }
+.rail button {
+  width: 10px; height: 10px; padding: 0; border-radius: 50%;
+  border: 1.5px solid var(--muted); background: transparent; cursor: pointer;
+}
+.rail button[aria-current="true"] { background: var(--accent); border-color: var(--accent); }
+
+.chapters { position: relative; margin-top: -100vh; margin-top: -100svh; }
+.chapter { min-height: 100vh; min-height: 100svh; display: flex; align-items: center; }
+.copy { max-width: 31rem; display: grid; gap: 18px; padding-block: 96px 48px; }
+.eyebrow {
+  font: 600 .74rem/1.2 var(--f-mono); letter-spacing: .14em; text-transform: uppercase;
+  display: flex; align-items: center; gap: .8em;
+}
+.eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--accent); }
+.display {
+  margin: 0; font-family: var(--f-display); font-weight: 850; font-stretch: 70%;
+  font-variation-settings: "wdth" 70; text-transform: uppercase;
+  font-size: clamp(3rem, 7.4vw, 7rem); line-height: .86; letter-spacing: -.005em;
+  text-wrap: balance; hyphens: manual;
+}
+.copy p { margin: 0; color: var(--muted); max-width: 40ch; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.chips li {
+  font: 500 .8rem/1 var(--f-mono); padding: .55em .8em; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--surface);
+}
+
+@media (max-width: 899px) {
+  .chapter { align-items: flex-end; }
+  .copy {
+    padding: 20px; margin-bottom: 5vh; gap: 14px;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: 16px;
+  }
+  .display { font-size: clamp(2.5rem, 12vw, 4rem); }
+}
+
+/* ---------- Info-Abschnitte ---------- */
+.section { padding-block: clamp(72px, 10vw, 128px); border-top: 1px solid var(--line); }
+.section h2 {
+  margin: 0 0 36px; font: 850 clamp(2.2rem, 5vw, 3.8rem)/.9 var(--f-display);
+  font-stretch: 70%; font-variation-settings: "wdth" 70; text-transform: uppercase; text-wrap: balance;
+}
+.services { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 0 40px; }
+.service {
+  display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; align-content: start;
+  padding-block: 22px; border-top: 1px solid var(--line); min-width: 0;
+}
+.service h3 { margin: 0; font: 600 1.15rem/1.3 var(--f-body); }
+.service .meta { font: 400 .78rem/1.6 var(--f-mono); color: var(--muted); white-space: nowrap; }
+.service p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: .98rem; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 32px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); counter-reset: s; }
+.steps li { counter-increment: s; display: grid; gap: 10px; min-width: 0; }
+.steps li::before {
+  content: counter(s); font: 850 3.4rem/1 var(--f-display); font-stretch: 70%;
+  color: var(--accent);
+}
+.steps h3 { margin: 0; font: 600 1.15rem/1.3 var(--f-body); }
+.steps p { margin: 0; color: var(--muted); }
+
+.booking { display: grid; gap: 40px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .booking { grid-template-columns: 5fr 7fr; gap: 64px; } }
+.booking .intro p { color: var(--muted); max-width: 38ch; margin: 0 0 16px; }
+.booking dl { margin: 24px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 20px; font-size: .95rem; }
+.booking dt { font: 600 .74rem/1.9 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.booking dd { margin: 0; }
+form {
+  display: grid; gap: 18px; grid-template-columns: 1fr 1fr;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: clamp(20px, 3vw, 32px);
+}
+.field { display: grid; gap: 6px; min-width: 0; }
+.field.full { grid-column: 1 / -1; }
+@media (max-width: 560px) { form { grid-template-columns: 1fr; } }
+label, legend { font: 600 .74rem/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+input, select, textarea {
+  font: 400 1rem/1.4 var(--f-body); color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: .75em .85em; width: 100%;
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+#fin { font-family: var(--f-mono); text-transform: uppercase; letter-spacing: .12em; }
+.hint { font-size: .82rem; color: var(--muted); }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+fieldset legend { width: 100%; margin-bottom: 8px; }
+.check { position: relative; }
+.check input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.check span {
+  display: inline-block; font-size: .92rem; padding: .5em .9em; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg); cursor: pointer; user-select: none;
+}
+.check input:checked + span { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.check input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status { grid-column: 1 / -1; margin: 0; font-size: .95rem; color: var(--steel); min-height: 1.6em; }
+
+footer { border-top: 1px solid var(--line); padding-block: 40px 56px; color: var(--muted); font-size: .9rem; }
+footer .wrap { display: grid; gap: 10px; }
+footer strong { color: var(--fg); font: 800 1rem/1 var(--f-display); font-stretch: 78%; letter-spacing: .06em; text-transform: uppercase; }
+
+.fab {
+  position: fixed; z-index: 25;
+  right: calc(18px + env(safe-area-inset-right, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  width: 54px; height: 54px; border-radius: 50%;
+  display: grid; place-items: center; background: var(--fg); color: var(--bg);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--fg) 28%, transparent);
+}
+.fab:hover { background: var(--accent); color: #fff; }
+.fab svg { width: 22px; height: 22px; }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#start">Drehzahl<span>/ Studio</span></a>
+    <span class="proto">Prototyp</span>
+    <nav class="nav" aria-label="Hauptnavigation">
+      <a href="#kap-codierung">Codierung</a>
+      <a href="#kap-leistung">Leistung</a>
+      <a href="#leistungen">Leistungen</a>
+      <a href="#ablauf">Ablauf</a>
+    </nav>
+    <a class="btn" href="#termin">Termin buchen</a>
+  </div>
+</header>
+
+<main id="start">
+  <section class="story" id="story" aria-label="Unsere Arbeit in vier Kapiteln">
+    <div class="stage">
+      <canvas id="stage" role="img" aria-label="Animation: Reihensechszylinder, Codierung über die OBD-Buchse, Leistungskurve auf dem Prüfstand und ein Rad mit Bremse"></canvas>
+      <nav class="rail" aria-label="Kapitel">
+        <button type="button" data-ch="0" aria-label="Diagnose"></button>
+        <button type="button" data-ch="1" aria-label="Codierung"></button>
+        <button type="button" data-ch="2" aria-label="Leistung"></button>
+        <button type="button" data-ch="3" aria-label="Fahrwerk und Optik"></button>
+      </nav>
+    </div>
+
+    <div class="chapters">
+      <article class="chapter" id="kap-diagnose">
+        <div class="wrap">
+          <div class="copy">
+            <div class="eyebrow">BMW-Spezialist · Diagnose</div>
+            <h1 class="display">Weck den Reihen&shy;sechser</h1>
+            <p>Fehlerspeicher auslesen, Service zurückstellen, Ursachen finden statt Teile tauschen. Wir arbeiten mit Händler-Software und erklären dir jeden Befund.</p>
+            <div class="actions">
+              <a class="btn" href="#termin">Termin buchen
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+              </a>
+              <a class="btn ghost" href="#leistungen">Alle Leistungen</a>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="chapter" id="kap-codierung">
+        <div class="wrap">
+          <div class="copy">
+            <div class="eyebrow">Codierung</div>
+            <h2 class="display">Frei&shy;schalten, was schon drin ist</h2>
+            <p>Viele Funktionen sind im Steuergerät angelegt und nur abgeschaltet. Wir codieren sie über die OBD-Buchse frei, mit Backup vorher und Protokoll nachher.</p>
+            <ul class="chips" aria-label="Beispiele">
+              <li>Begrüßungslicht</li>
+              <li>Digitaltacho</li>
+              <li>Spiegel anklappen</li>
+              <li>Start-Stopp merken</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="chapter" id="kap-leistung">
+        <div class="wrap">
+          <div class="copy">
+            <div class="eyebrow">Leistung</div>
+            <h2 class="display">Lass ihn atmen</h2>
+            <p>Softwareoptimierung auf dem Prüfstand: messen, abstimmen, nochmal messen. Du bekommst beide Kurven schwarz auf weiß und auf Wunsch die Eintragung.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="chapter" id="kap-fahrwerk">
+        <div class="wrap">
+          <div class="copy">
+            <div class="eyebrow">Fahrwerk &amp; Optik</div>
+            <h2 class="display">Mach ihn zu deinem</h2>
+            <p>Felgen, Tieferlegung, Bremse und Folierung, aufeinander abgestimmt und mit Gutachten. Wir planen den Umbau mit dir, bevor ein Teil bestellt wird.</p>
+            <div class="actions"><a class="btn" href="#termin">Umbau planen</a></div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="section" id="leistungen">
+    <div class="wrap">
+      <h2>Was wir machen</h2>
+      <div class="services">
+        <div class="service"><h3>Diagnose &amp; Fehlerspeicher</h3><span class="meta">ca. 45 min</span><p>Alle Steuergeräte auslesen, Befund erklären, Kostenvoranschlag.</p></div>
+        <div class="service"><h3>Codierung</h3><span class="meta">ca. 1 h</span><p>Komfort- und Lichtfunktionen freischalten, mit Backup jedes Steuergeräts.</p></div>
+        <div class="service"><h3>Softwareoptimierung</h3><span class="meta">1 Tag</span><p>Abstimmung mit Prüfstandsmessung vorher und nachher.</p></div>
+        <div class="service"><h3>Fahrwerk</h3><span class="meta">1–2 Tage</span><p>Federn, Gewinde- und Adaptivfahrwerke inklusive Achsvermessung.</p></div>
+        <div class="service"><h3>Nachrüstung</h3><span class="meta">nach Umfang</span><p>Rückfahrkamera, Apple CarPlay, Ambientelicht, Anhängerkupplung.</p></div>
+        <div class="service"><h3>Folierung &amp; Pflege</h3><span class="meta">2–4 Tage</span><p>Teil- und Vollfolierung, Lackschutz, Innenraumaufbereitung.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="ablauf">
+    <div class="wrap">
+      <h2>So läuft dein Termin</h2>
+      <ol class="steps">
+        <li><h3>Anfrage mit Modell und FIN</h3><p>Mit den letzten sieben Stellen der Fahrgestellnummer sehen wir die Ausstattung deines Wagens und können vorher sagen, was möglich ist.</p></li>
+        <li><h3>Diagnose und Festpreis</h3><p>Vor Ort lesen wir das Fahrzeug aus und nennen dir einen festen Preis, bevor wir anfangen.</p></li>
+        <li><h3>Umsetzung mit Protokoll</h3><p>Du bekommst Backups, Messkurven und eine Liste aller Änderungen, damit jede Werkstatt nachvollziehen kann, was gemacht wurde.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section" id="termin">
+    <div class="wrap booking">
+      <div class="intro">
+        <h2>Termin anfragen</h2>
+        <p>Schreib uns, was du vorhast. Wir melden uns innerhalb eines Werktags mit einem Terminvorschlag.</p>
+        <dl>
+          <dt>Adresse</dt><dd>Musterstraße 1, 00000 Musterstadt</dd>
+          <dt>Telefon</dt><dd>0000 000000</dd>
+          <dt>Zeiten</dt><dd>Mo–Fr 8–18 Uhr, Sa 9–13 Uhr</dd>
+        </dl>
+      </div>
+      <form id="booking-form" novalidate>
+        <div class="field"><label for="name">Name</label><input id="name" name="name" autocomplete="name" required></div>
+        <div class="field"><label for="email">E-Mail</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+        <div class="field">
+          <label for="modell">Modell</label>
+          <select id="modell" name="modell">
+            <option>1er (F40)</option><option>2er Coupé (G42)</option><option selected>3er (G20 / G21)</option>
+            <option>4er (G22 / G26)</option><option>5er (G60)</option><option>X3 (G45)</option>
+            <option>X5 (G05)</option><option>M2 / M3 / M4</option><option>MINI</option><option>Anderes Modell</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="fin">FIN, letzte 7 Stellen</label>
+          <input id="fin" name="fin" maxlength="7" inputmode="text" autocomplete="off" placeholder="z. B. AB12345" aria-describedby="fin-hint">
+          <span class="hint" id="fin-hint">Steht im Fahrzeugschein, Feld E.</span>
+        </div>
+        <fieldset class="field full">
+          <legend>Anliegen</legend>
+          <label class="check"><input type="checkbox" id="a-diag" name="anliegen" value="Diagnose"><span>Diagnose</span></label>
+          <label class="check"><input type="checkbox" id="a-cod" name="anliegen" value="Codierung" checked><span>Codierung</span></label>
+          <label class="check"><input type="checkbox" id="a-perf" name="anliegen" value="Leistung"><span>Leistung</span></label>
+          <label class="check"><input type="checkbox" id="a-fw" name="anliegen" value="Fahrwerk"><span>Fahrwerk</span></label>
+          <label class="check"><input type="checkbox" id="a-nach" name="anliegen" value="Nachrüstung"><span>Nachrüstung</span></label>
+        </fieldset>
+        <div class="field full"><label for="msg">Nachricht</label><textarea id="msg" name="msg" rows="4" placeholder="Was soll gemacht werden?"></textarea></div>
+        <div class="field full"><button class="btn" type="submit">Anfrage senden</button></div>
+        <p class="status" id="form-status" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <strong>Drehzahl / Studio</strong>
+    <span>Unabhängige Werkstatt. BMW und MINI sind Marken der BMW AG; wir sind kein BMW-Vertragspartner.</span>
+    <span>Prototyp: Name, Adresse, Zeiten und Animationen sind Platzhalter.</span>
+  </div>
+</footer>
+
+<a class="fab" href="#termin" aria-label="Termin anfragen">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+</a>
+
+<script>
+(() => {
+  const canvas = document.getElementById("stage");
+  const ctx = canvas.getContext("2d");
+  const story = document.getElementById("story");
+  const chapters = [...document.querySelectorAll(".chapter")];
+  const dots = [...document.querySelectorAll(".rail button")];
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const smooth = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+  const rad = (d) => d * Math.PI / 180;
+
+  let W = 0, H = 0, dpr = 1, cx = 0, cy = 0, S = 0;
+  let col = {}, fonts = {};
+  let cur = 0, clock = 0, crankDeg = 0, last = performance.now();
+
+  function readTheme() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (n) => cs.getPropertyValue(n).trim();
+    col = { bg: v("--bg"), surface: v("--surface"), fg: v("--fg"), muted: v("--muted"), line: v("--line"), accent: v("--accent"), steel: v("--steel"), tire: v("--tire") };
+    fonts = { mono: v("--f-mono"), body: v("--f-body"), display: v("--f-display") };
+  }
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = canvas.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    const wide = W >= 900;
+    cx = wide ? W * 0.66 : W * 0.5;
+    cy = wide ? H * 0.55 : H * 0.3;
+    S = wide ? Math.min(W * 0.5, H * 0.76) : Math.min(W * 0.92, H * 0.46);
+  }
+  function progress() {
+    const r = story.getBoundingClientRect();
+    const total = r.height - window.innerHeight;
+    return total > 0 ? clamp(-r.top / total, 0, 1) : 0;
+  }
+
+  function font(weight, size, family) { return `${weight} ${Math.max(9, size).toFixed(1)}px ${family}`; }
+  function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+
+  /* ---------- Szene 1: Reihensechszylinder ---------- */
+  const PISTON_OFF = [0, 120, 240, 240, 120, 0];      // Kurbelwinkel je Zylinder (Paare 1/6, 2/5, 3/4)
+  const FIRE_OFF = [0, 480, 240, 600, 120, 360];      // Zündfolge 1-5-3-6-2-4 im 720°-Takt
+
+  function sceneEngine(t, dt) {
+    if (!reduce.matches) crankDeg += (90 + t * 620) * dt;
+    const angle = crankDeg + t * 720;
+    const blockW = S * 0.92, cylW = blockW / 6, boreW = cylW * 0.64;
+    const top = -S * 0.26, headH = S * 0.075;
+    const boreTop = top + headH;
+    const pH = S * 0.07, rodL = S * 0.15, crankR = S * 0.045;
+    const crankY = boreTop + S * 0.012 + pH + rodL + crankR;
+    const boreBottom = crankY + crankR - rodL + pH * 0.5 + S * 0.02;
+
+    // Zylinderkopf mit Nockenwelle
+    ctx.fillStyle = col.fg;
+    roundRect(-blockW / 2, top, blockW, headH, S * 0.014); ctx.fill();
+    ctx.fillStyle = col.bg;
+    for (let i = 0; i < 12; i++) {
+      const x = -blockW / 2 + (blockW / 12) * (i + 0.5);
+      const lift = Math.max(0, Math.sin(rad(angle / 2 + i * 60)));
+      ctx.beginPath(); ctx.arc(x, top + headH * 0.5 - lift * headH * 0.12, headH * 0.16, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Motorblock und Kurbelgehäuse
+    ctx.fillStyle = col.surface; ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.006;
+    roundRect(-blockW / 2, boreTop, blockW, boreBottom - boreTop, [0, 0, S * 0.02, S * 0.02]); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = col.line; ctx.lineWidth = S * 0.004;
+    roundRect(-blockW / 2 + S * 0.02, crankY - crankR * 1.8, blockW - S * 0.04, crankR * 3.8, S * 0.04); ctx.stroke();
+
+    for (let k = 0; k < 6; k++) {
+      const x = -blockW / 2 + cylW * (k + 0.5);
+      const a = rad(angle - PISTON_OFF[k]);
+      const pinX = x + crankR * Math.sin(a);
+      const pinY = crankY - crankR * Math.cos(a);
+      const pistonPinY = pinY - Math.sqrt(rodL * rodL - (pinX - x) ** 2);
+      const pistonTop = pistonPinY - pH * 0.6;
+
+      ctx.fillStyle = col.bg;
+      ctx.fillRect(x - boreW / 2, boreTop, boreW, boreBottom - boreTop - S * 0.02);
+
+      const cyc = (((angle - FIRE_OFF[k]) % 720) + 720) % 720;
+      if (cyc < 50) {
+        const f = 1 - cyc / 50;
+        const g = ctx.createRadialGradient(x, boreTop, 0, x, boreTop, boreW * 0.9);
+        g.addColorStop(0, col.accent); g.addColorStop(1, "transparent");
+        ctx.globalAlpha *= 1; ctx.save(); ctx.globalAlpha *= f;
+        ctx.fillStyle = g; ctx.fillRect(x - boreW / 2, boreTop, boreW, pistonTop - boreTop);
+        ctx.restore();
+      }
+      // Zündkerze
+      ctx.strokeStyle = col.accent; ctx.lineWidth = S * 0.006;
+      ctx.beginPath(); ctx.moveTo(x, top + headH * 0.15); ctx.lineTo(x, boreTop + S * 0.008); ctx.stroke();
+
+      // Pleuel
+      ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.013; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(x, pistonPinY); ctx.lineTo(pinX, pinY); ctx.stroke();
+      // Kolben mit Ringen
+      ctx.fillStyle = col.fg;
+      roundRect(x - boreW / 2 + S * 0.004, pistonTop, boreW - S * 0.008, pH, [S * 0.006, S * 0.006, S * 0.012, S * 0.012]); ctx.fill();
+      ctx.strokeStyle = col.bg; ctx.lineWidth = S * 0.0035;
+      for (let r = 1; r <= 2; r++) {
+        ctx.beginPath(); ctx.moveTo(x - boreW / 2 + S * 0.006, pistonTop + pH * 0.16 * r); ctx.lineTo(x + boreW / 2 - S * 0.006, pistonTop + pH * 0.16 * r); ctx.stroke();
+      }
+      // Hubzapfen
+      ctx.fillStyle = col.steel; ctx.beginPath(); ctx.arc(pinX, pinY, S * 0.012, 0, Math.PI * 2); ctx.fill();
+    }
+    // Kurbelwelle
+    ctx.strokeStyle = col.muted; ctx.lineWidth = S * 0.008;
+    ctx.beginPath(); ctx.moveTo(-blockW / 2 + S * 0.03, crankY); ctx.lineTo(blockW / 2 - S * 0.03, crankY); ctx.stroke();
+
+    // Drehzahl
+    const rpm = Math.round((800 + t * 6200) / 50) * 50;
+    const ry = top - S * 0.08;
+    ctx.fillStyle = col.muted; ctx.font = font(600, S * 0.024, fonts.mono); ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.fillText("U/MIN", -blockW / 2, ry - S * 0.1);
+    ctx.fillStyle = col.fg; ctx.font = font(800, S * 0.1, fonts.display);
+    ctx.fillText(rpm.toLocaleString("de-DE"), -blockW / 2, ry - S * 0.012);
+    const barW = blockW * 0.42, barX = blockW / 2 - barW;
+    ctx.fillStyle = col.line; ctx.fillRect(barX, ry - S * 0.03, barW, S * 0.012);
+    ctx.fillStyle = col.accent; ctx.fillRect(barX + barW * (6500 / 7000), ry - S * 0.03, barW * (500 / 7000), S * 0.012);
+    ctx.fillStyle = col.fg; ctx.fillRect(barX, ry - S * 0.03, barW * Math.min(rpm, 6500) / 7000, S * 0.012);
+    ctx.fillStyle = col.muted; ctx.font = font(400, S * 0.022, fonts.mono); ctx.textAlign = "right";
+    ctx.fillText("R6 · 2.998 cm³ · Zündfolge 1-5-3-6-2-4", blockW / 2, crankY + crankR * 2.2 + S * 0.07);
+  }
+
+  /* ---------- Szene 2: Codierung über OBD ---------- */
+  const OPTIONS = ["Begrüßungslicht", "Start-Stopp merken", "Digitaltacho", "Spiegel anklappen"];
+  function hexLine(i) {
+    let h = (i * 2654435761) >>> 0, s = "";
+    for (let k = 0; k < 6; k++) { h = (h ^ (h << 13)) >>> 0; h = (h ^ (h >>> 17)) >>> 0; h = (h ^ (h << 5)) >>> 0; s += (h & 0xff).toString(16).padStart(2, "0").toUpperCase() + " "; }
+    return s.trim();
+  }
+  function sceneCoding(t) {
+    const sw = S * 0.96, sh = S * 0.56, sx = -sw / 2, sy = -sh / 2 - S * 0.1, pad = S * 0.04;
+    ctx.fillStyle = col.fg; roundRect(sx, sy, sw, sh, S * 0.03); ctx.fill();
+
+    // Hex-Datenstrom
+    const colW = sw * 0.36, lh = S * 0.04;
+    ctx.save(); ctx.beginPath(); ctx.rect(sx + pad, sy + pad, colW, sh - pad * 2); ctx.clip();
+    const scroll = (reduce.matches ? 0 : clock * 26) + t * 420;
+    const first = Math.floor(scroll / lh);
+    ctx.font = font(400, S * 0.022, fonts.mono); ctx.textAlign = "left"; ctx.textBaseline = "top";
+    for (let i = 0; i < Math.ceil(sh / lh) + 1; i++) {
+      const n = first + i, y = sy + pad + i * lh - (scroll % lh);
+      ctx.fillStyle = n % 7 === 3 ? col.accent : col.bg;
+      ctx.globalAlpha = n % 7 === 3 ? 1 : 0.5;
+      ctx.fillText(hexLine(n), sx + pad, y);
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = col.bg; ctx.globalAlpha *= 0.25; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(sx + pad * 1.5 + colW, sy + pad); ctx.lineTo(sx + pad * 1.5 + colW, sy + sh - pad); ctx.stroke();
+    ctx.globalAlpha /= 0.25;
+
+    // Schalter
+    const lx = sx + pad * 2.2 + colW, rx = sx + sw - pad;
+    ctx.fillStyle = col.bg; ctx.font = font(600, S * 0.02, fonts.mono); ctx.textBaseline = "top";
+    ctx.save(); ctx.globalAlpha *= 0.6; ctx.fillText("STEUERGERÄT · BDC_BODY", lx, sy + pad); ctx.restore();
+    const rowH = (sh - pad * 3.4) / OPTIONS.length;
+    OPTIONS.forEach((label, k) => {
+      const y = sy + pad * 2.1 + rowH * k + rowH / 2;
+      const on = smooth(0.16 + k * 0.18, 0.24 + k * 0.18, t);
+      ctx.fillStyle = col.bg; ctx.font = font(500, S * 0.03, fonts.body); ctx.textBaseline = "middle"; ctx.textAlign = "left";
+      ctx.fillText(label, lx, y);
+      const tw = S * 0.08, th = S * 0.042, tx = rx - tw;
+      ctx.save(); ctx.globalAlpha *= 0.25 + 0.75 * on; ctx.fillStyle = on > 0.5 ? col.accent : col.bg;
+      roundRect(tx, y - th / 2, tw, th, th / 2); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.globalAlpha *= 0.25; ctx.strokeStyle = col.bg; ctx.lineWidth = 1; roundRect(tx, y - th / 2, tw, th, th / 2); ctx.stroke(); ctx.restore();
+      ctx.fillStyle = on > 0.5 ? "#fff" : col.bg;
+      ctx.beginPath(); ctx.arc(tx + th / 2 + (tw - th) * on, y, th * 0.36, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // Fortschritt
+    const py = sy + sh - pad * 0.9;
+    ctx.save(); ctx.globalAlpha *= 0.2; ctx.fillStyle = col.bg; ctx.fillRect(lx, py, rx - lx, S * 0.008); ctx.restore();
+    ctx.fillStyle = col.accent; ctx.fillRect(lx, py, (rx - lx) * t, S * 0.008);
+
+    // OBD-Stecker und Kabel
+    const plugY = sy + sh + S * 0.2, pw = S * 0.26, pwb = S * 0.21, ph = S * 0.1;
+    const cable = [0, sy + sh, 0, sy + sh + S * 0.1, -S * 0.02, plugY - S * 0.06, 0, plugY];
+    ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.014; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(cable[0], cable[1]); ctx.bezierCurveTo(cable[2], cable[3], cable[4], cable[5], cable[6], cable[7]); ctx.stroke();
+    const bez = (u, a, b, c, d) => (1 - u) ** 3 * a + 3 * (1 - u) ** 2 * u * b + 3 * (1 - u) * u * u * c + u ** 3 * d;
+    ctx.fillStyle = col.accent;
+    for (let i = 0; i < 3; i++) {
+      const u = 1 - (((reduce.matches ? 0 : clock * 0.7) + t * 2 + i / 3) % 1);
+      ctx.beginPath(); ctx.arc(bez(u, cable[0], cable[2], cable[4], cable[6]), bez(u, cable[1], cable[3], cable[5], cable[7]), S * 0.011, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = col.surface; ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.007; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(-pw / 2, plugY); ctx.lineTo(pw / 2, plugY); ctx.lineTo(pwb / 2, plugY + ph); ctx.lineTo(-pwb / 2, plugY + ph); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = col.fg;
+    for (let r = 0; r < 2; r++) for (let i = 0; i < 8; i++) {
+      const rowW = (r === 0 ? pw : pwb) * 0.78, x = -rowW / 2 + rowW / 7 * i;
+      ctx.fillRect(x - S * 0.006, plugY + ph * (0.28 + r * 0.38), S * 0.012, ph * 0.18);
+    }
+    ctx.fillStyle = col.muted; ctx.font = font(400, S * 0.022, fonts.mono); ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText("OBD-II · 16 Pin", pw / 2 + S * 0.04, plugY + ph / 2);
+    ctx.textAlign = "right";
+    ctx.fillText(`Codierung ${Math.round(t * 100)} %`, -pw / 2 - S * 0.04, plugY + ph / 2);
+  }
+
+  /* ---------- Szene 3: Prüfstand ---------- */
+  const serie = (r) => 340 * Math.max(0, 1 - ((r - 6000) / 5000) ** 2);
+  const stage1 = (r) => 410 * Math.max(0, 1 - ((r - 5800) / 4800) ** 2);
+  function sceneDyno(t) {
+    const pw = S * 0.98, ph = S * 0.62;
+    const x0 = -pw / 2 + S * 0.08, x1 = pw / 2, y0 = ph / 2 - S * 0.04, y1 = -ph / 2;
+    const X = (r) => x0 + (r - 1000) / 6000 * (x1 - x0);
+    const Y = (ps) => y0 - ps / 450 * (y0 - y1);
+
+    ctx.strokeStyle = col.line; ctx.lineWidth = 1;
+    ctx.fillStyle = col.muted; ctx.font = font(400, S * 0.022, fonts.mono);
+    for (let r = 1000; r <= 7000; r += 1000) {
+      ctx.beginPath(); ctx.moveTo(X(r), y0); ctx.lineTo(X(r), y1); ctx.stroke();
+      ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillText(String(r / 1000), X(r), y0 + S * 0.016);
+    }
+    for (let ps = 0; ps <= 400; ps += 100) {
+      ctx.beginPath(); ctx.moveTo(x0, Y(ps)); ctx.lineTo(x1, Y(ps)); ctx.stroke();
+      ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillText(String(ps), x0 - S * 0.016, Y(ps));
+    }
+    ctx.textAlign = "right"; ctx.textBaseline = "top"; ctx.fillText("× 1.000 U/min", x1, y0 + S * 0.06);
+    ctx.textAlign = "left"; ctx.textBaseline = "bottom"; ctx.fillText("PS", x0 - S * 0.06, y1 - S * 0.02);
+
+    const rEnd = 1000 + 6000 * clamp(t * 1.12, 0, 1);
+    const path = (fn) => { ctx.beginPath(); for (let r = 1000; r <= rEnd; r += 50) { r === 1000 ? ctx.moveTo(X(r), Y(fn(r))) : ctx.lineTo(X(r), Y(fn(r))); } };
+
+    path(stage1); ctx.lineTo(X(rEnd), Y(0)); ctx.lineTo(X(1000), Y(0)); ctx.closePath();
+    ctx.save(); ctx.globalAlpha *= 0.12; ctx.fillStyle = col.accent; ctx.fill(); ctx.restore();
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    path(serie); ctx.strokeStyle = col.muted; ctx.lineWidth = S * 0.007; ctx.stroke();
+    path(stage1); ctx.strokeStyle = col.accent; ctx.lineWidth = S * 0.011; ctx.stroke();
+
+    ctx.fillStyle = col.accent; ctx.beginPath(); ctx.arc(X(rEnd), Y(stage1(rEnd)), S * 0.016, 0, Math.PI * 2); ctx.fill();
+
+    const peak = (r, fn, color, label, dy) => {
+      if (rEnd < r) return;
+      ctx.fillStyle = color; ctx.font = font(800, S * 0.05, fonts.display); ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText(label, X(r), Y(fn(r)) - dy);
+    };
+    peak(6000, serie, col.muted, "340 PS", S * 0.02);
+    peak(5800, stage1, col.accent, "410 PS", S * 0.03);
+
+    ctx.font = font(600, S * 0.022, fonts.mono); ctx.textBaseline = "middle"; ctx.textAlign = "left";
+    const ly = y1 + S * 0.03;
+    ctx.fillStyle = col.muted; ctx.fillRect(x0 + S * 0.03, ly - 1, S * 0.05, S * 0.007); ctx.fillText("Serie", x0 + S * 0.1, ly);
+    ctx.fillStyle = col.accent; ctx.fillRect(x0 + S * 0.03, ly + S * 0.045 - 1, S * 0.05, S * 0.009); ctx.fillText("Stage 1", x0 + S * 0.1, ly + S * 0.045);
+    ctx.fillStyle = col.muted; ctx.font = font(400, S * 0.02, fonts.mono); ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("Beispielkurve zur Darstellung, kein Messwert", x0, y0 + S * 0.11);
+  }
+
+  /* ---------- Szene 4: Rad, Bremse, Fahrwerk ---------- */
+  const CARDS = [
+    { at: 0.12, title: "FELGE", value: "19″ Doppelspeiche", ang: -2.4, rr: 0.9, dx: -1.35, dy: -0.95 },
+    { at: 0.38, title: "BREMSE", value: "4-Kolben-Festsattel", ang: -0.55, rr: 0.66, dx: 0.62, dy: -1.12 },
+    { at: 0.64, title: "FAHRWERK", value: "−30 mm, eingetragen", ang: 1.0, rr: 1.0, dx: 0.7, dy: 0.62 },
+  ];
+  function sceneWheel(t) {
+    const R = S * 0.4, rimR = R * 0.72;
+    const rot = t * Math.PI * 3 + (reduce.matches ? 0 : clock * 0.5);
+    const drop = smooth(0.55, 0.85, t) * S * 0.03;
+    ctx.save(); ctx.translate(0, drop);
+
+    ctx.save(); ctx.globalAlpha *= 0.14; ctx.fillStyle = col.fg;
+    ctx.beginPath(); ctx.ellipse(0, R + S * 0.035 - drop, R * 0.92, S * 0.028, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+
+    // Reifen
+    ctx.fillStyle = col.tire; ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = col.line; ctx.lineWidth = S * 0.003;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = col.muted;
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.9, 0, Math.PI * 2); ctx.stroke();
+    // Felgenbett und Bremsscheibe
+    ctx.fillStyle = col.bg; ctx.beginPath(); ctx.arc(0, 0, rimR, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = col.line; ctx.beginPath(); ctx.arc(0, 0, rimR * 0.8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = col.bg;
+    for (let i = 0; i < 30; i++) {
+      const a = rot + i * Math.PI * 2 / 30, rr = rimR * (i % 2 ? 0.6 : 0.7);
+      ctx.beginPath(); ctx.arc(Math.cos(a) * rr, Math.sin(a) * rr, S * 0.006, 0, Math.PI * 2); ctx.fill();
+    }
+    // Bremssattel (dreht nicht mit)
+    ctx.fillStyle = col.accent;
+    ctx.beginPath(); ctx.arc(0, 0, rimR * 0.86, -1.05, -0.05); ctx.arc(0, 0, rimR * 0.5, -0.05, -1.05, true); ctx.closePath(); ctx.fill();
+    // Doppelspeichen
+    ctx.fillStyle = col.surface; ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.004; ctx.lineJoin = "round";
+    for (let i = 0; i < 5; i++) {
+      const a = rot + i * Math.PI * 2 / 5;
+      for (const side of [-1, 1]) {
+        const h1 = a + side * 0.2, r1 = a + side * 0.13;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(h1 - 0.12) * rimR * 0.2, Math.sin(h1 - 0.12) * rimR * 0.2);
+        ctx.lineTo(Math.cos(r1 - 0.06) * rimR * 0.97, Math.sin(r1 - 0.06) * rimR * 0.97);
+        ctx.lineTo(Math.cos(r1 + 0.06) * rimR * 0.97, Math.sin(r1 + 0.06) * rimR * 0.97);
+        ctx.lineTo(Math.cos(h1 + 0.12) * rimR * 0.2, Math.sin(h1 + 0.12) * rimR * 0.2);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+    }
+    ctx.strokeStyle = col.fg; ctx.lineWidth = S * 0.014;
+    ctx.beginPath(); ctx.arc(0, 0, rimR, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = col.surface; ctx.lineWidth = S * 0.004;
+    ctx.beginPath(); ctx.arc(0, 0, rimR * 0.22, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = col.fg;
+    for (let i = 0; i < 5; i++) {
+      const a = rot + Math.PI / 5 + i * Math.PI * 2 / 5;
+      ctx.beginPath(); ctx.arc(Math.cos(a) * rimR * 0.14, Math.sin(a) * rimR * 0.14, S * 0.009, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(0, 0, rimR * 0.07, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+    // Info-Karten
+    CARDS.forEach((c) => {
+      const a = smooth(c.at, c.at + 0.12, t);
+      if (a <= 0) return;
+      const ax = Math.cos(c.ang) * R * c.rr, ay = Math.sin(c.ang) * R * c.rr + drop;
+      const fT = font(600, S * 0.02, fonts.mono), fV = font(600, S * 0.032, fonts.body);
+      ctx.font = fT; const w1 = ctx.measureText(c.title).width;
+      ctx.font = fV; const w2 = ctx.measureText(c.value).width;
+      const pad = S * 0.026, cw = Math.max(w1, w2) + pad * 2, ch = S * 0.12;
+      let x = R * c.dx, y = R * c.dy + (1 - a) * S * 0.04;
+      x = clamp(x, -cx + 12, W - cx - 12 - cw);
+      y = clamp(y, -cy + 72, H - cy - 12 - ch);
+      ctx.save(); ctx.globalAlpha *= a;
+      const ex = clamp(ax, x, x + cw), ey = clamp(ay, y, y + ch);
+      ctx.strokeStyle = col.muted; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = col.accent; ctx.beginPath(); ctx.arc(ax, ay, S * 0.01, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col.surface; ctx.strokeStyle = col.line;
+      roundRect(x, y, cw, ch, S * 0.02); ctx.fill(); ctx.stroke();
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillStyle = col.muted; ctx.font = fT; ctx.fillText(c.title, x + pad, y + pad * 0.9);
+      ctx.fillStyle = col.fg; ctx.font = fV; ctx.fillText(c.value, x + pad, y + pad * 0.9 + S * 0.034);
+      ctx.restore();
+    });
+  }
+
+  const SCENES = [sceneEngine, sceneCoding, sceneDyno, sceneWheel];
+
+  function draw(p, dt) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    const c = p * (SCENES.length - 1);
+    SCENES.forEach((fn, i) => {
+      const a = 1 - smooth(0.25, 0.75, Math.abs(c - i));
+      if (a <= 0.01) return;
+      const t = i === 0 ? clamp(c * 2, 0, 1)
+        : i === SCENES.length - 1 ? clamp((c - i + 0.5) * 2, 0, 1)
+        : clamp(c - i + 0.5, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(cx, cy + (c < i ? 1 : -1) * (1 - a) * S * 0.12);
+      fn(t, dt);
+      ctx.restore();
+    });
+    const active = Math.round(c);
+    dots.forEach((d, i) => d.setAttribute("aria-current", String(i === active)));
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const target = progress();
+    cur = reduce.matches ? target : cur + (target - cur) * Math.min(1, dt * 7);
+    if (!reduce.matches) clock += dt;
+    draw(cur, dt);
+    requestAnimationFrame(frame);
+  }
+
+  dots.forEach((d) => d.addEventListener("click", () => chapters[+d.dataset.ch].scrollIntoView({ behavior: reduce.matches ? "auto" : "smooth" })));
+
+  readTheme(); resize();
+  addEventListener("resize", resize);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", readTheme);
+  new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  if (document.fonts) document.fonts.ready.then(readTheme);
+  requestAnimationFrame(frame);
+
+  /* ---------- Formular (Prototyp: wird nicht verschickt) ---------- */
+  const form = document.getElementById("booking-form");
+  const status = document.getElementById("form-status");
+  const fin = document.getElementById("fin");
+  fin.addEventListener("input", () => { fin.value = fin.value.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, ""); });
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const name = form.elements.name.value.trim();
+    const email = form.elements.email.value.trim();
+    if (!name) { status.textContent = "Bitte gib deinen Namen ein."; form.elements.name.focus(); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { status.textContent = "Bitte gib eine gültige E-Mail-Adresse ein, damit wir antworten können."; form.elements.email.focus(); return; }
+    if (fin.value && fin.value.length !== 7) { status.textContent = "Die FIN braucht genau 7 Zeichen, oder lass das Feld leer."; fin.focus(); return; }
+    status.textContent = `Danke, ${name}. Im Prototyp wird die Anfrage nicht verschickt; in der fertigen Seite geht sie direkt an die Werkstatt.`;
+  });
+})();
+</script>
