@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <defs>
+    <linearGradient id="chrome" x1="49" y1="29" x2="203" y2="230" gradientUnits="userSpaceOnUse"><stop stop-color="#f4f7fa"/><stop offset=".18" stop-color="#858c96"/><stop offset=".35" stop-color="#ecf1f6"/><stop offset=".5" stop-color="#424a56"/><stop offset=".72" stop-color="#a9b3c0"/><stop offset=".87" stop-color="#f4f7fa"/><stop offset="1" stop-color="#687380"/></linearGradient>
+    <linearGradient id="face" x1="83" y1="34" x2="173" y2="228" gradientUnits="userSpaceOnUse"><stop stop-color="#252a31"/><stop offset=".46" stop-color="#07090c"/><stop offset="1" stop-color="#121821"/></linearGradient>
+    <linearGradient id="letter" x1="128" y1="115" x2="128" y2="183" gradientUnits="userSpaceOnUse"><stop stop-color="#fcfdff"/><stop offset=".34" stop-color="#cad3df"/><stop offset=".52" stop-color="#8492a3"/><stop offset=".62" stop-color="#e6edf5"/><stop offset="1" stop-color="#9ba9bb"/></linearGradient>
+    <linearGradient id="roof" x1="63" y1="79" x2="197" y2="98" gradientUnits="userSpaceOnUse"><stop stop-color="#2375ed"/><stop offset=".5" stop-color="#71caff"/><stop offset="1" stop-color="#3486ff"/></linearGradient>
+    <radialGradient id="halo"><stop offset=".7" stop-color="#3486ff" stop-opacity="0"/><stop offset=".86" stop-color="#3486ff" stop-opacity=".2"/><stop offset="1" stop-color="#3486ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <circle cx="128" cy="128" r="128" fill="url(#halo)"/>
+  <circle cx="128" cy="128" r="109" fill="url(#chrome)"/>
+  <circle cx="128" cy="128" r="103" stroke="#07090c" stroke-width="2"/>
+  <circle cx="128" cy="128" r="99" fill="url(#face)" stroke="#b4c1d2" stroke-opacity=".65" stroke-width="1.5"/>
+  <path d="M47 109C54 72 82 44 120 39" stroke="#ffffff" stroke-opacity=".2" stroke-width="2" stroke-linecap="round"/>
+  <path d="M65 100L84 96L104 78C109 73 117 71 128 71H143C153 71 160 76 167 84L179 97L193 100" stroke="url(#roof)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M87 103H171" stroke="url(#roof)" stroke-width="2" stroke-linecap="round" opacity=".55"/>
+  <path d="M70 121H100C116 121 125 128 125 138C125 145 121 150 114 153C123 155 129 161 129 169C129 183 118 190 101 190H70V121ZM86 134V147H99C105 147 109 145 109 140C109 136 105 134 99 134H86ZM86 160V177H101C108 177 112 174 112 168C112 163 108 160 101 160H86Z" fill="url(#letter)"/>
+  <path d="M128 121H146L162 169L179 121H197L171 190H153L128 121Z" fill="url(#letter)"/>
+  <path d="M99 210H157" stroke="#3486ff" stroke-opacity=".45" stroke-linecap="round"/>
+</svg>
