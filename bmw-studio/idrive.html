@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BimmerVision Cockpit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Prototyp: Cockpit-Ansicht von BimmerVision im Stil eines Auto-Bildschirms. Breites Querformat, App-Kacheln, Bedienung per Tippen oder Pfeiltasten (wie ein Dreh-Drück-Steller). */
+:root {
+  color-scheme: dark;
+  --bg: #04060b; --panel: #0a1020; --fg: #f1f5f9; --muted: #8a97ab; --soft: #cbd5e1;
+  --m-light: #009ada; --m-dark: #2b3990; --m-blue: #1c69d4; --m-red: #e7222e; --m-text: #5ec8f2;
+  --ok: #22c55e; --warn: #f5b301;
+  --edge: rgb(255 255 255 / 10%);
+  --f-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: #000; color: var(--fg); font: 400 16px/1.4 var(--f-sans); -webkit-font-smoothing: antialiased; display: grid; place-items: center; overflow: hidden; }
+
+/* Der Bildschirm: festes 8:3-Format wie ein breites Auto-Display */
+.screen {
+  position: relative; width: min(100vw, calc(100vh * 8 / 3)); aspect-ratio: 8 / 3; overflow: hidden;
+  background:
+    radial-gradient(70% 90% at 100% 0%, rgb(0 154 218 / 16%), transparent 60%),
+    radial-gradient(50% 80% at 0% 100%, rgb(231 34 46 / 9%), transparent 60%),
+    linear-gradient(180deg, #070b16, #04060b);
+  font-size: calc(min(100vw, 100vh * 8 / 3) / 1280 * 16px);
+}
+.screen::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: .25em; pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--m-blue) 15%, var(--m-light) 50%, var(--m-blue) 85%, transparent);
+  box-shadow: 0 0 1.4em .2em rgb(0 154 218 / 55%); opacity: .9;
+}
+
+/* Statusleiste */
+.bar { position: absolute; inset: 0 0 auto; height: 3.4em; display: flex; align-items: center; gap: 1.1em; padding: 0 1.6em; z-index: 5; }
+.bar .home { width: 1.5em; height: 1.5em; color: var(--soft); }
+.bar h1 { margin: 0; font-size: 1.05em; font-weight: 600; color: var(--m-red); letter-spacing: .01em; }
+.bar .brand { display: flex; align-items: center; gap: .5em; font-weight: 650; font-size: .95em; }
+.bar .brand img { width: 1.5em; height: 1.5em; }
+.bar .brand span { color: var(--m-text); }
+.bar .right { margin-left: auto; display: flex; align-items: center; gap: 1.1em; color: var(--soft); font: 500 .85em/1 var(--f-mono); }
+.bar .right svg { width: 1.25em; height: 1.25em; }
+.bar .sep { flex: 1; }
+
+/* Seitenleiste */
+.side { position: absolute; left: 0; top: 3.4em; bottom: 0; width: 5.2em; display: grid; align-content: start; gap: .6em; padding: .8em .7em; z-index: 4; }
+.side button {
+  display: grid; justify-items: center; gap: .3em; padding: .6em .2em; border: 0; border-radius: .8em; background: transparent; color: var(--muted);
+  font: 500 .62em/1.1 var(--f-sans); cursor: pointer;
+}
+.side button svg { width: 2.3em; height: 2.3em; }
+.side button[aria-current="page"] { background: rgb(0 154 218 / 16%); color: var(--m-text); }
+
+/* App-Raster */
+.home-view { position: absolute; left: 5.6em; right: 1.6em; top: 3.8em; bottom: 1.2em; display: grid; grid-template-rows: auto 1fr; gap: .8em; transition: opacity .35s ease, transform .45s cubic-bezier(.2,.8,.2,1); }
+.home-view.away { opacity: 0; transform: scale(.94); pointer-events: none; }
+.m-stripe { display: inline-flex; width: 5em; height: .22em; transform: skewX(-20deg); }
+.m-stripe i { flex: 1; } .m-stripe i:nth-child(1) { background: var(--m-light); } .m-stripe i:nth-child(2) { background: var(--m-dark); } .m-stripe i:nth-child(3) { background: var(--m-red); }
+.grid { display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(2, 1fr); gap: .6em 1em; }
+.tile {
+  position: relative; display: grid; justify-items: center; align-content: center; gap: .55em; padding: .4em; border-radius: 1.1em;
+  background: transparent; border: 1px solid transparent; color: var(--fg); cursor: pointer; font: inherit;
+  transition: background-color .2s ease, border-color .2s ease, transform .2s ease;
+}
+.tile .ic { width: 4.4em; height: 4.4em; border-radius: 1.15em; display: grid; place-items: center; color: #fff; box-shadow: 0 .5em 1.4em -.6em rgb(0 0 0 / 80%), inset 0 1px 0 rgb(255 255 255 / 25%); }
+.tile .ic svg { width: 2.3em; height: 2.3em; }
+.tile b { font-size: .82em; font-weight: 600; text-align: center; }
+.tile small { position: absolute; top: .5em; right: .9em; font: 600 .5em/1 var(--f-mono); letter-spacing: .08em; color: var(--warn); border: 1px solid rgb(245 179 1 / 45%); border-radius: 99em; padding: .3em .55em; }
+.tile.focus, .tile:hover { background: rgb(255 255 255 / 6%); border-color: rgb(0 154 218 / 55%); box-shadow: 0 0 0 .18em rgb(0 154 218 / 18%), 0 0 1.6em -.4em var(--m-light); }
+.tile:active { transform: scale(.96); }
+.c-blue { background: linear-gradient(145deg, #0fb3f5, #1c69d4); }
+.c-dark { background: linear-gradient(145deg, #3f51c6, #1f2a6b); }
+.c-red { background: linear-gradient(145deg, #ff4d57, #b3121c); }
+.c-teal { background: linear-gradient(145deg, #23d0c0, #0b7f86); }
+.c-gray { background: linear-gradient(145deg, #5b6577, #2b3240); }
+.c-amber { background: linear-gradient(145deg, #ffc23a, #d97706); }
+.c-green { background: linear-gradient(145deg, #3ee07f, #128a43); }
+.c-white { background: linear-gradient(145deg, #eef2f7, #9aa6b8); color: #0b1222; }
+
+/* App-Fenster */
+.app {
+  position: absolute; left: 5.6em; right: 1.6em; top: 3.8em; bottom: 1.2em; border-radius: 1.2em; overflow: hidden;
+  background: linear-gradient(180deg, rgb(14 22 42 / 92%), rgb(8 12 24 / 96%)); border: 1px solid var(--edge);
+  box-shadow: 0 1.5em 3em -1em rgb(0 0 0 / 80%);
+  display: grid; grid-template-rows: auto 1fr; opacity: 0; transform: scale(.9); pointer-events: none; transform-origin: var(--ox, 50%) var(--oy, 50%);
+  transition: opacity .3s ease, transform .45s cubic-bezier(.2,.8,.2,1);
+}
+.app.open { opacity: 1; transform: none; pointer-events: auto; }
+.app::before { content: ""; position: absolute; inset: 0 0 auto; height: .2em; background: linear-gradient(90deg, var(--m-light) 0 33.3%, var(--m-dark) 33.3% 66.6%, var(--m-red) 66.6%); }
+.app header { display: flex; align-items: center; gap: .9em; padding: 1em 1.4em .6em; }
+.app header button { width: 2.4em; height: 2.4em; border-radius: 50%; border: 1px solid var(--edge); background: rgb(255 255 255 / 6%); color: var(--fg); display: grid; place-items: center; cursor: pointer; }
+.app header button svg { width: 1.2em; height: 1.2em; }
+.app header h2 { margin: 0; font-size: 1.2em; font-weight: 700; }
+.app header .tag { margin-left: auto; font: 600 .6em/1 var(--f-mono); letter-spacing: .1em; color: var(--warn); border: 1px solid rgb(245 179 1 / 45%); border-radius: 99em; padding: .45em .8em; }
+.app .body { padding: .4em 1.4em 1.2em; min-height: 0; }
+
+/* Drag-Timer */
+.drag { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1.6em; height: 100%; }
+.drag .big { display: grid; align-content: center; gap: .3em; }
+.drag .nums { display: flex; align-items: baseline; gap: 1.6em; }
+.drag .nums div { display: grid; }
+.drag .nums b { font: 700 4.2em/1 var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.drag .nums small { font-size: .8em; color: var(--muted); }
+.drag .state { font: 600 .85em/1 var(--f-mono); letter-spacing: .1em; color: var(--m-text); }
+.drag .bar2 { height: .5em; border-radius: .5em; background: rgb(255 255 255 / 8%); overflow: hidden; margin-top: .6em; }
+.drag .bar2 i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--m-light), var(--m-blue), var(--m-red)); }
+.drag table { width: 100%; border-collapse: collapse; font-size: .9em; align-self: center; }
+.drag td { padding: .55em 0; border-bottom: 1px solid var(--edge); }
+.drag td:last-child { text-align: right; font: 600 1em/1 var(--f-mono); font-variant-numeric: tabular-nums; color: var(--m-text); }
+.drag .btns { display: flex; gap: .7em; margin-top: 1em; }
+.pill { border: 0; border-radius: 99em; padding: .75em 1.4em; font: 600 .8em/1 var(--f-sans); color: #fff; cursor: pointer; background: linear-gradient(90deg, #009ada, #1c69d4, #2b3990); }
+.pill.red { background: var(--m-red); }
+.pill.ghost { background: rgb(255 255 255 / 7%); border: 1px solid var(--edge); }
+
+/* Live-Daten */
+.gauges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2em; height: 100%; align-items: center; }
+.gauge { display: grid; justify-items: center; gap: .3em; }
+.gauge svg { width: 9.5em; height: 9.5em; overflow: visible; }
+.gauge .track { fill: none; stroke: rgb(255 255 255 / 9%); stroke-width: 7; stroke-linecap: round; }
+.gauge .val { fill: none; stroke-width: 7; stroke-linecap: round; transition: stroke-dashoffset .5s ease; }
+.gauge text { fill: var(--fg); font: 700 15px var(--f-mono); text-anchor: middle; }
+.gauge text.u { fill: var(--muted); font: 500 7px var(--f-sans); }
+.gauge b { font-size: .85em; font-weight: 600; }
+.gauge small { font-size: .7em; color: var(--muted); }
+
+/* Fahrzeugdaten */
+.car { display: grid; grid-template-columns: 1fr 1.3fr; gap: 1.6em; height: 100%; align-items: center; }
+.vin { display: grid; gap: .6em; }
+.vin small { font: 600 .65em/1 var(--f-mono); letter-spacing: .12em; color: var(--muted); }
+.vin .code { display: flex; gap: .3em; }
+.vin .code span { width: 1.7em; height: 2.3em; display: grid; place-items: center; border-radius: .45em; background: rgb(11 18 32 / 70%); border: 1px solid rgb(0 154 218 / 35%); font: 600 1em/1 var(--f-mono); }
+.vin .code span.w { color: var(--m-text); }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: .7em; }
+.fact { padding: .8em 1em; border-radius: .9em; background: rgb(255 255 255 / 5%); border: 1px solid var(--edge); display: grid; gap: .25em; }
+.fact small { font-size: .68em; color: var(--muted); }
+.fact b { font-size: .95em; font-weight: 600; }
+
+/* Platzhalter-App */
+.soon { display: grid; place-items: center; height: 100%; text-align: center; gap: .6em; color: var(--soft); }
+.soon .ic { width: 5em; height: 5em; border-radius: 1.3em; display: grid; place-items: center; margin: 0 auto .6em; }
+.soon .ic svg { width: 2.6em; height: 2.6em; }
+.soon p { margin: 0; font-size: .85em; color: var(--muted); max-width: 34em; }
+
+.toast { position: absolute; left: 50%; bottom: 1.4em; transform: translate(-50%, 1em); opacity: 0; z-index: 9; padding: .7em 1.2em; border-radius: 99em; background: rgb(2 6 23 / 90%); border: 1px solid var(--edge); font-size: .75em; transition: opacity .3s, transform .3s; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .home-view, .app, .tile { transition: none; } }
+</style>
+</head>
+<body>
+<div class="screen" id="screen" role="application" aria-label="BimmerVision Cockpit">
+  <div class="bar">
+    <svg class="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9H3z"/></svg>
+    <h1 id="bar-title">Installierte Apps</h1>
+    <span class="sep"></span>
+    <span class="brand"><img src="img/bimmervision.svg" alt=""><b>Bimmer<span>Vision</span></b></span>
+    <span class="right">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0M12 19h0"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+      <span id="clock">14:28</span>
+    </span>
+  </div>
+
+  <nav class="side" aria-label="Bereiche">
+    <button type="button" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Apps</button>
+    <button type="button" data-open="garage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 11l9-6 9 6v9H3z"/><path d="M8 20v-5h8v5"/></svg>Garage</button>
+    <button type="button" data-open="einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>Einstellungen</button>
+  </nav>
+
+  <section class="home-view" id="home">
+    <span class="m-stripe" aria-hidden="true"><i></i><i></i><i></i></span>
+    <div class="grid" id="grid">
+      <button class="tile" data-open="fahrzeug"><span class="ic c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 15l2-6h14l2 6v3H3z"/><circle cx="7.5" cy="16.5" r="1.5"/><circle cx="16.5" cy="16.5" r="1.5"/></svg></span><b>Fahrzeugdaten</b></button>
+      <button class="tile" data-open="ausstattung"><span class="ic c-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span><b>Ausstattung</b></button>
+      <button class="tile" data-open="historie"><span class="ic c-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg></span><b>Historie</b></button>
+      <button class="tile" data-open="garage"><span class="ic c-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 11l9-6 9 6v9H3z"/><path d="M8 20v-5h8v5"/></svg></span><b>Garage</b></button>
+      <button class="tile" data-open="favoriten"><span class="ic c-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg></span><b>Favoriten</b></button>
+      <button class="tile" data-open="service"><span class="ic c-white"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L4 17l3 3 5.2-5.2a4 4 0 0 0 5.3-5.3l-2.4 2.4-2.6-.6-.6-2.6z"/></svg></span><b>Service</b></button>
+      <button class="tile" data-open="live"><span class="ic c-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 16a8 8 0 1 1 16 0"/><path d="M12 16l4-5"/></svg></span><b>Live-Daten</b><small>OBD</small></button>
+      <button class="tile" data-open="fehler"><span class="ic c-amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h0"/></svg></span><b>Fehlerspeicher</b><small>OBD</small></button>
+      <button class="tile" data-open="drag"><span class="ic c-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M10 2h4"/></svg></span><b>Drag-Timer</b></button>
+      <button class="tile" data-open="codierung"><span class="ic c-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="8" width="18" height="8" rx="4"/><circle cx="16" cy="12" r="2" fill="currentColor"/></svg></span><b>Codierung</b></button>
+      <button class="tile" data-open="einstellungen"><span class="ic c-gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span><b>Einstellungen</b></button>
+      <button class="tile" data-open="hilfe"><span class="ic c-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6M12 17h0"/></svg></span><b>Hilfe</b></button>
+    </div>
+  </section>
+
+  <section class="app" id="app" aria-live="polite">
+    <header>
+      <button type="button" id="back" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <h2 id="app-title">App</h2>
+      <span class="tag" id="app-tag" hidden>DEMO-WERTE</span>
+    </header>
+    <div class="body" id="app-body"></div>
+  </section>
+
+  <div class="toast" id="toast" role="status"></div>
+</div>
+
+<script>
+(() => {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)");
+  const home = document.getElementById("home");
+  const app = document.getElementById("app");
+  const body = document.getElementById("app-body");
+  const title = document.getElementById("app-title");
+  const tag = document.getElementById("app-tag");
+  const barTitle = document.getElementById("bar-title");
+  const tiles = [...document.querySelectorAll(".tile")];
+  const toast = document.getElementById("toast");
+  let focus = 0, openId = null, cleanup = null;
+
+  const clock = document.getElementById("clock");
+  const tickClock = () => { clock.textContent = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }); };
+  tickClock(); setInterval(tickClock, 15000);
+
+  function setFocus(i) {
+    focus = (i + tiles.length) % tiles.length;
+    tiles.forEach((t, k) => t.classList.toggle("focus", k === focus));
+  }
+  function say(text) { toast.textContent = text; toast.classList.add("show"); clearTimeout(say.t); say.t = setTimeout(() => toast.classList.remove("show"), 2200); }
+
+  /* ---------- Apps ---------- */
+  const APPS = {
+    fahrzeug: { name: "Fahrzeugdaten", demo: true, render: renderCar },
+    drag: { name: "Drag-Timer", demo: true, render: renderDrag },
+    live: { name: "Live-Daten", demo: true, render: renderLive },
+  };
+  const SOON = {
+    ausstattung: ["Ausstattung", "c-dark", "Zeigt die Sonderausstattung zur Kurz-FIN aus deiner BimmerVision-App."],
+    historie: ["Historie", "c-teal", "Deine letzten Abfragen als Zeitleiste, wie in der App."],
+    garage: ["Garage", "c-gray", "Deine gespeicherten Fahrzeuge mit Notizen."],
+    favoriten: ["Favoriten", "c-amber", "Schnellzugriff auf markierte Fahrzeuge."],
+    service: ["Service", "c-white", "Service-Termine und Hinweise zu deinem Fahrzeug."],
+    fehler: ["Fehlerspeicher", "c-amber", "Fehler auslesen braucht einen Bluetooth-OBD-Stecker im Auto."],
+    codierung: ["Codierung", "c-dark", "Übersicht, was bei deinem Modell freigeschaltet werden kann."],
+    einstellungen: ["Einstellungen", "c-gray", "Konto, Einheiten und Anzeige."],
+    hilfe: ["Hilfe", "c-green", "Antworten zu FIN, Kurz-FIN und Zugang."],
+  };
+
+  function open(id, fromEl) {
+    if (cleanup) { cleanup(); cleanup = null; }
+    openId = id;
+    const screen = document.getElementById("screen").getBoundingClientRect();
+    if (fromEl) {
+      const r = fromEl.getBoundingClientRect();
+      app.style.setProperty("--ox", `${r.left + r.width / 2 - screen.left}px`);
+      app.style.setProperty("--oy", `${r.top + r.height / 2 - screen.top}px`);
+    }
+    const a = APPS[id];
+    if (a) { title.textContent = a.name; tag.hidden = !a.demo; cleanup = a.render(body) || null; }
+    else {
+      const [name, color, text] = SOON[id];
+      title.textContent = name; tag.hidden = true;
+      body.innerHTML = `<div class="soon"><div><div class="ic ${color}">${tiles.find((t) => t.dataset.open === id)?.querySelector(".ic").innerHTML ?? ""}</div><b>${name}</b><p>${text} Im Prototyp noch ohne Inhalt.</p></div></div>`;
+    }
+    barTitle.textContent = title.textContent;
+    home.classList.add("away"); app.classList.add("open");
+    document.getElementById("back").focus({ preventScroll: true });
+  }
+  function close() {
+    if (cleanup) { cleanup(); cleanup = null; }
+    openId = null; app.classList.remove("open"); home.classList.remove("away");
+    barTitle.textContent = "Installierte Apps";
+    tiles[focus].focus({ preventScroll: true });
+  }
+
+  function renderCar(el) {
+    const vin = "WBA5U1C0X0K•••••";
+    el.innerHTML = `<div class="car">
+      <div class="vin"><small>FAHRGESTELLNUMMER</small><div class="code">${[...vin].map((c, i) => `<span class="${i < 3 ? "w" : ""}">${c}</span>`).join("")}</div>
+      <small style="margin-top:.6em">BEISPIEL · IN DER APP AUS DEINER ABFRAGE</small></div>
+      <div class="facts">
+        <div class="fact"><small>Modell</small><b>3er Limousine</b></div>
+        <div class="fact"><small>Motor</small><b>Reihensechszylinder</b></div>
+        <div class="fact"><small>Getriebe</small><b>Automatik</b></div>
+        <div class="fact"><small>Antrieb</small><b>Hinterrad</b></div>
+        <div class="fact"><small>Werk</small><b>Beispielwert</b></div>
+        <div class="fact"><small>Baujahr</small><b>Beispielwert</b></div>
+      </div></div>`;
+  }
+
+  function renderDrag(el) {
+    el.innerHTML = `<div class="drag">
+      <div class="big">
+        <span class="state" id="d-state">BEREIT</span>
+        <div class="nums"><div><b id="d-time">0.00</b><small>Sekunden</small></div><div><b id="d-speed">0</b><small>km/h</small></div></div>
+        <div class="bar2"><i id="d-bar"></i></div>
+        <div class="btns"><button class="pill" id="d-start" type="button">Demo-Lauf starten</button><button class="pill ghost" id="d-reset" type="button">Zurücksetzen</button></div>
+      </div>
+      <table aria-label="Zwischenzeiten"><tbody>
+        <tr><td>0–60 km/h</td><td id="s60">–</td></tr>
+        <tr><td>0–100 km/h</td><td id="s100">–</td></tr>
+        <tr><td>100–200 km/h</td><td id="s200">–</td></tr>
+        <tr><td>Höchstwert</td><td id="smax">–</td></tr>
+      </tbody></table></div>`;
+    const $ = (id) => el.querySelector("#" + id);
+    let raf = 0, t0 = 0, splits = {};
+    const v = (t) => 300 * (1 - Math.exp(-t / 10.5));
+    function reset() {
+      cancelAnimationFrame(raf); splits = {};
+      $("d-state").textContent = "BEREIT"; $("d-time").textContent = "0.00"; $("d-speed").textContent = "0"; $("d-bar").style.width = "0";
+      ["s60", "s100", "s200", "smax"].forEach((k) => { $(k).textContent = "–"; });
+    }
+    function run() {
+      reset(); $("d-state").textContent = "LÄUFT"; t0 = performance.now();
+      const step = (now) => {
+        const t = (now - t0) / 1000, s = v(t);
+        $("d-time").textContent = t.toFixed(2); $("d-speed").textContent = Math.round(s);
+        $("d-bar").style.width = `${Math.min(100, s / 2)}%`;
+        if (s >= 60 && !splits[60]) { splits[60] = t; $("s60").textContent = `${t.toFixed(2)} s`; }
+        if (s >= 100 && !splits[100]) { splits[100] = t; $("s100").textContent = `${t.toFixed(2)} s`; }
+        if (t < 6.2) raf = requestAnimationFrame(step);
+        else { $("d-state").textContent = "FERTIG"; $("smax").textContent = `${Math.round(s)} km/h`; $("s200").textContent = "nicht erreicht"; }
+      };
+      raf = requestAnimationFrame(step);
+    }
+    $("d-start").addEventListener("click", run);
+    $("d-reset").addEventListener("click", reset);
+    return () => cancelAnimationFrame(raf);
+  }
+
+  function renderLive(el) {
+    const G = [
+      { k: "oel", name: "Öltemperatur", unit: "°C", min: 40, max: 150, base: 98, amp: 3, col: "#009ada" },
+      { k: "lade", name: "Ladedruck", unit: "bar", min: 0, max: 2, base: 0.9, amp: 0.55, col: "#1c69d4", dec: 2 },
+      { k: "kuehl", name: "Kühlmittel", unit: "°C", min: 40, max: 130, base: 92, amp: 2, col: "#2b3990" },
+      { k: "bat", name: "Batterie", unit: "V", min: 10, max: 16, base: 14.2, amp: 0.15, col: "#e7222e", dec: 1 },
+    ];
+    const ARC = 2 * Math.PI * 40 * 0.75;
+    el.innerHTML = `<div class="gauges">${G.map((g) => `<div class="gauge">
+      <svg viewBox="0 0 100 100"><g transform="rotate(135 50 50)"><circle class="track" cx="50" cy="50" r="40" stroke-dasharray="${ARC} 999"/>
+      <circle class="val" id="g-${g.k}" cx="50" cy="50" r="40" stroke="${g.col}" stroke-dasharray="${ARC} 999" stroke-dashoffset="${ARC}"/></g>
+      <text x="50" y="54" id="t-${g.k}">–</text><text class="u" x="50" y="66">${g.unit}</text></svg>
+      <b>${g.name}</b><small>${g.min}–${g.max} ${g.unit}</small></div>`).join("")}</div>`;
+    let raf = 0; const start = performance.now();
+    const step = (now) => {
+      const t = (now - start) / 1000;
+      G.forEach((g, i) => {
+        const val = g.base + Math.sin(t * (0.9 + i * 0.35) + i) * g.amp + Math.sin(t * 3.1 + i * 2) * g.amp * 0.25;
+        const p = Math.max(0, Math.min(1, (val - g.min) / (g.max - g.min)));
+        el.querySelector(`#g-${g.k}`).setAttribute("stroke-dashoffset", (ARC * (1 - p)).toFixed(1));
+        el.querySelector(`#t-${g.k}`).textContent = val.toFixed(g.dec ?? 0).replace(".", ",");
+      });
+      if (!reduce.matches) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }
+
+  /* ---------- Bedienung ---------- */
+  tiles.forEach((t, i) => {
+    t.addEventListener("click", () => { setFocus(i); open(t.dataset.open, t); });
+    t.addEventListener("mouseenter", () => setFocus(i));
+  });
+  document.querySelectorAll(".side button[data-open]").forEach((b) => b.addEventListener("click", () => open(b.dataset.open, b)));
+  document.getElementById("back").addEventListener("click", close);
+  addEventListener("keydown", (e) => {
+    if (openId) { if (e.key === "Escape" || e.key === "Backspace") { e.preventDefault(); close(); } return; }
+    const cols = 6;
+    const map = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols };
+    if (map[e.key] !== undefined) { e.preventDefault(); setFocus(focus + map[e.key]); tiles[focus].focus({ preventScroll: true }); }
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(tiles[focus].dataset.open, tiles[focus]); }
+  });
+  setFocus(0);
+  window.bvDemo = { open: (id) => open(id, tiles.find((t) => t.dataset.open === id)), close, setFocus, say };
+})();
+</script>
+</body>
+</html>
