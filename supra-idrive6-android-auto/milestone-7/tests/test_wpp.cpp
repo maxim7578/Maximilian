@@ -36,6 +36,9 @@ static void* phone(void*) {
     return NULL;
 }
 
+static int g_acks = 0;
+static void onAck(void*) { ++g_acks; }
+
 int main() {
     // cfg parser
     FILE* c = fopen("t_iap2_wifi.cfg", "w");
@@ -51,9 +54,12 @@ int main() {
     int sv[2]; assert(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == 0);
     g_fd = sv[1];
     pthread_t t; pthread_create(&t, NULL, phone, NULL);
+    setWifiStartAckHook(&onAck, NULL);
     bool ok = runWirelessHandshake(sv[0], ap, 52770, 2000);
     pthread_join(t, NULL);
     assert(ok);
+    assert(g_acks == 1);   // Mikrofon-Regel: Das Telefon hat den WLAN-Start genau einmal angenommen
+    setWifiStartAckHook(NULL, NULL);
     printf("test_wpp OK\n");
     return 0;
 }

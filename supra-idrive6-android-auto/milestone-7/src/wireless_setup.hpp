@@ -84,6 +84,11 @@ void fillApNetworkInfo(const char* ifname, ApInfo& ap);
 //   mode 2 = proactive (WifiStartRequest, then WifiInfoResponse without waiting for the request)
 bool runWirelessHandshake(int fd, const ApInfo& ap, uint16_t port, int timeout_ms, int mode = 0);
 
+// Called whenever the phone accepts the Wi-Fi start (WifiStartResponse with status 0), during the handshake or later
+// on the serviced link. main.cpp uses it for the microphone rule (mic_guard.hpp).
+typedef void (*WifiStartAckHook)(void* user);
+void setWifiStartAckHook(WifiStartAckHook fn, void* user);
+
 // After a successful handshake keep the RFCOMM link open and serviced: answers WifiPingRequest, repeats
 // the AP info if the phone asks again, logs everything else. Waits up to timeout_ms for data.
 // Returns false once the link is closed by the phone / broken.

@@ -452,7 +452,9 @@ On/off settings accept `1`/`0`; most also accept `on`/`off`, `yes`/`no` and `tru
 | `NBT_HIDE_IDLE` | `0` | iDrive gets the screen while no phone is connected. Off = overlay stays up for the whole run |
 | `NBT_GEAR_ACTION` | `0` | Reverse-gear handling |
 | `NBT_CTL` | `0` | Single-instance control port (UDP 127.0.0.1:52790) |
-| `NBT_KEEP_PF` | set to `1` | Don't run `pfctl -d` at start (see [Troubleshooting](#troubleshooting)) |
+| `NBT_KEEP_PF` | set to `1` | Don't touch the packet filter at all (same as `NBT_PF=keep`, see [Troubleshooting](#troubleshooting)) |
+| `NBT_PF` | `rule` | `rule`: one allow rule for TCP 5277 in front of the car's pf rules, the filter stays on (falls back to `pfctl -d` if it does not work; with `NBT_WIRELESS=0` always `pfctl -d`). `off`: the old `pfctl -d` (whole filter off). `keep`: leave the filter alone |
+| `NBT_MIC_REQUIRE_BT` | `1` | Car microphone only for a wireless session whose phone did the Bluetooth handshake (up to 120 s before the session or during it), or over USB. `0`: any session may open it, as before |
 
 ### Advanced / experimental
 
@@ -585,7 +587,9 @@ Useful daemon log lines:
 - `[Wireless] opened /dev/btsppN`: the phone opened the Android Auto Bluetooth link.
 - `[Wireless] ... companion app (BCL), not Android Auto` / `releasing /dev/btspp0`: a MyBMW / Supra app link was
   skipped.
-- `'pfctl -d' ... returned N`: the firewall step (0 = OK).
+- `[PF] start: allow rule for TCP 5277 ... loaded, filter stays ON`: the firewall step. `... falling back to
+  'pfctl -d'` means the allow rule did not work on this car: please post the log.
+- `[Mic] car microphone for this session: ...` / `[Mic] ... REFUSED`: whether the session may use the car mic.
 
 ## Troubleshooting
 
@@ -617,15 +621,17 @@ follow the list above.
 
 ### Phone joins the Wi-Fi but no picture
 
-The phone connects to TCP 5277 on `uap0` (172.16.224.1). The car's packet filter blocks that port, so the daemon
-runs `pfctl -d` at start. The log shows `'pfctl -d' ... returned 0` when it worked. If the return value isn't 0
-(one car returned 256), post the log. A single allow rule for the port, instead of disabling the filter, is being
-worked on.
+The phone connects to TCP 5277 on `uap0` (172.16.224.1) or `wfd0` (172.16.222.1). The car's packet filter blocks
+that port, so the daemon puts one allow rule for it in front of the car's own rules at start and keeps the filter on
+(`[PF] start: allow rule for TCP 5277 ... loaded, filter stays ON`). If the rule cannot be loaded, or the phone takes
+the Wi-Fi details twice and never connects, it falls back to `pfctl -d` like older versions (`[PF] ... falling back
+to 'pfctl -d'`): post that log. `NBT_PF=off` skips the allow rule and turns the filter off right away.
 
 ### Assistant doesn't hear you / reply is silent or quiet
 
 - Silent mic: the log must show `[Voice] car mic scenario:` with the scenario accepted, and `[Mic] ... on`. Check
-  that you haven't set `NBT_VOICE_SCENARIO=0`, `NBT_MIC=0` or `/opt/aa/mic.disable`.
+  that you haven't set `NBT_VOICE_SCENARIO=0`, `NBT_MIC=0` or `/opt/aa/mic.disable`. `[Mic] ... REFUSED` means the
+  session did not start right after a Bluetooth handshake (see `NBT_MIC_REQUIRE_BT`).
 - Quiet reply: raise the phone's **Call volume** while connected (see [Tips](#tips)).
 
 ### No music
@@ -988,7 +994,8 @@ listed in `tests/Makefile`; binaries and logs go to `tests/build/`.
 - Force Stop / Restart: the v1.8.3 state-file fix needs a car test.
 - iDrive still reacts to touches while Android Auto is shown (the UDP touch stream goes to both).
 - CarPlay after Android Auto (v1.8.6): confirm the CarPlay picture is no longer zoomed on a `1180_480` car.
-- Firewall: replace `pfctl -d` with one allow rule for the AA port (needs the car's live `pfctl` rules first).
+- Firewall: the allow rule for TCP 5277 (`NBT_PF=rule`, default) needs a car test; the log shows whether it loaded
+  or fell back to `pfctl -d`.
 - The older CCS controller: knob rotation (v1.8.4) needs a car confirmation, including the turn direction.
 - `carplay.ini` screen codings such as `1180_480` or `900_540` are the CarPlay picture size, not always the panel: set
   `NBT_SCREEN` to the real panel size (e.g. `1280x480`, `1440x540`) if Android Auto doesn't fill the screen.
