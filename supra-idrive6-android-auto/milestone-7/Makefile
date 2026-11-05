@@ -1,0 +1,161 @@
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Required Notice: Copyright (c) 2026 nanaisu - NBT-AAD (https://github.com/Sq00ky/Supra-iDrive6-Android-Auto)
+# Makefile for nbt-aad (QNX Neutrino ARMv7LE)
+# Target: Cortex-A15 Little Endian (BMW NBT Evo)
+
+QCC ?= qcc
+TARGET_ARCH ?= -Vgcc_ntoarmv7le_cpp
+
+CXX = $(QCC) $(TARGET_ARCH)
+CC  = $(QCC) -Vgcc_ntoarmv7le
+
+INCLUDES = -I./include -I./src
+# Remove -fPIC and -Bdynamic to produce a true QNX executable (ET_EXEC), not a shared lib (ET_DYN)
+CXXFLAGS = -O2 -Wall -D_QNX_SOURCE -Wc,-std=gnu++0x -march=armv7-a -mfpu=vfpv3 -mfloat-abi=softfp $(INCLUDES)
+# Set RPATH so QNX's dynamic linker automatically finds liba2i_client.so in /opt/mm/lib without copying
+LDFLAGS  = -L./lib -la2i_client -lsocket -lssl -lcrypto -lscreen -lusbdi -lang-c++ -lm -Wl,-rpath,/opt/mm/lib:/lib:/usr/lib
+
+SRCS = src/main.cpp \
+       src/audio/a2i_audio.cpp \
+       src/audio/config.cpp \
+       src/audio/bt_audio.cpp \
+       src/audio/speech_out.cpp \
+       src/audio/mic_uplink.cpp \
+       src/audio/a2i_stream.cpp \
+       src/audio/audio_route.cpp \
+       src/audio/mixer.cpp \
+       src/audio/playout.cpp \
+       src/audio/drift.cpp \
+       src/audio/stream_rate.cpp \
+       src/audio/browser_audio.cpp \
+       src/audio/pcm_ring.cpp \
+       src/audio/resampler.cpp \
+       src/audio/asound_device.cpp \
+       src/video_manager.cpp \
+       src/mmr_launch.cpp \
+       src/tcp_server.cpp \
+       src/usb_accessory.cpp \
+       src/usb_direct.cpp \
+       src/aa_session.cpp \
+       src/audio/audio_acks.cpp \
+       src/aa_cryptor.cpp \
+       src/bluetooth_manager.cpp \
+       src/wireless_setup.cpp \
+       src/touch_probe.cpp \
+       src/dsi_client.cpp \
+       src/audio/voice_scenario.cpp \
+       src/audio/bt_play.cpp \
+       src/most/client.cpp \
+       src/most/trace.cpp \
+       src/car/ccs_input.cpp \
+       src/car/volume_input.cpp \
+       src/sdr_builder.cpp \
+       src/crash_handler.cpp \
+       src/kombi_client.cpp \
+       src/kombi_nav.cpp \
+       src/volume_osd.cpp
+
+# C sources: the vendored speexdsp resampler (third_party/speexdsp, BSD-3), built through src/audio/speex.c.
+CSRCS = src/audio/speex.c
+CFLAGS = -O2 -Wall -D_QNX_SOURCE -march=armv7-a -mfpu=vfpv3 -mfloat-abi=softfp $(INCLUDES)
+
+OBJS = $(SRCS:.cpp=.o) $(CSRCS:.c=.o)
+TARGET = nbt-aad
+
+.PHONY: all clean check
+
+# Host tests with the Linux g++ (tests/Makefile), not qcc.
+check:
+	$(MAKE) -C tests check
+
+all: $(TARGET) test_display test_controls plugin rhmiapp wfd_probe
+
+$(TARGET): $(OBJS)
+	@echo [LINK] $@
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS) $(LDFLAGS)
+	@echo [DONE] Built $(TARGET) for QNX armv7le
+
+test_display: test_display.cpp
+	@echo [CXX] test_display.cpp
+	$(CXX) $(CXXFLAGS) -o test_display test_display.cpp -L./lib -lscreen -lang-c++
+	@echo [DONE] Built test_display for QNX armv7le
+
+test_controls: test_controls.cpp src/dsi_client.cpp src/dsi_client.hpp src/most/ids.hpp src/most/msg.hpp src/car/ctl_wizard.hpp src/car/ccs_decoder.hpp src/aa_keys.hpp
+	@echo [CXX] test_controls.cpp
+	$(CXX) $(CXXFLAGS) -o test_controls test_controls.cpp src/dsi_client.cpp
+	@echo [DONE] Built test_controls for QNX armv7le
+
+# ---- HmiMain3D plugin (plugin/): GNU libstdc++ (_gpp variant) to match BMW's plugins, PIC shared object ----
+PLUGIN_CXX      = $(QCC) -Vgcc_ntoarmv7le_gpp
+PLUGIN_CXXFLAGS = -O2 -Wall -D_QNX_SOURCE -march=armv7-a -mfpu=vfpv3 -mfloat-abi=softfp -fPIC -I./plugin
+PLUGIN_RPATH    = -Wl,-rpath,/lib:/usr/lib:/fs/sda0/repository/istep/lib:/opt/hmi/ID5/lib
+
+# ---- native iDrive PluginApp (rhmiapp/): libNbtAad.so + manifest/XML/DBs -> /opt/hmi/ID5/data/ro/Plugins/NbtAad ----
+# RHMI_LIBDIR: copies of the car's libAppFramework.A.so and libCoreFramework.A.so (opt/hmi/ID5/lib in the dump).
+RHMI_LIBDIR ?= ./rhmiapp/lib
+RHMI_LIBS = $(wildcard $(RHMI_LIBDIR)/libAppFramework.A.so $(RHMI_LIBDIR)/libCoreFramework.A.so)
+
+.PHONY: rhmiapp
+rhmiapp: rhmiapp/libNbtAad.so
+
+rhmiapp/libNbtAad.so: rhmiapp/nbt_aad_app.cpp
+	@echo [BUILD] PluginApp $@
+	$(PLUGIN_CXX) $(PLUGIN_CXXFLAGS) -shared -Wl,-soname,libNbtAad.so -o $@ rhmiapp/nbt_aad_app.cpp $(RHMI_LIBS) -Wl,--allow-shlib-undefined -lang-c++
+	@echo [DONE] Built $@ - install with NbtAad.manifest, NbtAad.xml, NbtAad_ALL_*.zip into Plugins/NbtAad
+
+.PHONY: plugin
+plugin: plugin/libhmiaad.so plugin/plugin_check rhmiapp/libNbtAad.so
+
+PLUGIN_SRCS = plugin/nbt_aad_plugin.cpp plugin/hmi_services.cpp plugin/hmi_menu.cpp
+
+plugin/libhmiaad.so: $(PLUGIN_SRCS) plugin/plugin_abi.hpp plugin/hmi_services.hpp plugin/hmi_menu.hpp
+	@echo [CXX] $@
+	$(PLUGIN_CXX) $(PLUGIN_CXXFLAGS) -shared -Wl,-soname,libhmiaad.so -o $@ $(PLUGIN_SRCS) -lang-c++
+	@echo [DONE] Built $@ - install next to plugin/NbtAadPlugin.xml in hmiplugins
+
+plugin/plugin_check: plugin/plugin_check.cpp plugin/plugin_abi.hpp
+	@echo [CXX] $@
+	$(PLUGIN_CXX) -O2 -Wall -D_QNX_SOURCE -march=armv7-a -mfpu=vfpv3 -mfloat-abi=softfp -I./plugin -o $@ plugin/plugin_check.cpp -lang-c++ $(PLUGIN_RPATH)
+	@echo [DONE] Built $@
+
+# -Wp,-MMD: a .d file per object lists the headers it includes, so changing a header rebuilds every object that
+# uses it (a class that grew in aa_session.hpp once left main.o allocating the old, smaller AASession).
+%.o: %.cpp
+	@echo [CXX] $<
+	$(CXX) $(CXXFLAGS) -Wp,-MMD,$*.d -Wp,-MP -Wp,-MT,$@ -c $< -o $@
+
+%.o: %.c
+	@echo [CC] $<
+	$(CC) $(CFLAGS) -Wp,-MMD,$*.d -Wp,-MP -Wp,-MT,$@ -c $< -o $@
+
+-include $(OBJS:.o=.d)
+
+# Standalone read-only probe for the car's Wi-Fi Direct group (NBT_ALT_WIFI=DIRECT): prints ifconfig wfd0, the
+# decoded WFDPass/WFDWps files, raw mwud replies and the Wi-Fi persistency strings. Not part of nbt-aad.
+wfd_probe: tools/wfd_probe.cpp src/alt_wifi.hpp src/wireless_setup.hpp
+	@echo [CXX] tools/wfd_probe.cpp
+	$(CXX) $(CXXFLAGS) -o $@ tools/wfd_probe.cpp -lsocket -lang-c++
+	@echo [DONE] Built $@
+
+# Standalone volume-key capture/prompter: prints "press volume up 5x", waits, prints "press volume down 5x", waits, while
+# logging every MOST control message it can see to stdout and /mnt/umass01200t7/volcap.log. No daemon, no env needed.
+volcap: tools/volcap.cpp src/dsi_client.cpp src/dsi_client.hpp src/most/ids.hpp src/most/msg.hpp
+	@echo [CXX] tools/volcap.cpp
+	$(CXX) $(CXXFLAGS) -o $@ tools/volcap.cpp src/dsi_client.cpp -lang-c++
+	@echo [DONE] Built $@
+
+clean:
+	@echo [CLEAN] Removing object files and binaries
+	rm -f $(OBJS) $(OBJS:.o=.d) $(TARGET) test_display test_controls plugin/libhmiaad.so plugin/plugin_check wfd_probe
+
+# osdprobe: standalone check that this unit lets us own an LM surface for our own window.
+osdprobe: tools/osdprobe.cpp
+	$(CXX) $(CXXFLAGS) -o $@ tools/osdprobe.cpp -L./lib -lscreen -lang-c++
+
+# lmrestore: put screen 0's layer render order back after an experiment cleared it.
+lmrestore: tools/lmrestore.cpp
+	$(CXX) $(CXXFLAGS) -o $@ tools/lmrestore.cpp -lang-c++
+
+# kdprobe: the supported overlay path -- KD window + EGL/GLES surface (see tools/kdprobe.cpp).
+kdprobe: tools/kdprobe.cpp
+	$(CXX) $(CXXFLAGS) -o $@ tools/kdprobe.cpp -L./lib -lscreen -lKD -lEGL -lGLESv2 -lang-c++ -lm
