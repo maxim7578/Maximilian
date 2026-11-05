@@ -32,6 +32,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <string>
+#include <vector>
 #include <unistd.h>
 
 namespace nbt {
@@ -338,6 +340,21 @@ inline bool wfdPeerInNets(unsigned peerHostOrder, const unsigned* nets, size_t c
     for (size_t i = 0; i < count; ++i)
         if (wfdSameSubnet(peerHostOrder, nets[i])) return true;
     return false;
+}
+
+// The /24 networks (host order) of `addrs`, in order, without duplicates; empty or unparsable entries are skipped.
+// Returns how many were stored (at most `max`).
+inline int aaNetsFromAddrs(const std::vector<std::string>& addrs, unsigned* nets, int max) {
+    int count = 0;
+    for (size_t i = 0; i < addrs.size() && count < max; ++i) {
+        struct in_addr a;
+        if (addrs[i].empty() || !inet_aton(addrs[i].c_str(), &a)) continue;
+        unsigned net = ntohl(a.s_addr) & 0xffffff00u;
+        bool dup = false;
+        for (int x = 0; x < count; ++x) if (nets[x] == net) dup = true;
+        if (!dup) nets[count++] = net;
+    }
+    return count;
 }
 
 // The accept filter tcp_server.cpp uses (both wireless and NBT_WIRELESS=0): the phone has to be on one of the

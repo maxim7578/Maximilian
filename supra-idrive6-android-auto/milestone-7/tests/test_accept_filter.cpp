@@ -5,6 +5,8 @@
 // Interfaces, kam jeder Rechner am Ethernet/OBD-Kabel durch.
 #include "alt_wifi.hpp"
 #include <stdio.h>
+#include <string>
+#include <vector>
 using namespace nbt;
 
 static int g_fehler = 0;
@@ -39,6 +41,25 @@ int main() {
     PRUEFE("Anders nummeriertes WLAN-Netz wird über die gelesene Adresse angenommen",
            aaPeerAllowed(0x0A4D0017u, anders, 1));
     PRUEFE("Mit gelesenen Adressen gelten die Standardnetze nicht zusätzlich", !aaPeerAllowed(kTelefonAp, anders, 1));
+
+    // Netzliste aus den gelesenen bzw. eingestellten Adressen (uap0/wfd0 oder NBT_AP_IF/NBT_WFD_IF, NBT_AP_IP/NBT_WFD_IP).
+    {
+        std::vector<std::string> adr;
+        adr.push_back("172.16.224.1");
+        adr.push_back("");                  // Interface ohne Adresse
+        adr.push_back("10.77.0.1");         // NBT_AP_IP in einem anderen Netz
+        adr.push_back("172.16.224.7");      // gleiches /24 wie die erste: nicht doppelt
+        adr.push_back("kaputt");
+        unsigned n[4] = { 0, 0, 0, 0 };
+        int cnt = aaNetsFromAddrs(adr, n, 4);
+        PRUEFE("Netzliste: gültige Adressen, ohne Doppelte und Unlesbares", cnt == 2);
+        PRUEFE("Netzliste: eingestelltes Netz wird angenommen", aaPeerAllowed(0x0A4D0017u, n, (size_t)cnt));
+        PRUEFE("Netzliste: CarPlay-Netz wird angenommen", aaPeerAllowed(kTelefonAp, n, (size_t)cnt));
+        PRUEFE("Netzliste: Ethernet bleibt draußen", !aaPeerAllowed(kEthernet, n, (size_t)cnt));
+        std::vector<std::string> viele(10, "");
+        for (int i = 0; i < 10; ++i) { char b2[32]; snprintf(b2, sizeof(b2), "10.0.%d.1", i); viele[i] = b2; }
+        PRUEFE("Netzliste: höchstens so viele wie Platz ist", aaNetsFromAddrs(viele, n, 4) == 4);
+    }
 
     if (g_fehler) { printf("test_accept_filter: %d Prüfung(en) fehlgeschlagen\n", g_fehler); return 1; }
     printf("test_accept_filter: alle Prüfungen bestanden\n");

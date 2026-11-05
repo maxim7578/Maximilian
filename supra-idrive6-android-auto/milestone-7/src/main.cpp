@@ -1655,6 +1655,10 @@ int main(int argc, char* argv[]) {
     if (log_file && *log_file) g_logForced = (freopen(log_file, "a", stdout) != NULL);
     else serviceUsbLog(true);
     if (!logPersistent() && stdoutIsNull()) stdoutToRamOrNull();   // started by the iDrive app with no USB log
+    {   // whoever opened our log (the iDrive plugin, NBT_LOG_FILE, the USB stick): owner only (no effect on FAT)
+        struct stat st;
+        if (fstat(fileno(stdout), &st) == 0 && S_ISREG(st.st_mode)) fchmod(fileno(stdout), 0600);
+    }
     nbt::installProcessGuards();   // first: line-buffered log, SIGPIPE ignored, fatal-signal report (setvbuf must precede any output)
     if (g_logForced) printf("---- nbt-aad log appended to %s (fsync every 2 s) ----\n", log_file);
     printf("====================================================\n");

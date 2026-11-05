@@ -149,7 +149,7 @@ void launchDaemon() {
 
     char* argv[] = { const_cast<char*>(kDaemon), NULL };
     int in  = open("/dev/null", O_RDONLY);
-    int out = open(kDaemonLog, O_WRONLY | O_CREAT | O_APPEND, 0666);
+    int out = open(kDaemonLog, O_WRONLY | O_CREAT | O_APPEND, 0600);   // owner only (the daemon runs as us)
     if (in < 0 || out < 0) {
         plog("launch: cannot open /dev/null or %s (errno %d)", kDaemonLog, errno);
         if (in >= 0) close(in);
