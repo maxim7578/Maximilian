@@ -36,6 +36,14 @@ the USB log, and the "start with the car" boot-loop guard.
 
 11. **One tap on the screen reaches the phone as one tap.** The touch forwarder keeps the record sequence of each message. A duplicated message is skipped. A repeated "down" with no message lost in between is sent on as a move. A finger the forwarder has already released (it went quiet for `NBT_TOUCH_IDLE_MS`, or it was missing from a message) is ignored while the head unit still reports it, until the hardware sends "up" or a new "down". A move after a message was actually lost can still start a tap, because that touch's "down" may have been in the lost message.
 
+12. **Only the handshake may be sent unencrypted.** A frame without the encryption flag is accepted only on control channel 0, and there only for VersionRequest/Response, SSL handshake and AuthComplete (ids 1-4) before this session's TLS handshake has finished, and for PingRequest/Response (ids 11/12) at any time, since pings travel in the clear. Before, any plaintext frame went through the normal dispatcher, so a host that reached port 5277 could skip TLS and send video, sensor, microphone or ByeBye messages. Log: `Dropping unencrypted frame on channel ...`, `Dropping unencrypted message 0x.... on channel 0`. (`src/rx_guard.hpp`, `src/aa_session.cpp`)
+
+13. **Protobuf lengths are checked without overflow.** A length field is checked as `len <= n - pos`, never `pos + len <= n`. On the head unit (32-bit `size_t`) a length near 4 GiB in a session message made `pbFirstVarint` jump back and loop forever; over Bluetooth a 64-bit length made `findVarintField` loop and `dumpProto` read past the buffer and crash the daemon. (`src/rx_guard.hpp`, `src/wireless_setup.cpp`)
+
+14. **Split messages are capped over all channels.** Besides 8 MiB per channel, all partial messages together are capped at 16 MiB. Over the total, all partial messages are dropped, since the bytes may sit on channels whose LAST never came. Before, FIRST/MIDDLE fragments without a LAST on many channels could queue up to 2 GiB. A MIDDLE fragment with no FIRST is dropped as well: before, it started a new buffer and a later LAST delivered a message without its start. (`src/rx_guard.hpp`, `src/aa_session.cpp`)
+
+Host test for 12-14: `tests/test_rx_guard.cpp` (`make -C tests run-test_rx_guard`).
+
 ## Checked here
 
 On a Mac, these host tests passed: companion-app detection (`test_bcl_detect`), both iDrive controller replays (`test_ccs_decoder`, `test_ccs_push`), the car-config / guidance-sink test (`test_car_config`), and the touch parser and forwarder (`test_touch_frame`, `test_touch`, including messages split across datagrams). The changed daemon sources also pass a host syntax check. They have not been built with the QNX compiler and have not been run in a car.

@@ -174,6 +174,10 @@ private:
     std::map<uint8_t, std::vector<uint8_t> > reassembly_;
     std::map<uint8_t, uint32_t> reassembly_total_;   // size the phone announced on the FIRST fragment
     std::map<uint8_t, uint32_t> reassembly_wire_;    // sum of the fragment length fields
+    std::map<uint8_t, bool> reassembly_plain_;       // a fragment of the message came without encryption
+    size_t reassemblyBytes() const;                  // bytes queued over all channels (session thread)
+    void dropReassembly(uint8_t channel);
+    bool tls_done_;                                  // this session's TLS handshake finished (session thread)
     uint32_t media_frames_;
     std::vector<uint8_t> sps_pps_cache_;
 

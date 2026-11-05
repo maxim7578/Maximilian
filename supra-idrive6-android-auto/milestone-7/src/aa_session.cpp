@@ -5,6 +5,7 @@
 #include "nbt_env.hpp"
 #include "sdr_builder.hpp"
 #include "crash_handler.hpp"
+#include "rx_guard.hpp"
 #include <sys/select.h>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -41,6 +42,7 @@ AASession::AASession()
       audio_user_data_(NULL),
       audio_state_cb_(NULL),
       audio_state_user_data_(NULL),
+      tls_done_(false),
       media_frames_(0),
       rx_seq_next_(0),
       rx_seq_known_(false),
@@ -310,6 +312,8 @@ bool AASession::start(int client_fd) {
     reassembly_.clear();
     reassembly_total_.clear();
     reassembly_wire_.clear();
+    reassembly_plain_.clear();
+    tls_done_ = false;   // the cryptor keeps its state between sessions; plaintext rules follow this session
     sps_pps_cache_.clear();
     pthread_mutex_lock(&touch_mutex_);
     input_ready_ = false;
@@ -836,23 +840,20 @@ bool AASession::sendAudioFocusResponse(uint8_t focus_state) {
 // SensorStartResponse 0x8002 {status=1}, SensorEventIndication 0x8003 with repeated
 // NightMode night_mode=10 {is_night=1} and DrivingStatus driving_status=13 {status=1}.
 // Env: NBT_NIGHT_MODE (0/1, default 0), NBT_DRIVING_STATUS (0=unrestricted, default 0).
-static uint32_t pbFirstVarint(const std::vector<uint8_t>& d, size_t off, uint32_t field) {
-    size_t i = off;
-    while (i < d.size()) {
-        uint32_t tag = 0; int sh = 0;
-        while (i < d.size()) { uint8_t b = d[i++]; tag |= (uint32_t)(b & 0x7F) << sh; sh += 7; if (!(b & 0x80)) break; }
-        uint32_t f = tag >> 3, w = tag & 7;
-        if (w == 0) {
-            uint32_t v = 0; sh = 0;
-            while (i < d.size()) { uint8_t b = d[i++]; v |= (uint32_t)(b & 0x7F) << sh; sh += 7; if (!(b & 0x80)) break; }
-            if (f == field) return v;
-        } else if (w == 2) {
-            uint32_t len = 0; sh = 0;
-            while (i < d.size()) { uint8_t b = d[i++]; len |= (uint32_t)(b & 0x7F) << sh; sh += 7; if (!(b & 0x80)) break; }
-            i += len;
-        } else if (w == 1) { i += 8; } else if (w == 5) { i += 4; } else { break; }
-    }
-    return 0xFFFFFFFFu;
+// pbFirstVarint (rx_guard.hpp): first varint field of a message, bounds-checked against oversized lengths.
+
+size_t AASession::reassemblyBytes() const {
+    size_t total = 0;
+    for (std::map<uint8_t, std::vector<uint8_t> >::const_iterator it = reassembly_.begin(); it != reassembly_.end(); ++it)
+        total += it->second.size();
+    return total;
+}
+
+void AASession::dropReassembly(uint8_t channel) {
+    reassembly_[channel].clear();
+    reassembly_total_.erase(channel);
+    reassembly_wire_.erase(channel);
+    reassembly_plain_.erase(channel);
 }
 
 bool AASession::sendSensorStartResponse(uint8_t channel, bool ok) {
@@ -992,27 +993,47 @@ void AASession::sessionLoop() {
                     printf("            Raw: ");
                     for (size_t i = 0; i < payload.size() && i < 24; ++i) printf("%02X ", payload[i]);
                     printf("\n");
-                    reassembly_[channel].clear();
-                    reassembly_total_.erase(channel);
-                    reassembly_wire_.erase(channel);
+                    dropReassembly(channel);
                     continue;
                 }
             } else {
+                // Plaintext belongs to the handshake on channel 0 only (rx_guard.hpp). Without this, a host that
+                // reaches port 5277 could skip TLS and send video, sensor, mic or ByeBye messages in the clear.
+                if (!plaintextChannelAllowed(channel)) {
+                    static unsigned dropped = 0;
+                    if (dropped++ < 20 || (dropped % 1000) == 0)
+                        printf("[AASession] Dropping unencrypted frame on channel %u (flags 0x%02X, %u bytes; "
+                               "%u dropped)\n", channel, flags, length, dropped);
+                    continue;
+                }
                 decrypted_chunk = payload;
             }
+            const bool chunk_plain = !(flags & 0x08);
 
             // Reassemble fragmented frames per channel
             uint8_t frame_type = flags & 0x03; // 0=MIDDLE, 1=FIRST, 2=LAST, 3=BULK
             std::vector<uint8_t> frame_data;
 
-            // Bound reassembly memory: a lost LAST fragment or garbage must not grow it forever.
-            if (reassembly_[channel].size() + decrypted_chunk.size() > (8u * 1024u * 1024u)) {
-                printf("[AASession] Reassembly overflow on channel %u: dropping fragments.\n", channel);
-                reassembly_[channel].clear();
-                reassembly_total_.erase(channel);
-                reassembly_wire_.erase(channel);
+            // Bound reassembly memory: a lost LAST fragment or garbage must not grow it forever, per channel and
+            // over all channels together (rx_guard.hpp: 8 MiB / 16 MiB). Over the total, every partial message is
+            // dropped: the bytes may sit on other channels (a LAST that never came), not on this one.
+            const size_t queued_here = reassembly_[channel].size();
+            const size_t queued_all = reassemblyBytes();
+            if (!reassemblyFits(queued_here, queued_all, decrypted_chunk.size())) {
+                printf("[AASession] Reassembly overflow on channel %u (%u bytes queued here, %u on all channels): "
+                       "dropping fragments%s.\n", channel, (unsigned)queued_here, (unsigned)queued_all,
+                       queued_here + decrypted_chunk.size() > kReassemblyChannelMax ? "" : " on all channels");
+                if (queued_here + decrypted_chunk.size() > kReassemblyChannelMax) {
+                    dropReassembly(channel);
+                } else {
+                    reassembly_.clear();
+                    reassembly_total_.clear();
+                    reassembly_wire_.clear();
+                    reassembly_plain_.clear();
+                }
                 continue;
             }
+            bool frame_plain = chunk_plain;
 
             if (frame_type == 0x01) { // FIRST
                 reassembly_[channel].clear();
@@ -1020,24 +1041,31 @@ void AASession::sessionLoop() {
                                              decrypted_chunk.begin(), decrypted_chunk.end());
                 reassembly_total_[channel] = total_size;
                 reassembly_wire_[channel] = length;
+                reassembly_plain_[channel] = chunk_plain;
                 continue; // Wait for remaining fragments
             } else if (frame_type == 0x00) { // MIDDLE
+                if (reassembly_total_.find(channel) == reassembly_total_.end()) {
+                    // No FIRST (lost, or dropped above): appending would let a later LAST deliver a message
+                    // without its start.
+                    printf("[AASession] MIDDLE fragment on channel %u with no FIRST: dropping\n", channel);
+                    dropReassembly(channel);
+                    continue;
+                }
                 reassembly_[channel].insert(reassembly_[channel].end(),
                                              decrypted_chunk.begin(), decrypted_chunk.end());
                 reassembly_wire_[channel] += length;
+                if (chunk_plain) reassembly_plain_[channel] = true;
                 continue; // Wait for remaining fragments
             } else if (frame_type == 0x02) { // LAST
-                bool had_first = reassembly_total_.find(channel) != reassembly_total_.end() ||
-                                 !reassembly_[channel].empty();
+                bool had_first = reassembly_total_.find(channel) != reassembly_total_.end();   // set by every FIRST
                 reassembly_[channel].insert(reassembly_[channel].end(),
                                              decrypted_chunk.begin(), decrypted_chunk.end());
                 reassembly_wire_[channel] += length;
                 uint32_t expect = reassembly_total_[channel];
                 uint32_t wire = reassembly_wire_[channel];
+                frame_plain = chunk_plain || reassembly_plain_[channel];
                 frame_data = reassembly_[channel];
-                reassembly_[channel].clear();
-                reassembly_total_.erase(channel);
-                reassembly_wire_.erase(channel);
+                dropReassembly(channel);
                 if (!had_first) {
                     printf("[AASession] LAST fragment on channel %u with no FIRST: dropping\n", channel);
                     continue;
@@ -1065,6 +1093,11 @@ void AASession::sessionLoop() {
 
             // Universal Message Dispatcher based on protocol wire captures
             uint16_t msg_id = frame_data.size() >= 2 ? ((static_cast<uint16_t>(frame_data[0]) << 8) | frame_data[1]) : 0;
+            if (frame_plain && !plaintextAllowed(channel, msg_id, tls_done_)) {
+                printf("[AASession] Dropping unencrypted message 0x%04X on channel %u: only the handshake may be "
+                       "sent in the clear\n", msg_id, channel);
+                continue;
+            }
             noteRxMsg(msg_id);
             g_crumb_stage = 3;
             g_crumb_msg = msg_id;
@@ -1318,6 +1351,7 @@ void AASession::sessionLoop() {
                     }
 
                     if (cryptor_.isHandshakeComplete()) {
+                        tls_done_ = true;
                         printf("[AASession] >>> TLS Handshake Complete! Sending AuthCompleteNotification...\n");
                         sendAuthComplete();
                         printf("[AASession] >>> Awaiting ServiceDiscoveryRequest from phone...\n");
