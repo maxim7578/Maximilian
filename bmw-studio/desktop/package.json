@@ -1,0 +1,34 @@
+{
+  "name": "bimmervision-cockpit",
+  "productName": "BimmerVision Cockpit",
+  "version": "0.1.0",
+  "description": "BimmerVision Cockpit – Diagnose-Prototyp (Demo-Werte, nur lesend)",
+  "main": "main.js",
+  "author": "BimmerVision",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "@electron/packager": "^18.3.6",
+    "electron": "^33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "studio.bimmervision.cockpit",
+    "productName": "BimmerVision Cockpit",
+    "files": [
+      "main.js",
+      "app.html",
+      "icon.png"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "portable": {
+      "artifactName": "BimmerVision-Cockpit-${version}.exe"
+    }
+  }
+}
