@@ -20,6 +20,7 @@
 //
 // Header-only so the host test (tests/test_alt_wifi.cpp) runs without the QNX build.
 #include "wireless_setup.hpp"
+#include "log_secret.hpp"
 
 #include <ctype.h>
 #include <errno.h>
@@ -146,8 +147,8 @@ inline bool readWholeFile(const char* path, std::string& out) {
     return true;
 }
 
-// Reads the first readable WFDPass.conf in `paths` and decodes it. Logs what it found (this is the owner's own
-// car and the log line is how the passphrase can be read out and typed on a phone by hand).
+// Reads the first readable WFDPass.conf in `paths` and decodes it. Logs what it found; the passphrase itself only
+// with NBT_LOG_WFD_PASS=1 (log_secret.hpp), for typing it on a phone by hand.
 inline bool loadWfdAp(const char* const* paths, size_t nPaths, ApInfo& ap, std::string& pathUsed,
                         bool quiet = false) {
     pathUsed.clear();
@@ -171,9 +172,8 @@ inline bool loadWfdAp(const char* const* paths, size_t nPaths, ApInfo& ap, std::
         ap.apType = 1;           // DYNAMIC
         pathUsed = paths[i];
         if (!quiet)
-            printf("[Wireless] Wi-Fi Direct AP: passphrase from %s: '%s' (decoded, %u chars; type it on the phone's "
-                   "Wi-Fi settings to join the DIRECT group by hand)\n",
-                   paths[i], pass.c_str(), (unsigned)pass.size());
+            printf("[Wireless] Wi-Fi Direct AP: passphrase from %s: %s (decoded)\n", paths[i],
+                   secretForLog(pass, logWfdPassphrase()).c_str());
         return true;
     }
     return false;
@@ -335,6 +335,20 @@ inline bool wirelessPeerAllowed(unsigned peerHostOrder, unsigned localHostOrder)
 // head unit's other networks. Falls back to the arrival-network rule when no interface could be read.
 inline bool wfdPeerInNets(unsigned peerHostOrder, const unsigned* nets, size_t count, unsigned localHostOrder) {
     if (count == 0) return wirelessPeerAllowed(peerHostOrder, localHostOrder);
+    for (size_t i = 0; i < count; ++i)
+        if (wfdSameSubnet(peerHostOrder, nets[i])) return true;
+    return false;
+}
+
+// The accept filter tcp_server.cpp uses (both wireless and NBT_WIRELESS=0): the phone has to be on one of the
+// Android Auto networks read from uap0 / wfd0 (`nets`, host order). If none could be read, only the default ones
+// count (CarPlay AP 172.16.224.0/24, Wi-Fi Direct 172.16.222.0/24). Unlike wfdPeerInNets() it never falls back to
+// "same network as the arrival address": with the listener on every interface that admitted any host on the head
+// unit's Ethernet (OBD cable) whenever the access point was not up yet.
+inline bool aaPeerAllowed(unsigned peerHostOrder, const unsigned* nets, size_t count) {
+    if ((peerHostOrder & 0xff000000u) == 0x7f000000u) return false;   // 127/8 is never a phone
+    static const unsigned kDefaults[2] = { 0xAC10E000u, 0xAC10DE00u };
+    if (count == 0) { nets = kDefaults; count = 2; }
     for (size_t i = 0; i < count; ++i)
         if (wfdSameSubnet(peerHostOrder, nets[i])) return true;
     return false;

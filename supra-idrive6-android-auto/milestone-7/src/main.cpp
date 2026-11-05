@@ -111,6 +111,7 @@
 #include "a2i_client.h"
 #include "audio/voice_scenario.hpp"
 #include "usb_log.hpp"
+#include "log_secret.hpp"
 #include "spp_rereg.hpp"
 #include "spp_link_policy.hpp"
 #include "spp_direction.hpp"
@@ -844,17 +845,16 @@ struct ApChoice {
     bool direct;
 };
 
-// The Wi-Fi Direct passphrase is printed once per value (not per link attempt): it is decoded from the car's own
-// WFDPass.conf, so it can be typed into a phone's Wi-Fi settings by hand - that is how a DIRECT join gets checked
-// without the daemon getting it right first.
+// The Wi-Fi Direct AP is logged once per value (not per link attempt). The passphrase itself only with
+// NBT_LOG_WFD_PASS=1 (log_secret.hpp): it is decoded from the car's own WFDPass.conf and can then be typed into a
+// phone's Wi-Fi settings by hand, which is how a DIRECT join gets checked without the daemon getting it right first.
 static void logWfdAp(const nbt::ApInfo& ap, const std::string& path, std::string& shown) {
     char tag[512];
     snprintf(tag, sizeof(tag), "%s|%s|%s", path.c_str(), ap.ssid.c_str(), ap.key.c_str());
     if (shown == tag) return;
     shown = tag;
-    printf("[Wireless] Wi-Fi Direct AP: ssid='%s', passphrase from %s: '%s' (%u chars, decoded; type it into the "
-           "phone's Wi-Fi settings to join the group by hand)\n",
-           ap.ssid.c_str(), path.c_str(), ap.key.c_str(), (unsigned)ap.key.size());
+    printf("[Wireless] Wi-Fi Direct AP: ssid='%s', passphrase from %s: %s (decoded)\n",
+           ap.ssid.c_str(), path.c_str(), nbt::secretForLog(ap.key, nbt::logWfdPassphrase()).c_str());
 }
 
 static void* wirelessThread(void*) {
@@ -1585,6 +1585,7 @@ static void stdoutToRamOrNull() {
     if (!ramLogWanted()) { stdoutToNull(); return; }
     fflush(stdout);
     if (!freopen(nbt::ramlog::kDaemonPath, g_ramUsed ? "a" : "w", stdout)) { stdoutToNull(); return; }
+    fchmod(fileno(stdout), 0600);   // root only: the log names the car's Wi-Fi and its phones
     setvbuf(stdout, NULL, _IOLBF, 0);
     dup2(fileno(stdout), 2);
     g_ramLog = true;

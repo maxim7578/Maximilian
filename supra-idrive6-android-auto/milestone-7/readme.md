@@ -24,7 +24,7 @@ companion app, developer mode, or "Start head unit server". iDrive's own binarie
 > persistency, which can hold the group SSID itself, otherwise the `<name> CarPlay` pair, otherwise (cars without any
 > CarPlay config) the device name sitting directly before the encrypted passphrase. On a J29 `ifconfig` prints
 > no `ssid` line and mwud does not answer on 9096, so the config/persistency rungs are what work there; pin
-> `NBT_WFD_SSID` if the phone shows a different group. The decoded passphrase is printed in the log, once per value, so it can be typed into a phone's Wi-Fi settings
+> `NBT_WFD_SSID` if the phone shows a different group. With `NBT_LOG_WFD_PASS=1` the decoded passphrase is printed in the log, once per value, so it can be typed into a phone's Wi-Fi settings
 > to join the group by hand. Log: `[Wireless] Wi-Fi source: ...`, `[Wireless] Wi-Fi Direct AP: ssid=...`.
 >
 > **v1.8.42-stability / rhmiapp-20 (not car-verified):** after a tester's head unit reset 5 times in a row
@@ -454,6 +454,8 @@ On/off settings accept `1`/`0`; most also accept `on`/`off`, `yes`/`no` and `tru
 | `NBT_CTL` | `0` | Single-instance control port (UDP 127.0.0.1:52790) |
 | `NBT_KEEP_PF` | set to `1` | Don't touch the packet filter at all (same as `NBT_PF=keep`, see [Troubleshooting](#troubleshooting)) |
 | `NBT_PF` | `rule` | `rule`: one allow rule for TCP 5277 in front of the car's pf rules, the filter stays on (falls back to `pfctl -d` if it does not work; with `NBT_WIRELESS=0` always `pfctl -d`). `off`: the old `pfctl -d` (whole filter off). `keep`: leave the filter alone |
+| `NBT_LOG_WFD_PASS` | `0` | `1` prints the decoded Wi-Fi Direct passphrase in the log (to type it on a phone by hand). Off by default: anyone with the log could join the car's Wi-Fi |
+| `NBT_ACCEPT_ANY` | `0` | `1` accepts a phone connection on TCP 5277 from any address. Default: only from the Android Auto Wi-Fi networks (`uap0` / `wfd0`, or 172.16.224.0/24 and 172.16.222.0/24 while they cannot be read) |
 | `NBT_MIC_REQUIRE_BT` | `1` | Car microphone only for a wireless session whose phone did the Bluetooth handshake (up to 120 s before the session or during it), or over USB. `0`: any session may open it, as before |
 
 ### Advanced / experimental
