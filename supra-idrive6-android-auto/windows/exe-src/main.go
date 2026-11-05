@@ -295,6 +295,10 @@ func main() {
 	if a := ask("Andere Adresse? Enter = " + headUnit + ", sonst IP eingeben: "); a != "" {
 		headUnit = a
 	}
+	// Über den TurboCode-ENET-Proxy ist die Headunit meist 127.0.0.1 auf Port 6969 statt 22.
+	if a := ask("Port? Enter = " + port + " (TurboCode-Proxy: 6969): "); a != "" {
+		port = a
+	}
 	pw := readPassword()
 	fmt.Println("Verbinde ...")
 	cli, err := connect(pw)
