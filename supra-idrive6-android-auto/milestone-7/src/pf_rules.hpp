@@ -73,10 +73,23 @@ inline bool pfLineIsPassInQuickTcp(const std::string& line) {
     return line.compare(0, 13, "pass in quick") == 0 && line.find(" proto tcp ") != std::string::npos;
 }
 
-// True if `line` is a pass-in rule for TCP `port` to exactly `ip`.
+// True if `line` is a pass-in rule for TCP `port` to exactly `ip` on any interface, the shape of our own rule as
+// pfctl prints it back ("pass in quick inet proto tcp from any to 172.16.224.1 port = 5277 flags S/SA keep state").
+// A rule of the car's that only covers another interface ("on en0") or has 5277 as the source port does not count.
 inline bool pfLinePassesTo(const std::string& line, const std::string& ip, uint16_t port) {
-    if (!pfLineIsPassInQuickTcp(line) || !pfLineHasPort(line, port)) return false;
-    return line.find(" to " + ip + " ") != std::string::npos;
+    if (!pfLineIsPassInQuickTcp(line) || line.find(" on ") != std::string::npos) return false;
+    char a[96], b[96];
+    snprintf(a, sizeof(a), " to %s port = %u", ip.c_str(), (unsigned)port);
+    snprintf(b, sizeof(b), " to %s port %u", ip.c_str(), (unsigned)port);
+    const char* pats[2] = { a, b };
+    for (int k = 0; k < 2; ++k) {
+        size_t len = strlen(pats[k]);
+        for (size_t p = line.find(pats[k]); p != std::string::npos; p = line.find(pats[k], p + 1)) {
+            char next = p + len < line.size() ? line[p + len] : ' ';
+            if (next < '0' || next > '9') return true;
+        }
+    }
+    return false;
 }
 
 inline std::vector<std::string> pfLines(const std::string& text) {

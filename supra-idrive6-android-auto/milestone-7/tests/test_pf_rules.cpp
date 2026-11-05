@@ -96,6 +96,19 @@ int main() {
                             "pass in quick inet proto tcp from any to 172.16.222.10 port = 5277 keep state\n",
                             ziele(), 5277));
 
+    PRUEFE("Regel des Autos nur für ein anderes Interface zählt nicht",
+           !pfRulesHavePass("pass in quick on en0 inet proto tcp from any to 172.16.224.1 port = 5277 keep state\n"
+                            "pass in quick on en0 inet proto tcp from any to 172.16.222.1 port = 5277 keep state\n",
+                            ziele(), 5277));
+    PRUEFE("5277 als Quellport zählt nicht",
+           !pfRulesHavePass("pass in quick inet proto tcp from any port = 5277 to 172.16.224.1 keep state\n"
+                            "pass in quick inet proto tcp from any port = 5277 to 172.16.222.1 keep state\n",
+                            ziele(), 5277));
+    PRUEFE("Anderer Zielport hinter der Adresse zählt nicht",
+           !pfRulesHavePass("pass in quick inet proto tcp from any to 172.16.224.1 port = 52770 keep state\n"
+                            "pass in quick inet proto tcp from any to 172.16.222.1 port = 52770 keep state\n",
+                            ziele(), 5277));
+
     if (g_fehler) { printf("test_pf_rules: %d Prüfung(en) fehlgeschlagen\n", g_fehler); return 1; }
     printf("test_pf_rules: alle Prüfungen bestanden\n");
     return 0;

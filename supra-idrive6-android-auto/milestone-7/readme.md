@@ -453,8 +453,8 @@ On/off settings accept `1`/`0`; most also accept `on`/`off`, `yes`/`no` and `tru
 | `NBT_GEAR_ACTION` | `0` | Reverse-gear handling |
 | `NBT_CTL` | `0` | Single-instance control port (UDP 127.0.0.1:52790) |
 | `NBT_KEEP_PF` | set to `1` | Don't touch the packet filter at all (same as `NBT_PF=keep`, see [Troubleshooting](#troubleshooting)) |
-| `NBT_PF` | `rule` | `rule`: one allow rule for TCP 5277 in front of the car's pf rules, the filter stays on (falls back to `pfctl -d` if it does not work). `off`: the old `pfctl -d` (whole filter off). `keep`: leave the filter alone |
-| `NBT_MIC_REQUIRE_BT` | `1` | Car microphone only for a wireless session that started within 120 s of a Bluetooth handshake (or over USB). `0`: any session may open it, as before |
+| `NBT_PF` | `rule` | `rule`: one allow rule for TCP 5277 in front of the car's pf rules, the filter stays on (falls back to `pfctl -d` if it does not work; with `NBT_WIRELESS=0` always `pfctl -d`). `off`: the old `pfctl -d` (whole filter off). `keep`: leave the filter alone |
+| `NBT_MIC_REQUIRE_BT` | `1` | Car microphone only for a wireless session whose phone did the Bluetooth handshake (up to 120 s before the session or during it), or over USB. `0`: any session may open it, as before |
 
 ### Advanced / experimental
 
@@ -587,7 +587,9 @@ Useful daemon log lines:
 - `[Wireless] opened /dev/btsppN`: the phone opened the Android Auto Bluetooth link.
 - `[Wireless] ... companion app (BCL), not Android Auto` / `releasing /dev/btspp0`: a MyBMW / Supra app link was
   skipped.
-- `'pfctl -d' ... returned N`: the firewall step (0 = OK).
+- `[PF] start: allow rule for TCP 5277 ... loaded, filter stays ON`: the firewall step. `... falling back to
+  'pfctl -d'` means the allow rule did not work on this car: please post the log.
+- `[Mic] car microphone for this session: ...` / `[Mic] ... REFUSED`: whether the session may use the car mic.
 
 ## Troubleshooting
 

@@ -270,6 +270,10 @@ static long nowMs() {
 static uint8_t g_rx[16384];
 static size_t g_rxLen = 0;
 
+static WifiStartAckHook g_ackHook = NULL;
+static void* g_ackUser = NULL;
+void setWifiStartAckHook(WifiStartAckHook fn, void* user) { g_ackUser = user; g_ackHook = fn; }
+
 static bool g_foreign = false;   // the link turned out to be BMW Connected (BCL/Etch), not Android Auto
 
 static bool g_spokeWpp = false;  // a valid Android Auto wireless frame came back on this link
@@ -419,7 +423,10 @@ static int handleMsg(int fd, uint16_t id, const std::vector<uint8_t>& pl, const 
         else if (f3) printf("[Wireless] WifiStartResponse status field(3)=%llu\n", (unsigned long long)st3);
         else printf("[Wireless] WifiStartResponse (no status field)\n");
         if (!sentInfo) ++startRespSeen;
-        if (ack) startAcked = true;
+        if (ack) {
+            startAcked = true;
+            if (g_ackHook) g_ackHook(g_ackUser);
+        }
     } else if (id == wpp::kWifiConnectStatus) {
         uint64_t st = 0;
         bool have = !pl.empty() && (wpp::findVarintField(&pl[0], pl.size(), 1, st) || wpp::findVarintField(&pl[0], pl.size(), 2, st));

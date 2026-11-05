@@ -696,14 +696,27 @@ static bool runCapture(const char* cmd, std::string& out) {
     return pclose(p) == 0;
 }
 
-// The addresses the phone connects to: NBT_AP_IP if pinned, else the CarPlay AP and the Wi-Fi Direct group.
+static void pfAddTarget(std::vector<std::string>& v, const std::string& ip) {
+    if (ip.empty()) return;
+    for (size_t i = 0; i < v.size(); ++i) if (v[i] == ip) return;
+    v.push_back(ip);
+}
+
+// The addresses the phone connects to: NBT_AP_IP if pinned, else the CarPlay AP and the Wi-Fi Direct group at their
+// usual addresses plus whatever uap0 / wfd0 really have (the listener falls back to the interface address too).
 static std::vector<std::string> pfTargets() {
     std::vector<std::string> v;
     const char* ap = getenv("NBT_AP_IP");
     if (ap && *ap) { v.push_back(ap); return v; }
-    v.push_back("172.16.224.1");
+    pfAddTarget(v, "172.16.224.1");
     const char* wfd = getenv("NBT_WFD_IP");
-    v.push_back((wfd && *wfd) ? wfd : "172.16.222.1");
+    pfAddTarget(v, (wfd && *wfd) ? wfd : "172.16.222.1");
+    const char* apIf = getenv("NBT_AP_IF");
+    const char* wfdIf = getenv("NBT_WFD_IF");
+    std::string ip;
+    if (nbt::interfaceIpv4((apIf && *apIf) ? apIf : "uap0", ip)) pfAddTarget(v, ip);
+    ip.clear();
+    if (nbt::interfaceIpv4((wfdIf && *wfdIf) ? wfdIf : "wfd0", ip)) pfAddTarget(v, ip);
     return v;
 }
 
@@ -717,6 +730,10 @@ static void pfDisable(const char* why) {
 static bool pfAllowAaPort(const char* why) {
     std::string si;
     runCapture("pfctl -si 2>/dev/null", si);
+    if (si.empty()) {
+        printf("[PF] %s: 'pfctl -si' printed nothing: cannot tell whether the filter is on\n", why);
+        return false;
+    }
     if (!nbt::pfStatusEnabled(si)) {
         printf("[PF] %s: the packet filter is off: nothing to open\n", why);
         return true;
@@ -1114,6 +1131,7 @@ static void* wirelessThread(void*) {
             int tick = 0;
             while (g_running) {
                 bool alive = nbt::wppService(fd, 1000, ap, g_aaPort);
+                if (alive) g_micGuard.bluetoothHandshakeOk(monoSecs());   // this paired phone's link is still open
                 ++tick;
                 if (wirelessSessionActive()) everActive = true;
                 if (!alive && nbt::lastLinkForeign()) { if (!pinned) markSppForeign(dev); break; }
@@ -1181,6 +1199,8 @@ static void signalHandler(int sig) {
 }
 
 // ---- Car microphone -> phone (Assistant / voice search), AA channel 14 (audio/mic_uplink.hpp) -------------------
+static void onWifiStartAck(void*) { g_micGuard.bluetoothHandshakeOk(monoSecs()); }
+
 static void onMicRequest(bool open, void* user) {
     (void)user;
     if (open && !g_micGuard.micAllowed()) {
@@ -1288,8 +1308,8 @@ static void startSession(int client_fd, nbt::TcpServer* server, nbt::Transport t
     g_session.stop();
     g_owner.set(t);
     g_micGuard.sessionStarted(t, nbt::wirelessEnabled(), nbt::envFlag("NBT_MIC_REQUIRE_BT") != 0, monoSecs());
-    printf("[Mic] car microphone for this session: %s (%s)\n", g_micGuard.micAllowed() ? "allowed" : "REFUSED",
-           g_micGuard.reason());
+    printf("[Mic] car microphone for this session: %s (%s)\n",
+           g_micGuard.micAllowed() ? "allowed" : "not yet (until this phone's Bluetooth step)", g_micGuard.reason());
     g_sessionStartS = upSec();
     printf("[Main] [%9.3f] Android Auto client connected over %s on fd %d. Initializing aasdk session...\n",
            g_sessionStartS, nbt::transportName(t), client_fd);
@@ -1666,6 +1686,12 @@ int main(int argc, char* argv[]) {
     // Let the phone reach the stock AA port (5277): one allow rule in front of the car's pf rules (NBT_PF=rule, the
     // default), the whole filter off (NBT_PF=off, the old behaviour), or nothing (NBT_PF=keep / NBT_KEEP_PF=1).
     g_pfMode = nbt::pfModeFrom(getenv("NBT_PF"), nbt::envFlag("NBT_KEEP_PF"));
+    if (g_pfMode == nbt::kPfAllowRule && !nbt::wirelessEnabled()) {
+        // NBT_WIRELESS=0: the old scanner connects OUT to the phone, which the inbound allow rule does not cover and
+        // which has no wireless thread to notice a failure and fall back. Keep the old behaviour there.
+        g_pfMode = nbt::kPfDisable;
+        printf("[PF] NBT_WIRELESS=0 (outbound scanner): using 'pfctl -d' as before\n");
+    }
     printf("[PF] packet filter mode: %s\n", nbt::pfModeName(g_pfMode));
     pfApply("start");
 
@@ -1769,6 +1795,7 @@ int main(int argc, char* argv[]) {
     g_session.setAudioStateCallback(&onAudioState, NULL);
     g_session.setVideoFocusCallback(&onVideoFocusRequest, NULL);
     g_session.setMicRequestCallback(&onMicRequest, NULL);
+    nbt::setWifiStartAckHook(&onWifiStartAck, NULL);   // the phone accepted the Wi-Fi start over Bluetooth
     g_session.setNavStatusCallback(&nbt::kombinav::KombiNav::navStatusCallback, &g_kombiNav);
 
     if (!tcp_server.start()) {

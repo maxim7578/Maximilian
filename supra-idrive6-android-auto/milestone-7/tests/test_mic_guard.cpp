@@ -52,6 +52,24 @@ int main() {
         PRUEFE("Vor der ersten Sitzung kein Mikrofon", !g.micAllowed());
     }
     {
+        // Manche Telefone melden den Erfolg über Bluetooth erst, nachdem die TCP-Sitzung schon läuft (der 45-s-Pfad
+        // ohne WifiConnectStatus). Ein Handshake während der Sitzung zählt deshalb auch.
+        MicGuard g;
+        g.sessionStarted(kTransportTcp, drahtlos, true, 100);
+        PRUEFE("Mikrofon-Anfrage vor dem Bluetooth-Handshake verweigert", !g.micAllowed());
+        g.bluetoothHandshakeOk(130);
+        PRUEFE("Handshake während der Sitzung erlaubt das Mikrofon danach", g.micAllowed());
+    }
+    {
+        // Das Telefon verbindet sich neu, während sein Bluetooth-Link noch offen ist: der Wireless-Thread meldet
+        // den offenen Link laufend, also gilt auch eine Sitzung lange nach dem ersten Handshake.
+        MicGuard g;
+        g.bluetoothHandshakeOk(100);
+        g.bluetoothHandshakeOk(100 + 5 * MicGuard::kWindowSec);   // Link noch offen
+        g.sessionStarted(kTransportTcp, drahtlos, true, 101 + 5 * MicGuard::kWindowSec);
+        PRUEFE("Offener Bluetooth-Link hält das Fenster offen", g.micAllowed());
+    }
+    {
         MicGuard g;
         g.sessionStarted(kTransportUsb, drahtlos, true, 100);
         PRUEFE("USB-Sitzung (Kabel) bekommt das Mikrofon", g.micAllowed());
