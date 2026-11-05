@@ -56,6 +56,8 @@ Host test for 12-14: `tests/test_rx_guard.cpp` (`make -C tests run-test_rx_guard
 
 20. **Force Stop only signals nbt-aad.** The iDrive app sent SIGTERM / SIGKILL to the pid in `/dev/shmem/nbt-aad-state`, which the daemon created `0666`. The file is now `0644` (only the daemon writes it), and the app neither signals a pid nor treats it as the running daemon when `/proc/<pid>/exefile` shows another program. An unreadable `exefile` keeps the old behaviour, so Force Stop still works there. (`src/local_trust.hpp`, `rhmiapp/nbt_aad_app.cpp`, `src/main.cpp`)
 
+21. **Android Auto's driving restrictions are on.** The daemon always told the phone DRIVING_STATUS 0 (unrestricted), so the keyboard, long lists and settings stayed usable while driving. It has no vehicle speed, so the default is now 27 = moving (no video, no keyboard, no settings, limited message length; voice input stays allowed). `NBT_DRIVING_STATUS=0` restores the old behaviour, `31` sets every restriction. Log: `Sensor DRIVING_STATUS event (status=27: ...)`. (`src/driving_status.hpp`, `src/aa_session.cpp`; host test `tests/test_driving_status.cpp`)
+
 ## Checked here
 
 On a Mac, these host tests passed: companion-app detection (`test_bcl_detect`), both iDrive controller replays (`test_ccs_decoder`, `test_ccs_push`), the car-config / guidance-sink test (`test_car_config`), and the touch parser and forwarder (`test_touch_frame`, `test_touch`, including messages split across datagrams). The changed daemon sources also pass a host syntax check. They have not been built with the QNX compiler and have not been run in a car.

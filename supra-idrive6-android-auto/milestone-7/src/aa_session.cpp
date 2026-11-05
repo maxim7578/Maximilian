@@ -6,6 +6,7 @@
 #include "sdr_builder.hpp"
 #include "crash_handler.hpp"
 #include "rx_guard.hpp"
+#include "driving_status.hpp"
 #include <sys/select.h>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -839,7 +840,8 @@ bool AASession::sendAudioFocusResponse(uint8_t focus_state) {
 // Wire layout (aasdk): SensorStartRequest 0x8001 {sensor_type=1 varint, min_period=2},
 // SensorStartResponse 0x8002 {status=1}, SensorEventIndication 0x8003 with repeated
 // NightMode night_mode=10 {is_night=1} and DrivingStatus driving_status=13 {status=1}.
-// Env: NBT_NIGHT_MODE (0/1, default 0), NBT_DRIVING_STATUS (0=unrestricted, default 0).
+// Env: NBT_NIGHT_MODE (0/1, default 0), NBT_DRIVING_STATUS (0=unrestricted .. 31, default 27 = moving, voice
+// allowed: driving_status.hpp).
 // pbFirstVarint (rx_guard.hpp): first varint field of a message, bounds-checked against oversized lengths.
 
 size_t AASession::reassemblyBytes() const {
@@ -883,10 +885,10 @@ bool AASession::sendSensorEvent(uint32_t sensor_type) {
         plain.push_back(0x52); plain.push_back(0x02); plain.push_back(0x08); plain.push_back(night);
         printf("[AASession] >>> Sensor NIGHT_MODE event (is_night=%u, %s)\n", night, src);
     } else if (sensor_type == 13) { // DRIVING_STATUS
-        const char* e = getenv("NBT_DRIVING_STATUS");
-        uint8_t st = e ? (uint8_t)atoi(e) : 0;
+        const uint8_t st = (uint8_t)nbt::drivingStatus();
         plain.push_back(0x6A); plain.push_back(0x02); plain.push_back(0x08); plain.push_back(st);
-        printf("[AASession] >>> Sensor DRIVING_STATUS event (status=%u)\n", st);
+        printf("[AASession] >>> Sensor DRIVING_STATUS event (status=%u: %s)\n", st,
+               st == 0 ? "unrestricted (NBT_DRIVING_STATUS=0)" : "driving restrictions on; NBT_DRIVING_STATUS=0 turns them off");
     } else {
         return true; // no data source for other sensors: ack only
     }

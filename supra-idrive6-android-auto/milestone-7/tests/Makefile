@@ -61,6 +61,7 @@ SRC_test_pf_rules          :=
 SRC_test_accept_filter     :=
 SRC_test_log_secret        :=
 SRC_test_local_trust       :=
+SRC_test_driving_status    :=
 SRC_test_mic_guard         :=
 SRC_test_rx_guard          := src/aa_cryptor.cpp src/aa_session.cpp src/audio/audio_acks.cpp src/crash_handler.cpp src/sdr_builder.cpp src/wireless_setup.cpp
 SRC_test_sdr               := src/sdr_builder.cpp
