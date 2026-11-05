@@ -152,6 +152,13 @@ inline bool pfRulesHavePass(const std::string& sr, const std::vector<std::string
     return !dstIps.empty();
 }
 
+// Fall back to `pfctl -d` only after every Wi-Fi the phone is offered (`candidates`: BOTH = CarPlay hotspot and
+// Wi-Fi Direct, or several passphrases) failed a round of two tries. A phone that cannot join one of them is the
+// normal BOTH hand-over, not a sign that the allow rule does not work.
+inline bool pfShouldFallBack(unsigned failedRounds, size_t candidates) {
+    return failedRounds >= (candidates > 0 ? (unsigned)candidates : 1u);
+}
+
 } // namespace nbt
 
 #endif

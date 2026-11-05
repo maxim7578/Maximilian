@@ -54,7 +54,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include "../src/usb_log.hpp"
-#include "../src/local_trust.hpp"   // pidIsNbtAad: only ever signal the real daemon
+#include "../src/local_trust.hpp"   // pidIsOtherProgram: never signal a pid that runs something else
 #include "cds_parse.hpp"
 #include "boot_guard.hpp"
 #include "entry_key.hpp"

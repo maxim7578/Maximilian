@@ -40,7 +40,11 @@ int main() {
     const unsigned anders[1] = { 0x0A4D0001u };   // 10.77.0.1
     PRUEFE("Anders nummeriertes WLAN-Netz wird über die gelesene Adresse angenommen",
            aaPeerAllowed(0x0A4D0017u, anders, 1));
-    PRUEFE("Mit gelesenen Adressen gelten die Standardnetze nicht zusätzlich", !aaPeerAllowed(kTelefonAp, anders, 1));
+    // Die Standardnetze gehören immer zum Android-Auto-WLAN (der Listener bindet z. B. 172.16.222.1, auch wenn nur
+    // uap0 anders nummeriert gelesen wurde und wfd0 einen anderen Namen hat).
+    PRUEFE("Standardnetze gelten auch zusätzlich zu gelesenen Adressen", aaPeerAllowed(kTelefonAp, anders, 1) &&
+           aaPeerAllowed(kTelefonWfd, anders, 1));
+    PRUEFE("Mit gelesenen Adressen bleibt das Ethernet draußen", !aaPeerAllowed(kEthernet, anders, 1));
 
     // Netzliste aus den gelesenen bzw. eingestellten Adressen (uap0/wfd0 oder NBT_AP_IF/NBT_WFD_IF, NBT_AP_IP/NBT_WFD_IP).
     {

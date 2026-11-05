@@ -868,6 +868,7 @@ static void* wirelessThread(void*) {
     const char* cfg = getenv("NBT_AP_CFG");
     if (cfg && !*cfg) cfg = NULL;
     int apIdx = 0, apNoJoin = 0;
+    unsigned pfFailedRounds = 0;   // rounds of two no-joins in a row (pf_rules.hpp pfShouldFallBack)
     std::string apShown;
     const char* ifn = getenv("NBT_AP_IF");
     if (!ifn || !*ifn) ifn = "uap0";
@@ -1167,6 +1168,7 @@ static void* wirelessThread(void*) {
             if (!everActive) recoverWifiPath("phone took the Wi-Fi details but did not connect");
             if (everActive) {
                 apNoJoin = 0;
+                pfFailedRounds = 0;
             } else if (++apNoJoin >= 2) {
                 apNoJoin = 0;
                 if (!cfg && apCount > 1) {
@@ -1178,7 +1180,9 @@ static void* wirelessThread(void*) {
                            "(not proof of a wrong passphrase: a dead listener or the packet filter look the same)\n",
                            apPath.c_str());
                 }
-                pfFallBack("the phone took the Wi-Fi details twice and never connected");
+                // Only once every offered Wi-Fi failed: BOTH moving from the hotspot to Wi-Fi Direct is no reason.
+                if (nbt::pfShouldFallBack(++pfFailedRounds, cfg ? 1 : apCount))
+                    pfFallBack("the phone took the Wi-Fi details and never connected, on every Wi-Fi offered");
             }
         } else {
             g_btLink = 0;

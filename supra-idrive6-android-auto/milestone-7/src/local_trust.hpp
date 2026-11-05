@@ -8,9 +8,9 @@
 // Wi-Fi could therefore tap on the phone while Android Auto was on screen, and take the controller's place for good.
 // Touch PDUs from the Android Auto Wi-Fi networks are now dropped and never learned.
 //
-// pidIsNbtAad(): the iDrive app's Force Stop sends SIGTERM / SIGKILL to the pid in /dev/shmem/nbt-aad-state. It
-// now first checks that this pid really runs nbt-aad (/proc/<pid>/exefile), so a pid written there by something else
-// is not killed.
+// pidIsOtherProgram(): the iDrive app's Force Stop sends SIGTERM / SIGKILL to the pid in /dev/shmem/nbt-aad-state.
+// It now first checks /proc/<pid>/exefile and does not signal a pid shown to run another program (an unreadable
+// exefile keeps the old behaviour).
 #ifndef NBT_LOCAL_TRUST_HPP
 #define NBT_LOCAL_TRUST_HPP
 
