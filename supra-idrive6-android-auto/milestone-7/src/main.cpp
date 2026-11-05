@@ -462,6 +462,9 @@ static void writeUiState(const char* state, int overlay) {
     close(fd);
 }
 static volatile bool g_sessionActive = false;   // AA session running (set by connect/end callbacks)
+#include "pf_rules.hpp"
+#include "mic_guard.hpp"
+static nbt::MicGuard g_micGuard;              // who may open the car microphone (mic_guard.hpp)
 static nbt::SessionOwner g_owner;               // which transport that session came in on (session_owner.hpp)
 static pthread_mutex_t g_connectMutex = PTHREAD_MUTEX_INITIALIZER;   // serializes startSession() (TCP and USB)
 static bool wirelessSessionActive() { return g_owner.get() == nbt::kTransportTcp; }
@@ -679,16 +682,107 @@ static int ifaceHasIpv4(const char* ifn) {
     return up;
 }
 
+// ---- Packet filter (pf_rules.hpp): one allow rule for the Android Auto port instead of 'pfctl -d' ------------
+static nbt::PfMode g_pfMode = nbt::kPfAllowRule;
+static bool g_pfFellBack = false;   // the allow rule did not work: the whole filter is off, as before
+
+static bool runCapture(const char* cmd, std::string& out) {
+    out.clear();
+    FILE* p = popen(cmd, "r");
+    if (!p) return false;
+    char buf[512];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof(buf), p)) > 0) out.append(buf, n);
+    return pclose(p) == 0;
+}
+
+// The addresses the phone connects to: NBT_AP_IP if pinned, else the CarPlay AP and the Wi-Fi Direct group.
+static std::vector<std::string> pfTargets() {
+    std::vector<std::string> v;
+    const char* ap = getenv("NBT_AP_IP");
+    if (ap && *ap) { v.push_back(ap); return v; }
+    v.push_back("172.16.224.1");
+    const char* wfd = getenv("NBT_WFD_IP");
+    v.push_back((wfd && *wfd) ? wfd : "172.16.222.1");
+    return v;
+}
+
+static void pfDisable(const char* why) {
+    int rc = system("pfctl -d");
+    printf("[PF] %s: 'pfctl -d' (whole packet filter off) returned %d (%s)\n", why, rc,
+           rc == 0 ? "the filter was on and is now off" : "already off");
+}
+
+// Puts the pass rules in front of the car's live filter rules. False if they could not be loaded.
+static bool pfAllowAaPort(const char* why) {
+    std::string si;
+    runCapture("pfctl -si 2>/dev/null", si);
+    if (!nbt::pfStatusEnabled(si)) {
+        printf("[PF] %s: the packet filter is off: nothing to open\n", why);
+        return true;
+    }
+    const std::vector<std::string> ips = pfTargets();
+    std::string sr;
+    if (!runCapture("pfctl -sr 2>/dev/null", sr)) {
+        printf("[PF] %s: 'pfctl -sr' failed: cannot read the car's rules\n", why);
+        return false;
+    }
+    if (nbt::pfRulesHavePass(sr, ips, g_aaPort)) {
+        printf("[PF] %s: TCP %u is already allowed\n", why, (unsigned)g_aaPort);
+        return true;
+    }
+    const std::string rules = nbt::pfMergeRules(nbt::pfPassRules(ips, g_aaPort), sr);
+    static const char* kPath = "/dev/shmem/nbt-aad-pf.rules";
+    unlink(kPath);
+    int fd = open(kPath, O_WRONLY | O_CREAT | O_EXCL, 0600);
+    if (fd < 0) {
+        printf("[PF] %s: cannot write %s (%s)\n", why, kPath, strerror(errno));
+        return false;
+    }
+    size_t off = 0;
+    while (off < rules.size()) {
+        ssize_t w = write(fd, rules.data() + off, rules.size() - off);
+        if (w <= 0) break;
+        off += (size_t)w;
+    }
+    close(fd);
+    if (off != rules.size()) {
+        printf("[PF] %s: short write to %s\n", why, kPath);
+        return false;
+    }
+    char cmd[96];
+    snprintf(cmd, sizeof(cmd), "pfctl -R -f %s", kPath);
+    int rc = system(cmd);
+    std::string after;
+    runCapture("pfctl -sr 2>/dev/null", after);
+    bool loaded = rc == 0 && nbt::pfRulesHavePass(after, ips, g_aaPort);
+    printf("[PF] %s: allow rule for TCP %u (%u rules in total) %s ('pfctl -R -f' returned %d)\n", why,
+           (unsigned)g_aaPort, (unsigned)nbt::pfLines(rules).size(), loaded ? "loaded, filter stays ON" : "NOT loaded", rc);
+    return loaded;
+}
+
+// The allow rule did not get the phone in: do what older versions always did.
+static void pfFallBack(const char* why) {
+    if (g_pfMode != nbt::kPfAllowRule || g_pfFellBack) return;
+    g_pfFellBack = true;
+    printf("[PF] %s: falling back to 'pfctl -d' for this run. Please post this log: the car's rules need a "
+           "different allow rule. NBT_PF=off skips the attempt, NBT_PF=keep leaves the filter alone.\n", why);
+    pfDisable("fallback");
+}
+
+static void pfApply(const char* why) {
+    if (g_pfMode == nbt::kPfKeep) return;
+    if (g_pfMode == nbt::kPfDisable || g_pfFellBack) { pfDisable(why); return; }
+    if (!pfAllowAaPort(why)) pfFallBack("the allow rule could not be loaded");
+}
+
 // Ignition off/on while the head unit stays up (it only shuts down ~10 min after ignition off) switches the car's
 // Wi-Fi access point off and on again under a daemon that keeps running. Car reports 2026-10-29 (F31, Supra): after
 // that the phone takes the Wi-Fi details over Bluetooth but never connects, until Force Stop + Start, i.e. until
-// a new process runs 'pfctl -d' and opens a new listening socket. Redo both here.
+// a new process runs 'pfctl -d' and opens a new listening socket. Redo both here (the car reloads its own pf rules
+// when the access point comes back, so the allow rule is put in again).
 static void recoverWifiPath(const char* why) {
-    if (nbt::envFlag("NBT_KEEP_PF") != 1) {
-        int rc = system("pfctl -d");
-        printf("[Wireless] %s: 'pfctl -d' returned %d (%s)\n", why, rc,
-               rc == 0 ? "the packet filter was ON again and is now off" : "packet filter already off");
-    }
+    pfApply(why);
     if (g_tcp) g_tcp->requestRebind(why);
     fflush(stdout);
 }
@@ -1012,6 +1106,7 @@ static void* wirelessThread(void*) {
         if (!ok && !pinned) noteSppDirection(dev, nbt::lastLinkSpokeWpp());
         if (ok) {
             s_fails = 0;
+            g_micGuard.bluetoothHandshakeOk(monoSecs());   // this phone may use the car mic in its session
             // Keep the Bluetooth link open and serviced (ping replies, repeated AP info requests) for
             // as long as the phone wants it: closing it early makes the phone abort the wireless setup.
             bool everActive = false;   // the wireless phone connected (a USB session does not count)
@@ -1065,6 +1160,7 @@ static void* wirelessThread(void*) {
                            "(not proof of a wrong passphrase: a dead listener or the packet filter look the same)\n",
                            apPath.c_str());
                 }
+                pfFallBack("the phone took the Wi-Fi details twice and never connected");
             }
         } else {
             g_btLink = 0;
@@ -1087,6 +1183,13 @@ static void signalHandler(int sig) {
 // ---- Car microphone -> phone (Assistant / voice search), AA channel 14 (audio/mic_uplink.hpp) -------------------
 static void onMicRequest(bool open, void* user) {
     (void)user;
+    if (open && !g_micGuard.micAllowed()) {
+        // mic_guard.hpp: a session without the Bluetooth step (only the Wi-Fi passphrase, or the car's Ethernet)
+        // does not get the car microphone. The capture is not started, and onMicData() forwards nothing.
+        printf("[Mic] phone asked for the microphone: REFUSED (%s). NBT_MIC_REQUIRE_BT=0 allows it.\n",
+               g_micGuard.reason());
+        return;
+    }
     pushSlot(g_micQ, &g_micN, open ? 1 : 2);
 }
 
@@ -1094,6 +1197,7 @@ static void onMicRequest(bool open, void* user) {
 // the mic open.
 static void onMicData(const uint8_t* pcm_data, size_t size, void* user_data) {
     (void)user_data;
+    if (!g_micGuard.micAllowed()) return;      // capture still running from an earlier session: not for this one
     g_session.postMicData(pcm_data, size);   // echo-cancelled chunk -> AA mic channel (dropped unless open)
     if (!g_session.micOpen()) return;         // capture keeps running between Assistant requests: meter/dump only while open
     nbt::micLevelMeter(pcm_data, size);
@@ -1139,6 +1243,7 @@ static double g_sessionStartS = 0;   // upSec() of the last onClientConnected
 static int g_shortSessions = 0;      // sessions in a row that ended within kShortSessionS of connecting
 static const double kShortSessionS = 15.0;
 static void onSessionEnded(void* user_data) {
+    g_micGuard.sessionEnded();
     g_sessionActive = false;
     g_owner.set(nbt::kTransportNone);
     nbt::TcpServer* server = reinterpret_cast<nbt::TcpServer*>(user_data);
@@ -1182,6 +1287,9 @@ static void startSession(int client_fd, nbt::TcpServer* server, nbt::Transport t
     // starting: its onSessionEnded() runs now, so it cannot clear the new session's flags afterwards.
     g_session.stop();
     g_owner.set(t);
+    g_micGuard.sessionStarted(t, nbt::wirelessEnabled(), nbt::envFlag("NBT_MIC_REQUIRE_BT") != 0, monoSecs());
+    printf("[Mic] car microphone for this session: %s (%s)\n", g_micGuard.micAllowed() ? "allowed" : "REFUSED",
+           g_micGuard.reason());
     g_sessionStartS = upSec();
     printf("[Main] [%9.3f] Android Auto client connected over %s on fd %d. Initializing aasdk session...\n",
            g_sessionStartS, nbt::transportName(t), client_fd);
@@ -1555,14 +1663,11 @@ int main(int argc, char* argv[]) {
         if (pre && strip) unsetenv("LD_PRELOAD");
     }
 
-    // Drop the packet filter so the phone can reach the stock AA port (5277) on uap0.
-    // Set NBT_KEEP_PF=1 to leave the firewall alone.
-    if (nbt::envFlag("NBT_KEEP_PF") == 1) {
-        printf("[Main] NBT_KEEP_PF=1: leaving packet filter untouched.\n");
-    } else {
-        int rc = system("pfctl -d");
-        printf("[Main] 'pfctl -d' (disable packet filter) returned %d\n", rc);
-    }
+    // Let the phone reach the stock AA port (5277): one allow rule in front of the car's pf rules (NBT_PF=rule, the
+    // default), the whole filter off (NBT_PF=off, the old behaviour), or nothing (NBT_PF=keep / NBT_KEEP_PF=1).
+    g_pfMode = nbt::pfModeFrom(getenv("NBT_PF"), nbt::envFlag("NBT_KEEP_PF"));
+    printf("[PF] packet filter mode: %s\n", nbt::pfModeName(g_pfMode));
+    pfApply("start");
 
     signal(SIGINT,  signalHandler);
     signal(SIGTERM, signalHandler);
