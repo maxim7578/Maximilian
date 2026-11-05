@@ -358,14 +358,15 @@ inline int aaNetsFromAddrs(const std::vector<std::string>& addrs, unsigned* nets
 }
 
 // The accept filter tcp_server.cpp uses (both wireless and NBT_WIRELESS=0): the phone has to be on one of the
-// Android Auto networks read from uap0 / wfd0 (`nets`, host order). If none could be read, only the default ones
-// count (CarPlay AP 172.16.224.0/24, Wi-Fi Direct 172.16.222.0/24). Unlike wfdPeerInNets() it never falls back to
+// Android Auto networks read from uap0 / wfd0 (`nets`, host order) or on the default ones (CarPlay AP
+// 172.16.224.0/24, Wi-Fi Direct 172.16.222.0/24), which always count. Unlike wfdPeerInNets() it never falls back to
 // "same network as the arrival address": with the listener on every interface that admitted any host on the head
 // unit's Ethernet (OBD cable) whenever the access point was not up yet.
 inline bool aaPeerAllowed(unsigned peerHostOrder, const unsigned* nets, size_t count) {
     if ((peerHostOrder & 0xff000000u) == 0x7f000000u) return false;   // 127/8 is never a phone
     static const unsigned kDefaults[2] = { 0xAC10E000u, 0xAC10DE00u };
-    if (count == 0) { nets = kDefaults; count = 2; }
+    for (size_t i = 0; i < 2; ++i)
+        if (wfdSameSubnet(peerHostOrder, kDefaults[i])) return true;
     for (size_t i = 0; i < count; ++i)
         if (wfdSameSubnet(peerHostOrder, nets[i])) return true;
     return false;

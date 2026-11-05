@@ -109,6 +109,14 @@ int main() {
                             "pass in quick inet proto tcp from any to 172.16.222.1 port = 52770 keep state\n",
                             ziele(), 5277));
 
+    // Rückfall auf pfctl -d erst, wenn jede angebotene WLAN-Variante (BOTH: Hotspot und Wi-Fi Direct, mehrere
+    // Passphrasen) zweimal ohne Verbindung blieb. Vorher schaltete schon der Wechsel Hotspot -> DIRECT den Filter ab.
+    PRUEFE("Eine Variante: nach der ersten gescheiterten Runde zurückfallen", pfShouldFallBack(1, 1));
+    PRUEFE("Noch keine gescheiterte Runde: nicht zurückfallen", !pfShouldFallBack(0, 1));
+    PRUEFE("BOTH mit zwei Varianten: nach der ersten Runde noch nicht", !pfShouldFallBack(1, 2));
+    PRUEFE("BOTH mit zwei Varianten: nach beiden Runden zurückfallen", pfShouldFallBack(2, 2));
+    PRUEFE("Keine Variante bekannt: wie eine behandeln", pfShouldFallBack(1, 0));
+
     if (g_fehler) { printf("test_pf_rules: %d Prüfung(en) fehlgeschlagen\n", g_fehler); return 1; }
     printf("test_pf_rules: alle Prüfungen bestanden\n");
     return 0;
