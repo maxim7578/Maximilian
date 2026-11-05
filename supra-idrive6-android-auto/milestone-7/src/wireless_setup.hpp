@@ -42,6 +42,8 @@ void putInt(std::vector<uint8_t>& out, int field, uint64_t v);
 bool getVarint(const uint8_t* p, size_t n, size_t& pos, uint64_t& v);
 // Finds a varint field (returns false if absent). Skips other fields.
 bool findVarintField(const uint8_t* p, size_t n, int field, uint64_t& v);
+// Prints every field of a message without a schema (log only: what the phone really sent).
+void dumpProto(const uint8_t* p, size_t n);
 
 std::vector<uint8_t> frame(uint16_t id, const std::vector<uint8_t>& payload);
 std::vector<uint8_t> buildStartRequest(const std::string& ip, uint16_t port);

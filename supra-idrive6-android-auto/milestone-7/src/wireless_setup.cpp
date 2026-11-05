@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Required Notice: Copyright (c) 2026 nanaisu - NBT-AAD (https://github.com/Sq00ky/Supra-iDrive6-Android-Auto)
 #include "wireless_setup.hpp"
+#include "rx_guard.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +58,7 @@ bool findVarintField(const uint8_t* p, size_t n, int field, uint64_t& v) {
         } else if (wt == 2) {
             uint64_t len;
             if (!getVarint(p, n, pos, len)) return false;
-            if (pos + len > n) return false;
+            if (!fieldFits(pos, len, n)) return false;   // not pos + len > n: the sum wraps for a huge len
             pos += (size_t)len;
         } else if (wt == 5) {
             pos += 4;
@@ -369,7 +370,7 @@ static void hexdump(const char* tag, const uint8_t* p, size_t n) {
 }
 
 // Generic protobuf field dump (no schema): shows what the phone really sent.
-static void dumpProto(const uint8_t* p, size_t n) {
+void wpp::dumpProto(const uint8_t* p, size_t n) {
     size_t pos = 0;
     printf("[Wireless]    fields:");
     while (pos < n) {
@@ -383,7 +384,7 @@ static void dumpProto(const uint8_t* p, size_t n) {
             printf(" f%d=%llu", f, (unsigned long long)v);
         } else if (wt == 2) {
             uint64_t len;
-            if (!wpp::getVarint(p, n, pos, len) || pos + len > n) { printf(" <bad len>"); break; }
+            if (!wpp::getVarint(p, n, pos, len) || !fieldFits(pos, len, n)) { printf(" <bad len>"); break; }
             bool pr = true;
             for (size_t i = 0; i < len; ++i) if (p[pos + i] < 32 || p[pos + i] > 126) pr = false;
             if (pr) printf(" f%d='%.*s'", f, (int)len, (const char*)(p + pos));
@@ -400,7 +401,7 @@ static void dumpProto(const uint8_t* p, size_t n) {
 static int handleMsg(int fd, uint16_t id, const std::vector<uint8_t>& pl, const ApInfo& ap, uint16_t port,
                      bool& sentInfo, int& startRespSeen, bool& startAcked) {
     printf("[Wireless] RX msg id=%u len=%u\n", id, (unsigned)pl.size());
-    if (!pl.empty()) { hexdump("   payload", &pl[0], pl.size()); dumpProto(&pl[0], pl.size()); }
+    if (!pl.empty()) { hexdump("   payload", &pl[0], pl.size()); wpp::dumpProto(&pl[0], pl.size()); }
     if (id == wpp::kWifiInfoRequest) {
         std::vector<uint8_t> resp = wpp::buildInfoResponse(ap);
         printf("[Wireless] TX WifiInfoResponse ssid='%s' bssid='%s' security=%d\n",
