@@ -54,6 +54,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include "../src/usb_log.hpp"
+#include "../src/local_trust.hpp"   // pidIsNbtAad: only ever signal the real daemon
 #include "cds_parse.hpp"
 #include "boot_guard.hpp"
 #include "entry_key.hpp"
@@ -761,7 +762,7 @@ DaemonState readDaemonState() {
         int pid = 0, ov = 0;
         int n = fscanf(f, "%23s %d %d", st, &pid, &ov);
         fclose(f);
-        if (n >= 2 && pidAlive(pid)) {
+        if (n >= 2 && pidAlive(pid) && !nbt::pidIsOtherProgram("/proc", pid)) {   // a stale or foreign pid is no daemon
             strcpy(d.state, st);
             d.pid = pid;
             d.overlay = (n >= 3) ? ov : 0;
@@ -1121,6 +1122,14 @@ void serviceStop() {
     long waited = (long)(time(NULL) - g_stopTime);
     if (g_stopPid < 0) {                                 // no pid: 'quit' is all we can do
         if (waited >= 10) { alog("nbt-aad (pid unknown) still running 10 s after 'quit': giving up"); g_stopPid = 0; g_restartAfterStop = false; }
+        return;
+    }
+    if (g_stopStage < 2 && waited >= 3 && nbt::pidIsOtherProgram("/proc", (int)g_stopPid)) {
+        // The pid came from /dev/shmem/nbt-aad-state: never signal a process that is not nbt-aad.
+        alog("pid %d from the state file is not nbt-aad (/proc/%d/exefile): not sending a signal", (int)g_stopPid,
+             (int)g_stopPid);
+        g_stopPid = 0;
+        g_restartAfterStop = false;
         return;
     }
     if (g_stopStage == 0 && waited >= 3) {

@@ -446,13 +446,13 @@ static void writeUiState(const char* state, int overlay) {
     char rec[32];
     int n = snprintf(rec, sizeof(rec), "%-11.11s %10d %d\n", state ? state : "idle", (int)getpid(), overlay);
     if (n < 0) return;
-    int fd = open(kUiStateFile, O_WRONLY | O_CREAT, 0666);
+    int fd = open(kUiStateFile, O_WRONLY | O_CREAT, 0644);
     static bool s_warned = false;
     if (fd < 0) {
         if (!s_warned) { printf("[UiState] cannot write %s: %s\n", kUiStateFile, strerror(errno)); s_warned = true; }
         return;
     }
-    fchmod(fd, 0666);   // readable by HmiMain3D whatever our umask is
+    fchmod(fd, 0644);   // readable by HmiMain3D whatever our umask is; only we write it (it names the pid to stop)
     if (lseek(fd, 0, SEEK_SET) == (off_t)-1 && !s_warned) {
         printf("[UiState] seek failed on %s\n", kUiStateFile);
         s_warned = true;
