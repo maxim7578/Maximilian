@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Required Notice: Copyright (c) 2026 nanaisu - NBT-AAD (https://github.com/Sq00ky/Supra-iDrive6-Android-Auto)
 #include "nbt_env.hpp"
+#include <time.h>
 #include "tcp_server.hpp"
 #include "alt_wifi.hpp"   // which Wi-Fi the phone is offered (NBT_ALT_WIFI): listener + accept filter
 #include <stdio.h>
@@ -113,19 +114,23 @@ int TcpServer::tryConnect(const char* ip, uint16_t port, int timeout_ms) {
 
 // The /24 of each Android Auto interface (uap0, wfd0) as far as it can be read now. Used by the accept filter when
 // the listener is bound to every interface, so a client on the head unit's other networks is still refused.
+// The accept filter's networks: what the Wi-Fi interfaces (NBT_AP_IF / NBT_WFD_IF, default uap0 / wfd0) have now,
+// plus the pinned addresses (NBT_AP_IP / NBT_WFD_IP), which may sit on a network of their own.
 void TcpServer::refreshAaNets() {
-    aaNetCount_ = 0;
-    const char* ifs[2] = { "uap0", "wfd0" };
+    std::vector<std::string> addrs;
+    const char* envIf[2] = { "NBT_AP_IF", "NBT_WFD_IF" };
+    const char* defIf[2] = { "uap0", "wfd0" };
     for (int i = 0; i < 2; ++i) {
+        const char* e = getenv(envIf[i]);
         std::string ip;
-        if (!nbt::interfaceIpv4(ifs[i], ip)) continue;
-        struct in_addr a;
-        if (!inet_aton(ip.c_str(), &a)) continue;
-        unsigned net = ntohl(a.s_addr) & 0xffffff00u;
-        bool dup = false;
-        for (int x = 0; x < aaNetCount_; ++x) if (aaNets_[x] == net) dup = true;
-        if (!dup && aaNetCount_ < (int)(sizeof(aaNets_) / sizeof(aaNets_[0]))) aaNets_[aaNetCount_++] = net;
+        if (nbt::interfaceIpv4((e && *e) ? e : defIf[i], ip)) addrs.push_back(ip);
     }
+    const char* envIp[2] = { "NBT_AP_IP", "NBT_WFD_IP" };
+    for (int i = 0; i < 2; ++i) {
+        const char* e = getenv(envIp[i]);
+        if (e && *e) addrs.push_back(e);
+    }
+    aaNetCount_ = nbt::aaNetsFromAddrs(addrs, aaNets_, (int)(sizeof(aaNets_) / sizeof(aaNets_[0])));
     printf("[TcpServer] Android Auto networks for the accept filter: %d read\n", aaNetCount_);
 }
 
@@ -338,21 +343,29 @@ void TcpServer::acceptLoop() {
             close(client_fd);
             continue;
         }
-        if (nbt::wirelessEnabled()) {
-            // Which address did this connection arrive on? The phone has to be inside that network; that holds
-            // whatever the car numbers wfd0/uap0, and still keeps Ethernet/USB/OBD clients out.
+        if (nbt::envFlag("NBT_ACCEPT_ANY") != 1) {
+            // The phone has to be on an Android Auto network: the ones read from uap0 / wfd0, or the default
+            // 172.16.224.0/24 and 172.16.222.0/24 while none could be read (alt_wifi.hpp aaPeerAllowed). This
+            // holds whatever the car numbers its Wi-Fi, and keeps Ethernet/USB/OBD clients out even when the
+            // listener is on every interface because the access point was not up yet. Also with NBT_WIRELESS=0.
             uint32_t hip = ntohl(client_addr.sin_addr.s_addr);
-            uint32_t lip = 0;
-            sockaddr_in local;
-            socklen_t llen = sizeof(local);
-            memset(&local, 0, sizeof(local));
-            if (getsockname(client_fd, reinterpret_cast<sockaddr*>(&local), &llen) == 0)
-                lip = ntohl(local.sin_addr.s_addr);
-            if (!nbt::wfdPeerInNets(hip, aaNets_, (size_t)aaNetCount_, lip)) {
-                char lip_s[INET_ADDRSTRLEN] = "?";
-                inet_ntop(AF_INET, &local.sin_addr, lip_s, sizeof(lip_s));
-                printf("[TcpServer] refusing %s (not on %s: NBT_ALT_WIFI=%s)\n", client_ip, lip_s,
-                       nbt::altWifiName(nbt::altWifiMode()));
+            bool ok = nbt::aaPeerAllowed(hip, aaNets_, (size_t)aaNetCount_);
+            if (!ok) {
+                // The list may be stale (wfd0 / the access point came up after the listener was opened, or the
+                // group was re-formed on another network): read the interfaces again, at most every 5 s.
+                static long last_refresh = -1000;
+                struct timespec ts;
+                clock_gettime(CLOCK_MONOTONIC, &ts);
+                if ((long)ts.tv_sec - last_refresh >= 5) {
+                    last_refresh = (long)ts.tv_sec;
+                    refreshAaNets();
+                    ok = nbt::aaPeerAllowed(hip, aaNets_, (size_t)aaNetCount_);
+                }
+            }
+            if (!ok) {
+                printf("[TcpServer] refusing %s: not on an Android Auto network (%d read from uap0/wfd0%s; "
+                       "NBT_ACCEPT_ANY=1 lets anyone in)\n", client_ip, aaNetCount_,
+                       aaNetCount_ == 0 ? ", using 172.16.224.0/24 and 172.16.222.0/24" : "");
                 close(client_fd);
                 continue;
             }

@@ -98,8 +98,9 @@ inline bool append(Capped& c, const char* path, const char* buf, size_t n, long 
     if (c.full || !path) return false;
     int flags = O_WRONLY | O_CREAT | (c.opened ? O_APPEND : O_TRUNC);
     bool over = c.used + (long)n > maxBytes - kReserve;
-    int fd = open(path, flags, 0666);
+    int fd = open(path, flags, 0600);   // owner only: the log names the car's Wi-Fi and its phones
     if (fd < 0) return false;
+    if (!c.opened) fchmod(fd, 0600);    // also a file left 0666 by an older version (no effect on a FAT stick)
     c.opened = true;
     bool ok = false;
     if (over) {
