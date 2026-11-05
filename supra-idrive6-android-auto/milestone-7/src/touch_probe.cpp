@@ -4,6 +4,8 @@
 #include "touch_frame.hpp"
 #include "car_config.hpp"
 #include "gesture_pdu.hpp"
+#include "local_trust.hpp"
+#include "alt_wifi.hpp"   // interfaceIpv4 / aaNetsFromAddrs: the Android Auto Wi-Fi networks
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -182,6 +184,25 @@ void savePeerFile(const sockaddr_in& p) {
     fclose(f);
 }
 
+// The Android Auto Wi-Fi networks (NBT_AP_IF / NBT_WFD_IF, default uap0 / wfd0, plus NBT_AP_IP / NBT_WFD_IP): touch
+// PDUs from there are dropped (local_trust.hpp). The defaults 172.16.224.0/24 and 172.16.222.0/24 always count.
+int readAaWifiNets(unsigned* nets, int max) {
+    std::vector<std::string> addrs;
+    const char* envIf[2] = { "NBT_AP_IF", "NBT_WFD_IF" };
+    const char* defIf[2] = { "uap0", "wfd0" };
+    for (int i = 0; i < 2; ++i) {
+        const char* e = getenv(envIf[i]);
+        std::string ip;
+        if (nbt::interfaceIpv4((e && *e) ? e : defIf[i], ip)) addrs.push_back(ip);
+    }
+    const char* envIp[2] = { "NBT_AP_IP", "NBT_WFD_IP" };
+    for (int i = 0; i < 2; ++i) {
+        const char* e = getenv(envIp[i]);
+        if (e && *e) addrs.push_back(e);
+    }
+    return nbt::aaNetsFromAddrs(addrs, nets, max);
+}
+
 bool connectToPeer(int s, const sockaddr_in& peer, const char* why) {
     char ip[32];
     snprintf(ip, sizeof(ip), "%s", inet_ntoa(peer.sin_addr));
@@ -254,10 +275,20 @@ void* forwardMain(void* p) {
     sockaddr_in peer;
     bool havePeer = parsePeer(getenv("NBT_TOUCH_PEER"), &peer);
     if (havePeer) printf("[TouchFwd] touch controller from NBT_TOUCH_PEER: %s:%u\n", inet_ntoa(peer.sin_addr), (unsigned)ntohs(peer.sin_port));
-    else if (connectPeer && loadPeerFile(&peer)) {
-        havePeer = true;
-        printf("[TouchFwd] touch controller from %s: %s:%u (learned from an earlier touch)\n", kTouchPeerFile,
-               inet_ntoa(peer.sin_addr), (unsigned)ntohs(peer.sin_port));
+    unsigned aaNets[4];
+    int aaNetCount = readAaWifiNets(aaNets, 4);
+    struct timeval aaNetsAt;
+    gettimeofday(&aaNetsAt, NULL);
+    unsigned droppedWifi = 0;
+    if (!havePeer && connectPeer && loadPeerFile(&peer)) {
+        if (!nbt::touchSenderAllowed(ntohl(peer.sin_addr.s_addr), aaNets, (size_t)aaNetCount)) {
+            printf("[TouchFwd] ignoring %s: %s:%u is on the Android Auto Wi-Fi, not the touch controller\n",
+                   kTouchPeerFile, inet_ntoa(peer.sin_addr), (unsigned)ntohs(peer.sin_port));
+        } else {
+            havePeer = true;
+            printf("[TouchFwd] touch controller from %s: %s:%u (learned from an earlier touch)\n", kTouchPeerFile,
+                   inet_ntoa(peer.sin_addr), (unsigned)ntohs(peer.sin_port));
+        }
     }
     // Gestures that reached us (iDrive did not get them), logged decoded: one line per run of the same gesture.
     int gLast = -1;
@@ -324,6 +355,20 @@ void* forwardMain(void* p) {
             memset(&src, 0, sizeof(src));
             ssize_t n = recvfrom(s, buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&src), &sl);
             if (n < 0) { if (errno == EINTR) continue; usleep(100000); continue; }
+            {   // Never from the Android Auto Wi-Fi (local_trust.hpp): no taps on the phone, no learned controller.
+                struct timeval tn;
+                gettimeofday(&tn, NULL);
+                if (tn.tv_sec - aaNetsAt.tv_sec >= 60 || tn.tv_sec < aaNetsAt.tv_sec) {   // interfaces may come up later
+                    aaNetCount = readAaWifiNets(aaNets, 4);
+                    aaNetsAt = tn;
+                }
+                if (!nbt::touchSenderAllowed(ntohl(src.sin_addr.s_addr), aaNets, (size_t)aaNetCount)) {
+                    if (++droppedWifi <= 20 || (droppedWifi % 1000) == 0)
+                        printf("[TouchFwd] dropping a PDU from %s:%u: the Android Auto Wi-Fi is not the touch controller "
+                               "(%u dropped)\n", inet_ntoa(src.sin_addr), (unsigned)ntohs(src.sin_port), droppedWifi);
+                    continue;
+                }
+            }
             if (!isTouchPdu(buf, (size_t)n)) {
                 ++otherPdus;
                 if (otherPdus <= 20 || (otherPdus % 100) == 0) {
