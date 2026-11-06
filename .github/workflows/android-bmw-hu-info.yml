@@ -1,0 +1,50 @@
+name: BMW HU Info - Android APK
+
+# Baut den Debug-APK der BMW-HU-Info-App auf GitHub (dort ist das Android-SDK
+# erreichbar) und laedt ihn als Artefakt hoch. Laeuft nur bei Aenderungen am
+# Android-Projekt oder manuell.
+on:
+  push:
+    paths:
+      - "bmw-hu-info/android/**"
+      - ".github/workflows/android-bmw-hu-info.yml"
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bmw-hu-info/android
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: JDK 17 einrichten
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v3
+        with:
+          # Kein veraltetes 'tools'-Paket installieren (gibt es nicht mehr).
+          # AGP laedt Plattform und Build-Tools beim Build selbst nach.
+          packages: ""
+
+      - name: gradlew ausfuehrbar machen
+        run: chmod +x ./gradlew
+
+      - name: Debug-APK bauen
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Unit-Tests (Sicherheitslogik)
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: APK hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: bmw-hu-info-debug-apk
+          path: bmw-hu-info/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

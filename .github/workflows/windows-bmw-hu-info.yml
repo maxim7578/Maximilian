@@ -1,0 +1,57 @@
+name: BMW HU Info - Windows EXE
+
+# Baut die Windows-.exe der BMW-HU-Info-Diagnosesoftware mit PyInstaller auf
+# einem Windows-Runner und laedt sie als Artefakt hoch. Laeuft nur bei
+# Aenderungen an der Windows-Software/am Katalog oder manuell.
+on:
+  push:
+    paths:
+      - "bmw-hu-info/windows/**"
+      - "bmw-hu-info/shared/**"
+      - ".github/workflows/windows-bmw-hu-info.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-exe:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: bmw-hu-info/windows
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python einrichten
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Abhaengigkeiten installieren
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller pytest
+
+      - name: Tests (deutsch)
+        run: python -m pytest -q
+
+      - name: EXE bauen
+        run: pyinstaller --noconsole --onefile --name Vako-HU --icon assets\emblem.ico --add-data "..\shared\commands.json;shared" --add-data "assets\emblem.png;assets" run_gui.py
+
+      - name: EXE hochladen (Artefakt)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vako-hu-windows-exe
+          path: bmw-hu-info/windows/dist/Vako-HU.exe
+          if-no-files-found: error
+
+      - name: Release mit .exe veroeffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: vako-hu-windows-latest
+          name: Vako-HU - Windows (neuester Build)
+          body: "Automatisch gebaute Windows-.exe der Vako-HU-Diagnosesoftware fuer BMW-Headunits (Debug/Test, unsigniert, nur Lesen)."
+          files: bmw-hu-info/windows/dist/Vako-HU.exe
